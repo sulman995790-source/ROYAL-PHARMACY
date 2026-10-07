@@ -15,11 +15,10 @@ permissions:
   pages: write
   id-token: write
 
-# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
-# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
+# Auto-cancels older concurrent queue builds to prevent API lockouts
 concurrency:
   group: "pages"
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   # Single deploy job since we're just deploying; no build step needed
@@ -35,7 +34,6 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v5
       
-      # Using v3.0.1 explicitly addresses the Node 20 runtime engine warnings cleanly
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3.0.1
         with:
