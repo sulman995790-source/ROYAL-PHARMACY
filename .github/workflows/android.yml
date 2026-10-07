@@ -40,7 +40,6 @@ jobs:
     - name: Make Gradle Wrapper Executable
       run: chmod +x ./gradlew
 
-    # Quiet mode logging flag suppresses the deep KSP compiler configuration warnings
     - name: Build Signed Release APK
       env:
         STORE_PASS: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
