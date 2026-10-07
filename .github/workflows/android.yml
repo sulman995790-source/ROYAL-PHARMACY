@@ -24,11 +24,11 @@ jobs:
       with:
         gradle-version: '9.3.1'
 
-    - name: Generate Precise Double Nested Keystore Path
+    - name: Generate Precise Nested Keystore Path
       # This builds the exact folder layout the hardcoded gradle file is looking for
       run: |
-        mkdir -p ROYAL-PHARMACY/app
-        keytool -genkey -v -keystore ROYAL-PHARMACY/app/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+        mkdir -p ROYAL-PHARMACY
+        keytool -genkey -v -keystore ROYAL-PHARMACY/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
 
     - name: Build Debug APK
       run: gradle assembleDebug
