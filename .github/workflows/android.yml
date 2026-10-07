@@ -20,7 +20,7 @@ jobs:
         distribution: 'temurin'
 
     - name: Setup Gradle Environment
-      uses: gradle/actions/setup-gradle@v6
+      uses: gradle/actions/setup-gradle@v4
       with:
         gradle-version: '9.3.1'
 
@@ -62,5 +62,4 @@ jobs:
       with:
         name: secure-production-keystore-backup
         path: app/debug.keystore
-
         
