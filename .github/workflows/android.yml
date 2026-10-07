@@ -16,7 +16,7 @@ jobs:
     - name: Set up JDK 21
       uses: actions/setup-java@v4
       with:
-        java-version: '21' # Fixed the KSP background thread crash
+        java-version: '21'
         distribution: 'temurin'
 
     - name: Setup Gradle Environment
@@ -24,7 +24,12 @@ jobs:
       with:
         gradle-version: '9.3.1'
 
+    - name: Generate Dummy Debug Keystore
+      # This line automatically generates a mock key exactly where your project expects it
+      run: |
+        mkdir -p app
+        keytool -genkey -v -keystore app/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+
     - name: Build Debug APK
-      # Using -x validatesigningDebug tells Gradle to skip the missing signature key check
-      run: gradle assembleDebug -x :app:validateSigningDebug
+      run: gradle assembleDebug
       
