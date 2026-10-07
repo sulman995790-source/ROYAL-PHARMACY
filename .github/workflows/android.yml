@@ -27,10 +27,9 @@ jobs:
     - name: Generate Permanent Secure Keystore
       env:
         STORE_PASS: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
-        KEY_PASS: ${{ secrets.RELEASE_KEY_PASSWORD }}
       run: |
-        # Generates a production key across all local build nodes
-        keytool -genkey -v -keystore debug.keystore -storepass "$STORE_PASS" -alias royalpharmacykey -keypass "$KEY_PASS" -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Royal Pharmacy,O=Production,C=US"
+        # Using the exact same password variable for both parameters ensures matching padding blocks
+        keytool -genkey -v -keystore debug.keystore -storepass "$STORE_PASS" -alias royalpharmacykey -keypass "$STORE_PASS" -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Royal Pharmacy,O=Production,C=US"
         mkdir -p app && cp debug.keystore app/
         mkdir -p ROYAL-PHARMACY && cp debug.keystore ROYAL-PHARMACY/
         mkdir -p ROYAL-PHARMACY/ROYAL-PHARMACY && cp debug.keystore ROYAL-PHARMACY/ROYAL-PHARMACY/
@@ -39,17 +38,22 @@ jobs:
     - name: Build Signed Release APK
       env:
         STORE_PASS: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
-        KEY_PASS: ${{ secrets.RELEASE_KEY_PASSWORD }}
       run: |
         gradle assembleRelease \
           -Pandroid.injected.signing.store.file=debug.keystore \
           -Pandroid.injected.signing.store.password="$STORE_PASS" \
           -Pandroid.injected.signing.key.alias=royalpharmacykey \
-          -Pandroid.injected.signing.key.password="$KEY_PASS"
+          -Pandroid.injected.signing.key.password="$STORE_PASS"
 
     - name: Upload Production Release APK
       uses: actions/upload-artifact@v4
       with:
         name: RoyalPharmacy-Production-Release-APK
         path: app/build/outputs/apk/release/app-release.apk
+
+    - name: Archive Production Keystore
+      uses: actions/upload-artifact@v4
+      with:
+        name: secure-production-keystore-backup
+        path: app/debug.keystore
         
