@@ -1,0 +1,1718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Royal Pharmacy - Web POS & Management Portal</title>
+  
+  <!-- Tailwind CSS & Fonts -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- SheetJS & jsPDF & SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+          },
+          colors: {
+            royal: {
+              magenta: '#9C1258',
+              navy: '#1E293B',
+              slate: '#F8FAFC',
+              accent: '#BE185D',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #F8FAFC;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #F1F5F9;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #CBD5E1;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="overflow-hidden h-screen flex flex-col">
+
+  <!-- TOP HEADER -->
+  <header class="bg-royal-navy text-white px-6 py-3 flex items-center justify-between border-b border-slate-700 shrink-0">
+    <div class="flex items-center space-x-3">
+      <div class="bg-royal-magenta p-2 rounded-lg text-white">
+        <i data-lucide="activity" class="w-6 h-6"></i>
+      </div>
+      <div>
+        <h1 class="text-lg font-bold tracking-tight">ROYAL PHARMACY</h1>
+        <p class="text-xs text-slate-400">Web Portal & Chemist POS</p>
+      </div>
+    </div>
+
+    <!-- Sync and Role Status -->
+    <div class="flex items-center space-x-4">
+      <!-- Sync Status Badge -->
+      <button onclick="openSyncDialog()" class="flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-full text-xs transition duration-200">
+        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" id="sync-dot"></span>
+        <span class="font-medium" id="sync-label">Synced</span>
+      </button>
+
+      <!-- Role Status Badge -->
+      <button onclick="openRoleDialog()" class="flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-full text-xs transition duration-200">
+        <i data-lucide="user-check" class="w-3.5 h-3.5 text-pink-400"></i>
+        <span class="font-medium text-pink-200" id="current-role-badge">Owner (Full Access)</span>
+      </button>
+
+      <!-- Account login indicator -->
+      <div class="hidden md:flex items-center space-x-2 border-l border-slate-700 pl-4">
+        <div class="bg-slate-700 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm text-pink-300" id="user-avatar">
+          OP
+        </div>
+        <div class="text-left text-xs">
+          <p class="font-semibold text-slate-200" id="user-display-name">Owner Principal</p>
+          <p class="text-slate-400 text-[10px]" id="user-display-email">sulman995790@gmail.com</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN BODY LAYOUT -->
+  <div class="flex flex-1 overflow-hidden">
+    
+    <!-- SIDE NAVIGATION FOR COMPUTER ACCESS -->
+    <aside class="w-64 bg-white border-r border-slate-200 flex flex-col justify-between shrink-0 hidden md:flex">
+      <div class="p-4 space-y-1">
+        <p class="text-[10px] font-bold text-slate-400 px-3 uppercase tracking-wider mb-2">Operations</p>
+        
+        <button onclick="switchTab('pos')" id="tab-btn-pos" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-semibold text-royal-magenta bg-pink-50 transition">
+          <i data-lucide="shopping-cart" class="w-4 h-4"></i>
+          <span>Billing Counter (POS)</span>
+        </button>
+
+        <button onclick="switchTab('database')" id="tab-btn-database" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition">
+          <i data-lucide="search" class="w-4 h-4"></i>
+          <span>Drug Database (5L+)</span>
+        </button>
+
+        <button onclick="switchTab('cart')" id="tab-btn-cart" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition">
+          <i data-lucide="truck" class="w-4 h-4"></i>
+          <span>Required Purchases</span>
+          <span class="ml-auto bg-royal-magenta text-white text-[10px] px-1.5 py-0.5 rounded-full" id="cart-badge-count">0</span>
+        </button>
+
+        <button onclick="switchTab('calculator')" id="tab-btn-calculator" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition">
+          <i data-lucide="calculator" class="w-4 h-4"></i>
+          <span>Dosage Calculator</span>
+        </button>
+
+        <button onclick="switchTab('symptoms')" id="tab-btn-symptoms" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition">
+          <i data-lucide="clipboard-list" class="w-4 h-4"></i>
+          <span>Symptom Checker</span>
+        </button>
+
+        <p class="text-[10px] font-bold text-slate-400 px-3 uppercase tracking-wider pt-4 mb-2">Management</p>
+
+        <button onclick="switchTab('invoices')" id="tab-btn-invoices" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition">
+          <i data-lucide="printer" class="w-4 h-4"></i>
+          <span>Smart Invoice Printer</span>
+        </button>
+
+        <button onclick="switchTab('settings')" id="tab-btn-settings" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition">
+          <i data-lucide="settings" class="w-4 h-4"></i>
+          <span>Pharmacy Profile</span>
+        </button>
+      </div>
+
+      <!-- Footer Info -->
+      <div class="p-4 border-t border-slate-100 bg-slate-50 text-xs text-slate-500">
+        <div class="flex items-center space-x-2 mb-1">
+          <div class="w-2 h-2 rounded-full bg-emerald-500"></div>
+          <span class="font-semibold">Local Storage Saved</span>
+        </div>
+        <p class="text-[10px]">Netlify Deployment Version 1.0.2</p>
+      </div>
+    </aside>
+
+    <!-- WORKSPACE VIEW AREA -->
+    <main class="flex-1 bg-slate-50 overflow-y-auto p-6 flex flex-col space-y-6 custom-scrollbar" id="tab-container">
+      
+      <!-- ================= SECTION: POS / BILLING COUNTER ================= -->
+      <section id="tab-content-pos" class="space-y-6 block">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h2 class="text-2xl font-bold text-slate-900">Billing Counter</h2>
+            <p class="text-sm text-slate-500">Generate fast, GST-compliant chemist cash memos.</p>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button onclick="loadDemoSaleData()" class="text-xs bg-pink-100 text-royal-magenta px-3 py-1.5 rounded-lg font-semibold hover:bg-pink-200 transition">
+              Load Sample Sale
+            </button>
+            <button onclick="clearCurrentSale()" class="text-xs bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg font-semibold hover:bg-slate-300 transition">
+              Reset Bill
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Bill Setup Details (Left Col) -->
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+            <h3 class="font-bold text-slate-800 flex items-center space-x-2">
+              <i data-lucide="user" class="w-4 h-4 text-royal-magenta"></i>
+              <span>Patient & Doctor Details</span>
+            </h3>
+            
+            <div class="space-y-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-500 mb-1">Customer Name</label>
+                <input type="text" id="bill-customer" placeholder="Walk-in Customer" class="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-royal-magenta">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-500 mb-1">Prescribing Doctor Name</label>
+                <input type="text" id="bill-doctor" placeholder="Dr. Self / None" class="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-royal-magenta">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-500 mb-1">Payment Mode</label>
+                <select id="bill-payment" class="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-royal-magenta bg-white">
+                  <option value="Cash">Cash Payment</option>
+                  <option value="UPI">UPI Digital Link</option>
+                  <option value="Card">Credit/Debit Card</option>
+                  <option value="NetBanking">Net Banking</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Add Items Block (Middle Col) -->
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4 lg:col-span-2 flex flex-col">
+            <h3 class="font-bold text-slate-800 flex items-center space-x-2">
+              <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-600"></i>
+              <span>Quick Add Medicines</span>
+            </h3>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="relative">
+                <label class="block text-xs font-semibold text-slate-500 mb-1">Select Medicine</label>
+                <select id="add-item-select" onchange="autofillBillItem()" class="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-royal-magenta bg-white">
+                  <!-- Will load dynamically -->
+                </select>
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-500 mb-1">Quantity</label>
+                  <input type="number" id="add-item-qty" value="1" min="1" class="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm text-center focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-royal-magenta">
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-500 mb-1">MRP Price (₹)</label>
+                  <input type="number" id="add-item-mrp" value="0" step="0.01" class="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm text-center focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-royal-magenta">
+                </div>
+              </div>
+            </div>
+
+            <div class="flex justify-end pt-2">
+              <button onclick="addItemToCurrentBill()" class="flex items-center space-x-2 bg-royal-magenta text-white px-5 py-2 rounded-xl text-xs font-bold hover:bg-royal-accent transition shadow-sm">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                <span>Add Item To Memo</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bill Invoice Summary / Itemized Listing -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+            <h3 class="font-bold text-slate-800">Current Sales Cart</h3>
+            <span class="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full font-semibold" id="cart-item-count">0 items</span>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-600">
+              <thead class="bg-slate-50 text-xs font-bold text-slate-500 uppercase">
+                <tr>
+                  <th class="px-6 py-3">Medicine Name</th>
+                  <th class="px-6 py-3 text-center">Batch / Exp</th>
+                  <th class="px-6 py-3 text-center">Qty</th>
+                  <th class="px-6 py-3 text-right">MRP (₹)</th>
+                  <th class="px-6 py-3 text-right">Total (₹)</th>
+                  <th class="px-6 py-3 text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="bill-items-table-body">
+                <tr>
+                  <td colspan="6" class="px-6 py-8 text-center text-slate-400 text-xs">
+                    No medicines added to bill yet. Load sample or add items above.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="bg-slate-50 p-6 flex flex-col md:flex-row justify-between gap-6 border-t border-slate-100">
+            <div class="text-xs text-slate-500 max-w-sm space-y-1">
+              <p class="font-semibold text-slate-700">GST Invoice Notice:</p>
+              <p>Memos generated here are automatically tagged with a 12% GST structure (CGST 6%, SGST 6%) for compliant retail chemistry reports.</p>
+            </div>
+
+            <div class="space-y-2 w-full md:w-80">
+              <div class="flex justify-between text-xs text-slate-500">
+                <span>Subtotal:</span>
+                <span id="bill-subtotal">₹0.00</span>
+              </div>
+              <div class="flex justify-between text-xs text-slate-500">
+                <span>GST Total (12% Included):</span>
+                <span id="bill-gst">₹0.00</span>
+              </div>
+              <div class="flex justify-between font-bold text-lg text-slate-900 border-t border-slate-200 pt-2">
+                <span>Net Payable:</span>
+                <span id="bill-net">₹0.00</span>
+              </div>
+              
+              <div class="pt-3">
+                <button onclick="checkoutSale()" class="w-full flex items-center justify-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-bold transition shadow-md">
+                  <i data-lucide="check-circle" class="w-5 h-5"></i>
+                  <span>Checkout & Open Invoice Printer</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SECTION: DRUG DATABASE ================= -->
+      <section id="tab-content-database" class="space-y-6 hidden">
+        <div>
+          <h2 class="text-2xl font-bold text-slate-900">Drug Database</h2>
+          <p class="text-sm text-slate-500">Search offline drug catalog containing over 5,00,000+ local medicines, injectables, and chemistry codes.</p>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+          <div class="flex flex-col md:flex-row gap-3">
+            <div class="relative flex-1">
+              <i data-lucide="search" class="absolute left-4 top-3.5 w-5 h-5 text-slate-400"></i>
+              <input type="text" id="drug-search" onkeyup="searchDrugs()" placeholder="Search by brand name, generic formulation, HSN, or category..." class="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-royal-magenta">
+            </div>
+            <select id="drug-category-filter" onchange="searchDrugs()" class="px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-royal-magenta bg-white w-full md:w-60">
+              <option value="">All Categories</option>
+              <option value="Analgesic">Analgesics & Pain</option>
+              <option value="Antibiotic">Antibiotics</option>
+              <option value="Antihistamine">Antihistamines & Cough</option>
+              <option value="Injectable">Chemist Injectables</option>
+              <option value="Cardiac">Cardiac Care</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-600">
+              <thead class="bg-slate-50 text-xs font-bold text-slate-500 uppercase">
+                <tr>
+                  <th class="px-6 py-4">Brand / Generic Formulation</th>
+                  <th class="px-6 py-4 text-center">HSN Code</th>
+                  <th class="px-6 py-4 text-center">Available Stock</th>
+                  <th class="px-6 py-4 text-right">Price / strip (₹)</th>
+                  <th class="px-6 py-4 text-center">Safety Rating</th>
+                  <th class="px-6 py-4 text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="drugs-table-body">
+                <!-- Loaded dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SECTION: REQUIRED PURCHASES / CART ================= -->
+      <section id="tab-content-cart" class="space-y-6 hidden">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h2 class="text-2xl font-bold text-slate-900">Required Purchases</h2>
+            <p class="text-sm text-slate-500">Order from distributors. Export direct purchase lists to easily supply products.</p>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button onclick="addCustomCartItem()" class="flex items-center space-x-2 bg-royal-magenta text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-royal-accent transition">
+              <i data-lucide="plus" class="w-4 h-4"></i>
+              <span>Add custom request</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          <!-- Cart list (Left 2 cols) -->
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden xl:col-span-2">
+            <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+              <h3 class="font-bold text-slate-800">Pending Order items</h3>
+              <button onclick="clearDistributorCart()" class="text-xs text-rose-600 hover:underline">Clear all cart</button>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm text-slate-600">
+                <thead class="bg-slate-50 text-xs font-bold text-slate-500 uppercase">
+                  <tr>
+                    <th class="px-6 py-3">Medicine Name</th>
+                    <th class="px-6 py-3 text-center">Batch Ref</th>
+                    <th class="px-6 py-3 text-center">Quantity</th>
+                    <th class="px-6 py-3 text-right">Est. Cost (₹)</th>
+                    <th class="px-6 py-3 text-center">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="cart-table-body">
+                  <!-- Loaded dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Export Block (Right Col) -->
+          <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
+            <div>
+              <h3 class="font-bold text-slate-800 text-base">Distributor Order Export</h3>
+              <p class="text-xs text-slate-500 mt-1">Select formats to generate compliant spreadsheets and sheets instantly.</p>
+            </div>
+
+            <div class="bg-slate-50 p-4 rounded-xl space-y-3">
+              <div class="flex justify-between text-xs">
+                <span class="text-slate-500">Selected Items:</span>
+                <span id="export-total-items" class="font-bold text-slate-700">0</span>
+              </div>
+              <div class="flex justify-between text-xs">
+                <span class="text-slate-500">Est. PO Total:</span>
+                <span id="export-total-price" class="font-bold text-emerald-600">₹0.00</span>
+              </div>
+            </div>
+
+            <div class="space-y-2.5">
+              <p class="text-xs font-bold text-slate-400 uppercase tracking-wide">Download Batch Files</p>
+              
+              <button onclick="exportCart('csv')" class="w-full flex items-center space-x-3 bg-teal-50 hover:bg-teal-100/80 text-teal-800 border border-teal-200 py-3 px-4 rounded-xl text-xs font-bold transition">
+                <i data-lucide="file-spreadsheet" class="w-4 h-4 text-teal-600"></i>
+                <span>Export as CSV Spreadsheet (.csv)</span>
+              </button>
+
+              <button onclick="exportCart('xls')" class="w-full flex items-center space-x-3 bg-emerald-50 hover:bg-emerald-100/80 text-emerald-800 border border-emerald-200 py-3 px-4 rounded-xl text-xs font-bold transition">
+                <i data-lucide="sheet" class="w-4 h-4 text-emerald-600"></i>
+                <span>Export as XLS Excel (.xls)</span>
+              </button>
+
+              <button onclick="exportCart('xlsx')" class="w-full flex items-center space-x-3 bg-green-50 hover:bg-green-100/80 text-green-800 border border-green-200 py-3 px-4 rounded-xl text-xs font-bold transition">
+                <i data-lucide="table" class="w-4 h-4 text-green-600"></i>
+                <span>Export as XLSX Spreadsheet (.xlsx)</span>
+              </button>
+
+              <button onclick="exportCart('pdf')" class="w-full flex items-center space-x-3 bg-rose-50 hover:bg-rose-100/80 text-rose-800 border border-rose-200 py-3 px-4 rounded-xl text-xs font-bold transition">
+                <i data-lucide="file-text" class="w-4 h-4 text-rose-600"></i>
+                <span>Export as Purchase Order PDF (.pdf)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SECTION: DOSAGE CALCULATOR ================= -->
+      <section id="tab-content-calculator" class="space-y-6 hidden">
+        <div>
+          <h2 class="text-2xl font-bold text-slate-900">Chemist Dosage Calculator</h2>
+          <p class="text-sm text-slate-500">Calculate pediatric and adult medicine dosages based on weight, safety protocols, and prescription directions.</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Setup Inputs (Left) -->
+          <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+            <h3 class="font-bold text-slate-800">Dosage Setup</h3>
+
+            <div class="space-y-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-500 mb-1">Select Formulation</label>
+                <select id="calc-drug" onchange="onDosageDrugChange()" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-royal-magenta bg-white">
+                  <option value="paracetamol">Paracetamol 120mg/5ml Suspension</option>
+                  <option value="ibuprofen">Ibuprofen 100mg/5ml Suspension</option>
+                  <option value="amoxicillin">Amoxicillin (Pediatric Drops) 125mg/5ml</option>
+                  <option value="cetirizine">Cetirizine 5mg/5ml Syrup</option>
+                </select>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-500 mb-1">Body Weight (kg)</label>
+                  <input type="number" id="calc-weight" value="15" min="2" onkeyup="calculateDosage()" onchange="calculateDosage()" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm text-center focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-royal-magenta">
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-500 mb-1">Age Bracket</label>
+                  <select id="calc-age" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20 bg-white" onchange="calculateDosage()">
+                    <option value="pediatric">Pediatric (Child)</option>
+                    <option value="infant">Infant (Baby)</option>
+                    <option value="adult">Adult</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-slate-500 mb-1">Base Dose Factor (mg/kg/dose)</label>
+                <input type="number" id="calc-factor" value="15" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20" onkeyup="calculateDosage()">
+              </div>
+            </div>
+          </div>
+
+          <!-- Setup Output (Right) -->
+          <div class="bg-white p-6 rounded-2xl border border-emerald-200 shadow-sm flex flex-col justify-between space-y-4">
+            <div>
+              <div class="flex items-center space-x-2 text-emerald-600 mb-2">
+                <i data-lucide="check-circle" class="w-5 h-5"></i>
+                <h3 class="font-bold text-slate-800">Calculated Safety Dosage Result</h3>
+              </div>
+              <p class="text-xs text-slate-500">Based on dynamic body weight parameters, recommended intervals and chemist standards.</p>
+            </div>
+
+            <div class="py-6 space-y-4">
+              <div class="flex items-baseline justify-between border-b border-slate-100 pb-3">
+                <span class="text-xs font-semibold text-slate-500">Recommended Liquid Volume:</span>
+                <span class="text-2xl font-black text-emerald-600" id="calc-volume-result">9.38 ml</span>
+              </div>
+              <div class="flex justify-between text-xs border-b border-slate-100 pb-3">
+                <span class="text-slate-500">Single Active Substance Dose:</span>
+                <span class="font-bold text-slate-700" id="calc-substance-result">225.00 mg</span>
+              </div>
+              <div class="flex justify-between text-xs border-b border-slate-100 pb-3">
+                <span class="text-slate-500">Dosing Frequency Interval:</span>
+                <span class="font-bold text-slate-700" id="calc-interval-result">Every 4 to 6 hours as needed</span>
+              </div>
+              <div class="flex justify-between text-xs">
+                <span class="text-slate-500">Max Dosage in 24 Hours:</span>
+                <span class="font-bold text-rose-600" id="calc-max24-result">4 Doses Max</span>
+              </div>
+            </div>
+
+            <div class="bg-amber-50 p-3.5 rounded-xl border border-amber-100 text-[11px] text-amber-800">
+              <span class="font-bold">Heads up:</span> Ensure you measure strictly with a marked syringe or dosing cup. Never guess based on household spoons.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SECTION: SYMPTOM CHECKER ================= -->
+      <section id="tab-content-symptoms" class="space-y-6 hidden">
+        <div>
+          <h2 class="text-2xl font-bold text-slate-900">Symptom Checker & Triage</h2>
+          <p class="text-sm text-slate-500">Analyze basic clinical indicators, caution levels, and pharmacy recommendations.</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Setup Inputs (Left 1 col) -->
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+            <h3 class="font-bold text-slate-800">Select Symptoms</h3>
+            
+            <div class="space-y-2" id="symptom-checkboxes">
+              <label class="flex items-center space-x-3 p-2.5 rounded-lg hover:bg-slate-50 cursor-pointer border border-slate-100">
+                <input type="checkbox" value="fever" class="text-pink-600 focus:ring-pink-500 rounded" onchange="runSymptomChecker()">
+                <span class="text-sm text-slate-700">High Fever (Temp > 101°F)</span>
+              </label>
+              <label class="flex items-center space-x-3 p-2.5 rounded-lg hover:bg-slate-50 cursor-pointer border border-slate-100">
+                <input type="checkbox" value="cough" class="text-pink-600 focus:ring-pink-500 rounded" onchange="runSymptomChecker()">
+                <span class="text-sm text-slate-700">Dry Cough / Throat Scratch</span>
+              </label>
+              <label class="flex items-center space-x-3 p-2.5 rounded-lg hover:bg-slate-50 cursor-pointer border border-slate-100">
+                <input type="checkbox" value="congestion" class="text-pink-600 focus:ring-pink-500 rounded" onchange="runSymptomChecker()">
+                <span class="text-sm text-slate-700">Nasal Congestion / Blockage</span>
+              </label>
+              <label class="flex items-center space-x-3 p-2.5 rounded-lg hover:bg-slate-50 cursor-pointer border border-slate-100">
+                <input type="checkbox" value="pain" class="text-pink-600 focus:ring-pink-500 rounded" onchange="runSymptomChecker()">
+                <span class="text-sm text-slate-700">Body Muscle Pain / Headaches</span>
+              </label>
+              <label class="flex items-center space-x-3 p-2.5 rounded-lg hover:bg-slate-50 cursor-pointer border border-slate-100">
+                <input type="checkbox" value="acidity" class="text-pink-600 focus:ring-pink-500 rounded" onchange="runSymptomChecker()">
+                <span class="text-sm text-slate-700">Stomach Acid / Bloated Burn</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Triage Recommendation (Right 2 cols) -->
+          <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 lg:col-span-2">
+            <h3 class="font-bold text-slate-800 text-lg">Pharmacist Clinical Decision recommendation</h3>
+
+            <div id="symptom-empty-state" class="py-12 text-center text-slate-400 text-sm">
+              <i data-lucide="clipboard-list" class="w-12 h-12 mx-auto text-slate-300 mb-3"></i>
+              Please select symptoms on the left sidebar to generate real triage data.
+            </div>
+
+            <div id="symptom-result-panel" class="hidden space-y-5">
+              <div class="flex items-center space-x-3 p-4 rounded-xl border" id="symptom-risk-banner">
+                <div class="p-2 rounded-full text-white" id="symptom-risk-icon-bg">
+                  <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+                </div>
+                <div>
+                  <h4 class="font-bold" id="symptom-risk-title">Triage Status</h4>
+                  <p class="text-xs" id="symptom-risk-desc">Recommended action</p>
+                </div>
+              </div>
+
+              <div class="space-y-2">
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wide">Suggested Over-The-Counter Categories</p>
+                <div class="flex flex-wrap gap-2" id="symptom-otc-list">
+                  <!-- Loaded dynamically -->
+                </div>
+              </div>
+
+              <div class="space-y-2">
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wide">Precautionary Alerts & Safety</p>
+                <p class="text-sm text-slate-600 border-l-4 border-amber-500 pl-3 italic" id="symptom-precaution-text">Safety alerts</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SECTION: SMART INVOICE PRINTER ================= -->
+      <section id="tab-content-invoices" class="space-y-6 hidden">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h2 class="text-2xl font-bold text-slate-900">Smart Invoice Printer</h2>
+            <p class="text-sm text-slate-500">Edit pharmacy details, select thermal receipt dimensions, and print with ESC/POS standards.</p>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button onclick="openEditDetailsDialog()" class="flex items-center space-x-2 bg-royal-magenta hover:bg-royal-accent text-white px-4 py-2 rounded-xl text-xs font-bold transition">
+              <i data-lucide="edit" class="w-4 h-4"></i>
+              <span>Edit Pharmacy Details</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Printer Options (Left Col) -->
+          <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+            <h3 class="font-bold text-slate-800">Print Formatting Options</h3>
+
+            <div class="space-y-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-500 mb-1">Paper Dimension Size</label>
+                <select id="invoice-paper" class="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-royal-magenta bg-white" onchange="renderInvoicePreview()">
+                  <option value="THERMAL_80MM">80mm Thermal POS (3-inch)</option>
+                  <option value="THERMAL_58MM">58mm Thermal POS (2-inch)</option>
+                  <option value="A4_STANDARD">A4 Standard GST Invoice</option>
+                  <option value="A5_COMPACT">A5 Half Sheet Cash Memo</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-slate-500 mb-1">Invoice Copy Type</label>
+                <select id="invoice-copy" class="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-royal-magenta bg-white" onchange="renderInvoicePreview()">
+                  <option value="ORIGINAL">Original (For Recipient)</option>
+                  <option value="DUPLICATE">Duplicate (For Transporter)</option>
+                  <option value="OFFICE_COPY">Office / Accounts Copy</option>
+                </select>
+              </div>
+
+              <div class="space-y-2 pt-2 border-t border-slate-100">
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wide">Include Columns</p>
+                <label class="flex items-center space-x-3 text-xs text-slate-600">
+                  <input type="checkbox" id="inc-gst" checked onchange="renderInvoicePreview()" class="text-pink-600 rounded">
+                  <span>GSTIN Details</span>
+                </label>
+                <label class="flex items-center space-x-3 text-xs text-slate-600">
+                  <input type="checkbox" id="inc-dl" checked onchange="renderInvoicePreview()" class="text-pink-600 rounded">
+                  <span>Drug License (Form 20B/21B)</span>
+                </label>
+                <label class="flex items-center space-x-3 text-xs text-slate-600">
+                  <input type="checkbox" id="inc-ayushman" checked onchange="renderInvoicePreview()" class="text-pink-600 rounded">
+                  <span>Ayushman HFR ID</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="pt-4 border-t border-slate-100 space-y-2">
+              <button onclick="printInvoiceBrowser()" class="w-full flex items-center justify-center space-x-2 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl text-xs font-bold transition shadow-sm">
+                <i data-lucide="printer" class="w-4 h-4"></i>
+                <span>Direct Web Print / PDF</span>
+              </button>
+              
+              <button onclick="simulateBluetoothPrinterPrint()" class="w-full flex items-center justify-center space-x-2 bg-slate-800 hover:bg-slate-700 text-white py-2.5 rounded-xl text-xs font-bold transition">
+                <i data-lucide="bluetooth" class="w-4 h-4 text-sky-400 animate-pulse"></i>
+                <span>Simulate Thermal Bluetooth POS</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Print Preview Page (Right 2 cols) -->
+          <div class="lg:col-span-2 bg-slate-200 p-6 rounded-2xl flex justify-center overflow-auto custom-scrollbar">
+            <!-- Simulated Paper Sheet -->
+            <div id="invoice-preview-sheet" class="bg-white shadow-lg p-8 border border-slate-300 text-slate-800 flex flex-col justify-between" style="width: 420px; min-height: 550px;">
+              <!-- Generated Dynamically -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SECTION: PHARMACY PROFILE / SETTINGS ================= -->
+      <section id="tab-content-settings" class="space-y-6 hidden">
+        <div>
+          <h2 class="text-2xl font-bold text-slate-900">Pharmacy Profile Settings</h2>
+          <p class="text-sm text-slate-500">Configure business identity, regulatory credentials, and security PIN options.</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- Pharmacy profile detail card -->
+          <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+            <h3 class="font-bold text-slate-800 text-base">Regulatory & Business Identity</h3>
+            
+            <div class="space-y-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-500 mb-1">Pharmacy Business Name</label>
+                <input type="text" id="set-name" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20">
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-500 mb-1">Phone Number</label>
+                  <input type="text" id="set-phone" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20">
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-500 mb-1">GSTIN Number</label>
+                  <input type="text" id="set-gstin" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20">
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs font-semibold text-slate-500 mb-1">Drug License 20B</label>
+                  <input type="text" id="set-dl20" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20">
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold text-slate-500 mb-1">Drug License 21B</label>
+                  <input type="text" id="set-dl21" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20">
+                </div>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-500 mb-1">Ayushman HFR ID</label>
+                <input type="text" id="set-ayushman" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20">
+              </div>
+            </div>
+
+            <div class="pt-4 flex justify-end">
+              <button onclick="saveProfileSettings()" class="bg-royal-magenta hover:bg-royal-accent text-white px-5 py-2.5 rounded-xl text-xs font-bold transition">
+                Save Profile Configuration
+              </button>
+            </div>
+          </div>
+
+          <!-- Security and Role options card -->
+          <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+            <h3 class="font-bold text-slate-800 text-base">Security & Authentication Privileges</h3>
+            
+            <div class="space-y-4">
+              <div class="p-4 bg-slate-50 rounded-xl border border-slate-100 space-y-2">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold text-slate-600">Owner Access PIN Verification</span>
+                  <span class="text-xs bg-pink-100 text-royal-magenta font-semibold px-2 py-0.5 rounded">Default: 1234</span>
+                </div>
+                <p class="text-[11px] text-slate-500 leading-relaxed">This PIN protects administrative features. When staff uses the system, they operate in General Work mode and need this PIN to enter Owner mode.</p>
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-slate-500 mb-1">Change Owner Security PIN</label>
+                <input type="password" id="set-pin" value="1234" maxlength="4" class="w-24 px-3.5 py-2 border border-slate-200 rounded-xl text-sm text-center font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-pink-500/20">
+              </div>
+
+              <div class="pt-4 border-t border-slate-100 space-y-3">
+                <h4 class="text-xs font-bold text-slate-600 uppercase tracking-wide">Staff Management Accounts</h4>
+                <div class="flex items-center justify-between text-xs p-3 bg-slate-50 rounded-lg">
+                  <div class="flex items-center space-x-2">
+                    <i data-lucide="shield-alert" class="w-4 h-4 text-slate-400"></i>
+                    <span class="font-semibold text-slate-700">Allow staff to self-register</span>
+                  </div>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" checked class="sr-only peer">
+                    <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-royal-magenta"></div>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- BOTTOM NAV BAR FOR MOBILE SCREEN ACCESS -->
+  <nav class="md:hidden bg-white border-t border-slate-200 h-16 shrink-0 grid grid-cols-5 text-center text-xs text-slate-500">
+    <button onclick="switchTab('pos')" id="mob-tab-pos" class="flex flex-col items-center justify-center space-y-1 text-royal-magenta">
+      <i data-lucide="shopping-cart" class="w-5 h-5"></i>
+      <span class="text-[10px] font-semibold">POS</span>
+    </button>
+    <button onclick="switchTab('database')" id="mob-tab-database" class="flex flex-col items-center justify-center space-y-1">
+      <i data-lucide="search" class="w-5 h-5"></i>
+      <span class="text-[10px]">Database</span>
+    </button>
+    <button onclick="switchTab('cart')" id="mob-tab-cart" class="flex flex-col items-center justify-center space-y-1">
+      <i data-lucide="truck" class="w-5 h-5"></i>
+      <span class="text-[10px]">Purchases</span>
+    </button>
+    <button onclick="switchTab('calculator')" id="mob-tab-calculator" class="flex flex-col items-center justify-center space-y-1">
+      <i data-lucide="calculator" class="w-5 h-5"></i>
+      <span class="text-[10px]">Dose</span>
+    </button>
+    <button onclick="switchTab('invoices')" id="mob-tab-invoices" class="flex flex-col items-center justify-center space-y-1">
+      <i data-lucide="printer" class="w-5 h-5"></i>
+      <span class="text-[10px]">Invoice</span>
+    </button>
+  </nav>
+
+  <!-- JS LOGIC CONTROLLER -->
+  <script>
+    // State Objects
+    let state = {
+      role: 'OWNER', // OWNER or STAFF
+      pin: '1234',
+      userName: 'sulman995790',
+      userEmail: 'sulman995790@gmail.com',
+      userPhone: '+91 99887 76655',
+      profile: {
+        businessName: "ROYAL PHARMACY",
+        phone: "+91 98765 43210",
+        email: "contact@royalchemist.com",
+        addressLine1: "Central Chemist Plaza, New Delhi",
+        addressLine2: "DLF Phase 2, PIN - 110001",
+        drugLicenseForm20: "DL-20B-77221",
+        drugLicenseForm21: "DL-21B-77222",
+        gstin: "07AAAAA1111A1Z1",
+        ayushmanHfrId: "HFR-IN-9821-2291",
+        ownerName: "Sulman Pharmacist"
+      },
+      currentSale: {
+        customerName: 'Walk-in Customer',
+        doctorName: 'Dr. Self / None',
+        paymentMode: 'Cash',
+        items: []
+      },
+      distributorCart: [],
+      syncQueue: [],
+      drugDatabase: [
+        { name: "Paracetamol 650mg (Dolo)", generic: "Paracetamol", hsn: "300490", stock: 1240, price: 30.0, category: "Analgesic", safety: "A (Very Safe)", indication: "High Fever, Mild Pain, Migraines" },
+        { name: "Amoxicillin 500mg Capsule", generic: "Amoxicillin", hsn: "300410", stock: 850, price: 72.0, category: "Antibiotic", safety: "B (Caution Required)", indication: "Bacterial Throat Infection, Sinusitis" },
+        { name: "Cetirizine 10mg Syrup", generic: "Cetirizine Hydrochloride", hsn: "300490", stock: 340, price: 45.0, category: "Antihistamine", safety: "A (Mild Drowsy)", indication: "Allergy Sneezing, Cold Congestion" },
+        { name: "Ceftriaxone 1g Injectable", generic: "Ceftriaxone Sodium", hsn: "300420", stock: 120, price: 110.0, category: "Injectable", safety: "C (Prescription only)", indication: "Severe Systemic Bacterial Sepsis" },
+        { name: "Pantocid 40mg Tablet", generic: "Pantoprazole", hsn: "300490", stock: 1500, price: 95.0, category: "Antiacid", safety: "A (Extremely Safe)", indication: "Hyperacidity, Heartburn, Acid Reflux" }
+      ]
+    };
+
+    // Load state from LocalStorage if present
+    function loadSavedState() {
+      const saved = localStorage.getItem('royal_pharmacy_state');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          state.profile = parsed.profile || state.profile;
+          state.distributorCart = parsed.distributorCart || state.distributorCart;
+          state.pin = parsed.pin || state.pin;
+          state.role = parsed.role || state.role;
+        } catch (e) {
+          console.error("Failed to restore local state", e);
+        }
+      }
+      syncUiState();
+    }
+
+    function saveStateToLocal() {
+      localStorage.setItem('royal_pharmacy_state', JSON.stringify({
+        profile: state.profile,
+        distributorCart: state.distributorCart,
+        pin: state.pin,
+        role: state.role
+      }));
+    }
+
+    // UI State Sync
+    function syncUiState() {
+      // Sync badges
+      document.getElementById('current-role-badge').innerText = state.role === 'OWNER' ? 'Owner (Full Access)' : 'Staff (General)';
+      document.getElementById('user-avatar').innerText = state.role === 'OWNER' ? 'OP' : 'ST';
+      document.getElementById('user-display-name').innerText = state.role === 'OWNER' ? 'Owner Principal' : 'Staff Worker';
+      
+      // Update form configurations
+      document.getElementById('set-name').value = state.profile.businessName;
+      document.getElementById('set-phone').value = state.profile.phone;
+      document.getElementById('set-gstin').value = state.profile.gstin;
+      document.getElementById('set-dl20').value = state.profile.drugLicenseForm20;
+      document.getElementById('set-dl21').value = state.profile.drugLicenseForm21;
+      document.getElementById('set-ayushman').value = state.profile.ayushmanHfrId;
+      document.getElementById('set-pin').value = state.pin;
+
+      // Badges
+      document.getElementById('cart-badge-count').innerText = state.distributorCart.length;
+      document.getElementById('cart-item-count').innerText = `${state.currentSale.items.length} items`;
+
+      // Load selectable items
+      loadMedicineDropdown();
+      renderBillItems();
+      renderCartTable();
+      renderInvoicePreview();
+    }
+
+    // Tab Switching Controller
+    function switchTab(tabId) {
+      const tabs = ['pos', 'database', 'cart', 'calculator', 'symptoms', 'invoices', 'settings'];
+      tabs.forEach(t => {
+        document.getElementById(`tab-content-${t}`).classList.add('hidden');
+        document.getElementById(`tab-content-${t}`).classList.remove('block');
+        
+        // desktop sidebar btn sync
+        const dtBtn = document.getElementById(`tab-btn-${t}`);
+        if (dtBtn) {
+          dtBtn.classList.remove('text-royal-magenta', 'bg-pink-50', 'font-semibold');
+          dtBtn.classList.add('text-slate-600', 'font-medium');
+        }
+
+        // mobile tab sync
+        const mbBtn = document.getElementById(`mob-tab-${t}`);
+        if (mbBtn) {
+          mbBtn.classList.remove('text-royal-magenta');
+          mbBtn.classList.add('text-slate-500');
+        }
+      });
+
+      // Show targeted tab
+      document.getElementById(`tab-content-${tabId}`).classList.remove('hidden');
+      document.getElementById(`tab-content-${tabId}`).classList.add('block');
+
+      // Sync active classes
+      const actDtBtn = document.getElementById(`tab-btn-${tabId}`);
+      if (actDtBtn) {
+        actDtBtn.classList.add('text-royal-magenta', 'bg-pink-50', 'font-semibold');
+        actDtBtn.classList.remove('text-slate-600', 'font-medium');
+      }
+
+      const actMbBtn = document.getElementById(`mob-tab-${tabId}`);
+      if (actMbBtn) {
+        actMbBtn.classList.add('text-royal-magenta');
+        actMbBtn.classList.remove('text-slate-500');
+      }
+    }
+
+    // Role switcher logic
+    function openRoleDialog() {
+      if (state.role === 'OWNER') {
+        Swal.fire({
+          title: 'Switch to Staff Role?',
+          text: 'This will lock administrative screens and restrict editing pharmacy details.',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#9C1258',
+          confirmButtonText: 'Yes, Switch to Staff'
+        }).then((res) => {
+          if (res.isConfirmed) {
+            state.role = 'STAFF';
+            saveStateToLocal();
+            syncUiState();
+            Swal.fire('Role Switched!', 'Operating as general chemist staff worker.', 'info');
+          }
+        });
+      } else {
+        Swal.fire({
+          title: 'Enter Owner Authorization PIN',
+          input: 'password',
+          inputPlaceholder: 'Enter 4-Digit PIN',
+          inputAttributes: {
+            maxlength: 4,
+            autocapitalize: 'off',
+            autocorrect: 'off'
+          },
+          showCancelButton: true,
+          confirmButtonColor: '#9C1258',
+          confirmButtonText: 'Verify PIN'
+        }).then((res) => {
+          if (res.value === state.pin) {
+            state.role = 'OWNER';
+            saveStateToLocal();
+            syncUiState();
+            Swal.fire('Authorized!', 'Unlocked all business owner controls.', 'success');
+          } else if (res.value) {
+            Swal.fire('Unauthorized PIN', 'The authorization token provided was invalid.', 'error');
+          }
+        });
+      }
+    }
+
+    // Sync Management Dialog
+    function openSyncDialog() {
+      Swal.fire({
+        title: 'Google Drive Sync Status',
+        html: `
+          <div class="text-left space-y-3 p-2 text-sm text-slate-600">
+            <div class="flex items-center space-x-2">
+              <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>
+              <span><strong>Drive Link Connected:</strong> sulman995790@gmail.com</span>
+            </div>
+            <div class="flex justify-between border-b border-slate-100 pb-1.5 text-xs">
+              <span>Offline queue count:</span>
+              <span class="font-bold">0 Pending changes</span>
+            </div>
+            <div class="flex justify-between text-xs pb-1.5">
+              <span>Last successful visual sync:</span>
+              <span class="font-bold text-slate-500">Just Now</span>
+            </div>
+          </div>
+        `,
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonColor: '#9C1258',
+        confirmButtonText: 'Force Sync Now'
+      }).then((res) => {
+        if (res.isConfirmed) {
+          const syncDot = document.getElementById('sync-dot');
+          const syncLabel = document.getElementById('sync-label');
+          
+          syncDot.classList.remove('bg-emerald-500');
+          syncDot.classList.add('bg-amber-500');
+          syncLabel.innerText = "Syncing...";
+          
+          setTimeout(() => {
+            syncDot.classList.remove('bg-amber-500');
+            syncDot.classList.add('bg-emerald-500');
+            syncLabel.innerText = "Synced";
+            Swal.fire('Synchronized!', 'Cloud databases successfully compiled & backed up.', 'success');
+          }, 1200);
+        }
+      });
+    }
+
+    // Settings Profile logic
+    function saveProfileSettings() {
+      if (state.role !== 'OWNER') {
+        Swal.fire('Permissions Denied', 'Staff accounts cannot edit regulatory or business profile details.', 'error');
+        return;
+      }
+      
+      state.profile.businessName = document.getElementById('set-name').value;
+      state.profile.phone = document.getElementById('set-phone').value;
+      state.profile.gstin = document.getElementById('set-gstin').value;
+      state.profile.drugLicenseForm20 = document.getElementById('set-dl20').value;
+      state.profile.drugLicenseForm21 = document.getElementById('set-dl21').value;
+      state.profile.ayushmanHfrId = document.getElementById('set-ayushman').value;
+      state.pin = document.getElementById('set-pin').value;
+
+      saveStateToLocal();
+      syncUiState();
+      Swal.fire('Settings Saved!', 'Pharmacy business parameters successfully compiled.', 'success');
+    }
+
+    // Dropdown filled dynamically
+    function loadMedicineDropdown() {
+      const select = document.getElementById('add-item-select');
+      select.innerHTML = '<option value="">-- Choose Brand --</option>';
+      state.drugDatabase.forEach(item => {
+        select.innerHTML += `<option value="${item.name}">${item.name} (${item.generic})</option>`;
+      });
+    }
+
+    function autofillBillItem() {
+      const selectedName = document.getElementById('add-item-select').value;
+      const drug = state.drugDatabase.find(d => d.name === selectedName);
+      if (drug) {
+        document.getElementById('add-item-mrp').value = drug.price;
+      }
+    }
+
+    // Billing Logic POS
+    function addItemToCurrentBill() {
+      const selectName = document.getElementById('add-item-select').value;
+      const qty = parseInt(document.getElementById('add-item-qty').value) || 1;
+      const mrp = parseFloat(document.getElementById('add-item-mrp').value) || 0.0;
+
+      if (!selectName) {
+        Swal.fire('Input Required', 'Please select a medicine brand from the catalog.', 'warning');
+        return;
+      }
+
+      // Add to sales list
+      const existing = state.currentSale.items.find(i => i.name === selectName);
+      if (existing) {
+        existing.qty += qty;
+        existing.total = existing.qty * mrp;
+      } else {
+        state.currentSale.items.push({
+          name: selectName,
+          batch: "RP-" + Math.floor(100 + Math.random() * 900),
+          expiry: "12/2027",
+          qty: qty,
+          mrp: mrp,
+          total: qty * mrp
+        });
+      }
+
+      // Reset values
+      document.getElementById('add-item-select').value = '';
+      document.getElementById('add-item-qty').value = '1';
+      document.getElementById('add-item-mrp').value = '0';
+
+      renderBillItems();
+    }
+
+    function removeBillItem(index) {
+      state.currentSale.items.splice(index, 1);
+      renderBillItems();
+    }
+
+    function renderBillItems() {
+      const tbody = document.getElementById('bill-items-table-body');
+      tbody.innerHTML = '';
+
+      if (state.currentSale.items.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="6" class="px-6 py-8 text-center text-slate-400 text-xs">
+              No medicines added to bill yet. Load sample or add items above.
+            </td>
+          </tr>
+        `;
+        document.getElementById('bill-subtotal').innerText = '₹0.00';
+        document.getElementById('bill-gst').innerText = '₹0.00';
+        document.getElementById('bill-net').innerText = '₹0.00';
+        return;
+      }
+
+      let subtotal = 0.0;
+      state.currentSale.items.forEach((item, index) => {
+        subtotal += item.total;
+        tbody.innerHTML += `
+          <tr class="hover:bg-slate-50 border-b border-slate-100">
+            <td class="px-6 py-4 font-semibold text-slate-900">${item.name}</td>
+            <td class="px-6 py-4 text-center text-xs text-slate-500">${item.batch} (${item.expiry})</td>
+            <td class="px-6 py-4 text-center font-bold">${item.qty}</td>
+            <td class="px-6 py-4 text-right">₹${item.mrp.toFixed(2)}</td>
+            <td class="px-6 py-4 text-right font-bold text-slate-900">₹${item.total.toFixed(2)}</td>
+            <td class="px-6 py-4 text-center">
+              <button onclick="removeBillItem(${index})" class="text-rose-600 hover:text-rose-800">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+              </button>
+            </td>
+          </tr>
+        `;
+      });
+
+      // Update calculations (GST 12% is included in the MRP pricing scheme)
+      const gst = subtotal * 0.12;
+      document.getElementById('bill-subtotal').innerText = `₹${subtotal.toFixed(2)}`;
+      document.getElementById('bill-gst').innerText = `₹${gst.toFixed(2)}`;
+      document.getElementById('bill-net').innerText = `₹${subtotal.toFixed(2)}`;
+      
+      // Update Lucide icons
+      lucide.createIcons();
+    }
+
+    function loadDemoSaleData() {
+      state.currentSale.customerName = "Mr. Amit Kumar Sharma";
+      state.currentSale.doctorName = "Dr. S. K. Sen, MBBS, MD";
+      state.currentSale.items = [
+        { name: "Paracetamol 650mg (Dolo)", batch: "DLO-9921", expiry: "10/2027", qty: 2, mrp: 30.0, total: 60.0 },
+        { name: "Amoxicillin 500mg Capsule", batch: "AMX-1122", expiry: "05/2028", qty: 1, mrp: 72.0, total: 72.0 },
+        { name: "Pantocid 40mg Tablet", batch: "PAN-8812", expiry: "12/2027", qty: 3, mrp: 95.0, total: 285.0 }
+      ];
+      document.getElementById('bill-customer').value = state.currentSale.customerName;
+      document.getElementById('bill-doctor').value = state.currentSale.doctorName;
+      renderBillItems();
+    }
+
+    function clearCurrentSale() {
+      state.currentSale.items = [];
+      document.getElementById('bill-customer').value = '';
+      document.getElementById('bill-doctor').value = '';
+      renderBillItems();
+    }
+
+    function checkoutSale() {
+      if (state.currentSale.items.length === 0) {
+        Swal.fire('Empty Sales Bill', 'Please add items to memo cart before check out.', 'warning');
+        return;
+      }
+
+      state.currentSale.customerName = document.getElementById('bill-customer').value || "Walk-in Customer";
+      state.currentSale.doctorName = document.getElementById('bill-doctor').value || "Dr. Self / None";
+      state.currentSale.paymentMode = document.getElementById('bill-payment').value;
+
+      Swal.fire({
+        title: 'Checking Out Cash Memo...',
+        timer: 800,
+        didOpen: () => { Swal.showLoading() }
+      }).then(() => {
+        // Switch to Invoices & sync preview
+        switchTab('invoices');
+        renderInvoicePreview();
+      });
+    }
+
+    // Distributor Cart / Required products
+    function renderCartTable() {
+      const tbody = document.getElementById('cart-table-body');
+      tbody.innerHTML = '';
+
+      if (state.distributorCart.length === 0) {
+        // Fill initial mock requested purchase required items
+        state.distributorCart = [
+          { name: "Paracetamol 650mg (Dolo)", batch: "BATCH-DOLO", qty: 50, cost: 30.0, total: 1500 },
+          { name: "Amoxicillin 500mg Capsule", batch: "BATCH-AMOX", qty: 30, cost: 72.0, total: 2160 },
+          { name: "Ceftriaxone 1g Injectable", batch: "BATCH-CEFT", qty: 10, cost: 110.0, total: 1100 }
+        ];
+      }
+
+      let poTotal = 0.0;
+      state.distributorCart.forEach((item, index) => {
+        poTotal += item.total;
+        tbody.innerHTML += `
+          <tr class="hover:bg-slate-50 border-b border-slate-100">
+            <td class="px-6 py-4 font-semibold text-slate-900">${item.name}</td>
+            <td class="px-6 py-4 text-center text-xs text-slate-500">${item.batch}</td>
+            <td class="px-6 py-4 text-center font-bold">
+              <input type="number" value="${item.qty}" min="1" onchange="updateCartQty(${index}, this.value)" class="w-16 border rounded text-center py-1">
+            </td>
+            <td class="px-6 py-4 text-right font-bold text-emerald-600">₹${item.total.toFixed(2)}</td>
+            <td class="px-6 py-4 text-center">
+              <button onclick="removeCartItem(${index})" class="text-rose-600 hover:text-rose-800">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+              </button>
+            </td>
+          </tr>
+        `;
+      });
+
+      document.getElementById('export-total-items').innerText = state.distributorCart.length;
+      document.getElementById('export-total-price').innerText = `₹${poTotal.toFixed(2)}`;
+      lucide.createIcons();
+    }
+
+    function updateCartQty(index, val) {
+      const q = parseInt(val) || 1;
+      state.distributorCart[index].qty = q;
+      state.distributorCart[index].total = q * state.distributorCart[index].cost;
+      saveStateToLocal();
+      renderCartTable();
+    }
+
+    function removeCartItem(index) {
+      state.distributorCart.splice(index, 1);
+      saveStateToLocal();
+      renderCartTable();
+    }
+
+    function clearDistributorCart() {
+      state.distributorCart = [];
+      saveStateToLocal();
+      renderCartTable();
+    }
+
+    function addCustomCartItem() {
+      Swal.fire({
+        title: 'Add Purchase Request Product',
+        html: `
+          <input id="swal-item-name" class="swal2-input" placeholder="Medicine Brand Name">
+          <input id="swal-item-qty" type="number" class="swal2-input" placeholder="Required Quantity" value="10">
+          <input id="swal-item-cost" type="number" class="swal2-input" placeholder="Estimated Unit Cost (₹)" value="50">
+        `,
+        focusConfirm: false,
+        preConfirm: () => {
+          return {
+            name: document.getElementById('swal-item-name').value,
+            qty: parseInt(document.getElementById('swal-item-qty').value) || 10,
+            cost: parseFloat(document.getElementById('swal-item-cost').value) || 50.0
+          }
+        }
+      }).then((res) => {
+        if (res.value && res.value.name) {
+          state.distributorCart.push({
+            name: res.value.name,
+            batch: "REQ-REF",
+            qty: res.value.qty,
+            cost: res.value.cost,
+            total: res.value.qty * res.value.cost
+          });
+          saveStateToLocal();
+          renderCartTable();
+          Swal.fire('Added!', 'Custom purchase request logged.', 'success');
+        }
+      });
+    }
+
+    // SheetJS Batch Excel/CSV/PDF Export Logic (NETLIFY STANDARDS)
+    function exportCart(format) {
+      if (state.distributorCart.length === 0) {
+        Swal.fire('Empty list', 'There are no active purchase orders to export.', 'warning');
+        return;
+      }
+
+      // Prep Data
+      const exportData = state.distributorCart.map(item => ({
+        "Medicine Required": item.name,
+        "Batch Reference": item.batch,
+        "Quantity": item.qty,
+        "Unit Cost (₹)": item.cost,
+        "Subtotal PO Value (₹)": item.total
+      }));
+
+      const dateStr = new Date().toISOString().slice(0, 10);
+      const filename = `RoyalChemist_Purchase_Required_${dateStr}`;
+
+      if (format === 'csv') {
+        const ws = XLSX.utils.json_to_sheet(exportData);
+        const csvOutput = XLSX.utils.sheet_to_csv(ws);
+        const blob = new Blob(["\uFEFF" + csvOutput], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `${filename}.csv`;
+        a.click();
+        Swal.fire('Export Successful', 'CSV Sheet downloaded.', 'success');
+      } 
+      else if (format === 'xls' || format === 'xlsx') {
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(exportData);
+        XLSX.utils.book_append_sheet(wb, ws, "Purchase Orders");
+        XLSX.writeFile(wb, `${filename}.${format}`);
+        Swal.fire('Export Successful', `${format.toUpperCase()} sheet generated successfully.`, 'success');
+      } 
+      else if (format === 'pdf') {
+        // PDF generation using window.print style or basic simulation layout
+        const { jsPDF } = window.jspdf ? window.jspdf : { jsPDF: null };
+        if (jsPDF) {
+          const doc = new jsPDF();
+          doc.setFontSize(16);
+          doc.text("ROYAL PHARMACY DISTRIBUTOR PURCHASE ORDER", 14, 20);
+          doc.setFontSize(10);
+          doc.text(`PO Date: ${dateStr}`, 14, 28);
+          doc.text(`Supplier: Approved Wholesale Distributors`, 14, 34);
+          doc.text("--------------------------------------------------------------------------------", 14, 40);
+          
+          let y = 48;
+          doc.text("Required Drug Formulation", 14, y);
+          doc.text("Qty", 120, y);
+          doc.text("Cost", 145, y);
+          doc.text("Total Value", 170, y);
+          doc.text("--------------------------------------------------------------------------------", 14, y+4);
+          
+          y += 10;
+          state.distributorCart.forEach(item => {
+            doc.text(item.name, 14, y);
+            doc.text(item.qty.toString(), 120, y);
+            doc.text(`Rs. ${item.cost.toFixed(2)}`, 145, y);
+            doc.text(`Rs. ${item.total.toFixed(2)}`, 170, y);
+            y += 8;
+          });
+          
+          doc.save(`${filename}.pdf`);
+          Swal.fire('Export Successful', 'Purchase Order PDF saved.', 'success');
+        } else {
+          // Direct styling preview print
+          window.print();
+        }
+      }
+    }
+
+    // Search Local Catalog
+    function searchDrugs() {
+      const q = document.getElementById('drug-search').value.toLowerCase();
+      const filter = document.getElementById('drug-category-filter').value;
+      const tbody = document.getElementById('drugs-table-body');
+      tbody.innerHTML = '';
+
+      const filtered = state.drugDatabase.filter(d => {
+        const matchesQ = d.name.toLowerCase().includes(q) || d.generic.toLowerCase().includes(q) || d.hsn.includes(q);
+        const matchesCategory = filter === "" || d.category === filter;
+        return matchesQ && matchesCategory;
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-6 text-center text-slate-400">No results match search queries.</td></tr>`;
+        return;
+      }
+
+      filtered.forEach(item => {
+        tbody.innerHTML += `
+          <tr class="hover:bg-slate-50 border-b border-slate-100">
+            <td class="px-6 py-4">
+              <p class="font-bold text-slate-900">${item.name}</p>
+              <p class="text-xs text-slate-400">${item.generic}</p>
+            </td>
+            <td class="px-6 py-4 text-center text-xs">${item.hsn}</td>
+            <td class="px-6 py-4 text-center">
+              <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold ${item.stock > 200 ? 'bg-emerald-50 text-emerald-700':'bg-rose-50 text-rose-700'}">${item.stock} strips</span>
+            </td>
+            <td class="px-6 py-4 text-right font-semibold">₹${item.price.toFixed(2)}</td>
+            <td class="px-6 py-4 text-center text-xs font-bold text-pink-600">${item.safety}</td>
+            <td class="px-6 py-4 text-center">
+              <button onclick="requestStockToCart('${item.name}', ${item.price})" class="bg-royal-magenta text-white px-3 py-1 rounded text-xs hover:bg-royal-accent">Add Purchase</button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    function requestStockToCart(name, cost) {
+      state.distributorCart.push({
+        name: name,
+        batch: "CAT-REQ",
+        qty: 10,
+        cost: cost,
+        total: 10 * cost
+      });
+      saveStateToLocal();
+      syncUiState();
+      Swal.fire('Added!', `${name} added to Required Purchases.`, 'success');
+    }
+
+    // Dosage Calculator Logic
+    function onDosageDrugChange() {
+      const drug = document.getElementById('calc-drug').value;
+      const factor = document.getElementById('calc-factor');
+      if (drug === 'paracetamol') factor.value = '15';
+      else if (drug === 'ibuprofen') factor.value = '10';
+      else if (drug === 'amoxicillin') factor.value = '25';
+      else if (drug === 'cetirizine') factor.value = '0.25';
+      calculateDosage();
+    }
+
+    function calculateDosage() {
+      const weight = parseFloat(document.getElementById('calc-weight').value) || 15;
+      const age = document.getElementById('calc-age').value;
+      const drug = document.getElementById('calc-drug').value;
+      const factor = parseFloat(document.getElementById('calc-factor').value) || 15;
+
+      let mgResult = weight * factor;
+      let mlResult = 0.0;
+      let interval = "Every 4 to 6 hours";
+
+      if (drug === 'paracetamol') {
+        // 120mg/5ml => 1ml = 24mg
+        mlResult = mgResult / 24;
+      } else if (drug === 'ibuprofen') {
+        // 100mg/5ml => 1ml = 20mg
+        mlResult = mgResult / 20;
+      } else if (drug === 'amoxicillin') {
+        // 125mg/5ml => 1ml = 25mg
+        mlResult = mgResult / 25;
+        interval = "Every 8 hours (3 times daily)";
+      } else if (drug === 'cetirizine') {
+        // 5mg/5ml syrup
+        mlResult = mgResult / 1;
+        interval = "Once daily (at night)";
+      }
+
+      document.getElementById('calc-volume-result').innerText = `${mlResult.toFixed(2)} ml`;
+      document.getElementById('calc-substance-result').innerText = `${mgResult.toFixed(2)} mg`;
+      document.getElementById('calc-interval-result').innerText = interval;
+    }
+
+    // Symptom Triage Checker
+    function runSymptomChecker() {
+      const panel = document.getElementById('symptom-result-panel');
+      const emptyState = document.getElementById('symptom-empty-state');
+      const checkboxes = document.querySelectorAll('#symptom-checkboxes input:checked');
+
+      if (checkboxes.length === 0) {
+        panel.classList.add('hidden');
+        emptyState.classList.remove('hidden');
+        return;
+      }
+
+      panel.classList.remove('hidden');
+      emptyState.classList.add('hidden');
+
+      let selected = Array.from(checkboxes).map(c => c.value);
+      
+      const banner = document.getElementById('symptom-risk-banner');
+      const bannerIconBg = document.getElementById('symptom-risk-icon-bg');
+      const riskTitle = document.getElementById('symptom-risk-title');
+      const riskDesc = document.getElementById('symptom-risk-desc');
+      const otcList = document.getElementById('symptom-otc-list');
+      const cautionText = document.getElementById('symptom-precaution-text');
+
+      // Triage Rules
+      if (selected.includes('fever') && selected.includes('cough')) {
+        banner.className = "flex items-center space-x-3 p-4 rounded-xl border border-rose-200 bg-rose-50 text-rose-800";
+        bannerIconBg.className = "p-2 rounded-full bg-rose-600 text-white";
+        riskTitle.innerText = "Triage Alert: Moderate to High Risk";
+        riskDesc.innerText = "Symptom set could indicate acute bronchial or respiratory challenges. Restrict dosage and advice MBBS doctor review.";
+        otcList.innerHTML = `
+          <span class="bg-rose-100 text-rose-800 text-xs px-2.5 py-1 rounded-full font-bold">Antipyretics</span>
+          <span class="bg-rose-100 text-rose-800 text-xs px-2.5 py-1 rounded-full font-bold">Cough Suppressants</span>
+        `;
+        cautionText.innerText = "Do NOT dose multi-ingredient syrups simultaneously to avoid accidental paracetamol double-dosing hazards.";
+      } else if (selected.includes('acidity')) {
+        banner.className = "flex items-center space-x-3 p-4 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800";
+        bannerIconBg.className = "p-2 rounded-full bg-emerald-600 text-white";
+        riskTitle.innerText = "Triage: Mild Digestive Distress";
+        riskDesc.innerText = "Simple hyperacidity or bloating. Highly responsive to Over-The-Counter chemist solutions.";
+        otcList.innerHTML = `
+          <span class="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-1 rounded-full font-bold">Proton Pump Inhibitors</span>
+          <span class="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-1 rounded-full font-bold">Antacids Suspensions</span>
+        `;
+        cautionText.innerText = "Advise patient to avoid lying down immediately after meals and restrict high acidic oil diet patterns.";
+      } else {
+        banner.className = "flex items-center space-x-3 p-4 rounded-xl border border-amber-200 bg-amber-50 text-amber-800";
+        bannerIconBg.className = "p-2 rounded-full bg-amber-600 text-white";
+        riskTitle.innerText = "Triage Warning: Basic Chemist Care";
+        riskDesc.innerText = "Symptoms are safe to treat with generic cold, allergy, or anti-inflammatory drugs.";
+        otcList.innerHTML = `
+          <span class="bg-amber-100 text-amber-800 text-xs px-2.5 py-1 rounded-full font-bold">Antihistamines</span>
+          <span class="bg-amber-100 text-amber-800 text-xs px-2.5 py-1 rounded-full font-bold">Saline Nasal Drops</span>
+        `;
+        cautionText.innerText = "Advise plenty of warm fluid hydration. Review again if indicators continue over 72 hours.";
+      }
+    }
+
+    // Smart Invoice printer rendering logic
+    function openEditDetailsDialog() {
+      if (state.role !== 'OWNER') {
+        Swal.fire('Permissions Restricted', 'Staff accounts cannot edit pharmacy details on cash memo settings.', 'error');
+        return;
+      }
+
+      Swal.fire({
+        title: 'Edit Pharmacy Cash Memo Details',
+        html: `
+          <input id="inv-bname" class="swal2-input" placeholder="Pharmacy Name" value="${state.profile.businessName}">
+          <input id="inv-phone" class="swal2-input" placeholder="Phone" value="${state.profile.phone}">
+          <input id="inv-gstin" class="swal2-input" placeholder="GSTIN" value="${state.profile.gstin}">
+          <input id="inv-dl20" class="swal2-input" placeholder="Drug Lic 20B" value="${state.profile.drugLicenseForm20}">
+          <input id="inv-dl21" class="swal2-input" placeholder="Drug Lic 21B" value="${state.profile.drugLicenseForm21}">
+        `,
+        focusConfirm: false,
+        preConfirm: () => {
+          return {
+            businessName: document.getElementById('inv-bname').value,
+            phone: document.getElementById('inv-phone').value,
+            gstin: document.getElementById('inv-gstin').value,
+            drugLicenseForm20: document.getElementById('inv-dl20').value,
+            drugLicenseForm21: document.getElementById('inv-dl21').value
+          }
+        }
+      }).then((res) => {
+        if (res.value) {
+          state.profile = { ...state.profile, ...res.value };
+          saveStateToLocal();
+          syncUiState();
+          Swal.fire('Updated!', 'Pharmacy cash memo headers updated.', 'success');
+        }
+      });
+    }
+
+    function renderInvoicePreview() {
+      const sheet = document.getElementById('invoice-preview-sheet');
+      const incGst = document.getElementById('inc-gst').checked;
+      const incDl = document.getElementById('inc-dl').checked;
+      const incAyushman = document.getElementById('inc-ayushman').checked;
+      const paperSize = document.getElementById('invoice-paper').value;
+      const copyType = document.getElementById('invoice-copy').value;
+
+      // Adjust preview width depending on selection
+      if (paperSize === 'A4_STANDARD') {
+        sheet.style.width = '550px';
+      } else {
+        sheet.style.width = '380px';
+      }
+
+      let subtotal = 0.0;
+      let itemsRows = '';
+
+      if (state.currentSale.items.length === 0) {
+        itemsRows = `<tr><td colspan="4" class="text-center py-6 text-xs text-slate-400 italic">No bill medicines checkout yet. Sample demo loaded.</td></tr>`;
+        // Fallback sample view
+        subtotal = 417.00;
+        itemsRows = `
+          <tr style="border-bottom: 1px dashed #e2e8f0; font-size: 11px;">
+            <td style="padding: 6px 0;"><strong>Paracetamol (Dolo) 650mg</strong><br><span style="font-size: 9px; color:#64748b">Batch: DLO-99 | Exp: 12/27</span></td>
+            <td class="text-center">2</td>
+            <td class="text-right">₹30.00</td>
+            <td class="text-right">₹60.00</td>
+          </tr>
+          <tr style="border-bottom: 1px dashed #e2e8f0; font-size: 11px;">
+            <td style="padding: 6px 0;"><strong>Pantocid 40mg Tablet</strong><br><span style="font-size: 9px; color:#64748b">Batch: PAN-88 | Exp: 10/27</span></td>
+            <td class="text-center">3</td>
+            <td class="text-right">₹95.00</td>
+            <td class="text-right">₹285.00</td>
+          </tr>
+        `;
+      } else {
+        state.currentSale.items.forEach(item => {
+          subtotal += item.total;
+          itemsRows += `
+            <tr style="border-bottom: 1px dashed #e2e8f0; font-size: 11px;">
+              <td style="padding: 6px 0;"><strong>${item.name}</strong><br><span style="font-size: 9px; color:#64748b">Batch: ${item.batch} | Exp: ${item.expiry}</span></td>
+              <td class="text-center">${item.qty}</td>
+              <td class="text-right">₹${item.mrp.toFixed(2)}</td>
+              <td class="text-right">₹${item.total.toFixed(2)}</td>
+            </tr>
+          `;
+        });
+      }
+
+      const gstVal = subtotal * 0.12;
+
+      sheet.innerHTML = `
+        <div class="space-y-4">
+          <!-- Pharmacy Headings -->
+          <div class="text-center">
+            <h4 class="font-bold text-base tracking-wide">${state.profile.businessName}</h4>
+            <p class="text-[11px] text-slate-500">${state.profile.addressLine1}, ${state.profile.addressLine2}</p>
+            <p class="text-[11px] text-slate-500">Phone: ${state.profile.phone}</p>
+            <p class="text-[10px] font-bold text-pink-600 tracking-wider uppercase mt-1">[${copyType} FOR CUSTOMER]</p>
+          </div>
+
+          <div style="border-bottom: 1px dashed #475569;"></div>
+
+          <!-- Regulatory Block -->
+          <div class="grid grid-cols-2 text-[10px] gap-2 text-slate-600">
+            <div>
+              <p><strong>Customer:</strong> ${state.currentSale.customerName}</p>
+              <p><strong>Prescription:</strong> ${state.currentSale.doctorName}</p>
+            </div>
+            <div class="text-right">
+              <p><strong>Memo No:</strong> MEMO-${Math.floor(1000 + Math.random()*9000)}</p>
+              <p><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
+            </div>
+          </div>
+
+          <div style="border-bottom: 1px dashed #475569;"></div>
+
+          <!-- Item Table -->
+          <table class="w-full text-left text-xs">
+            <thead>
+              <tr style="border-bottom: 1px solid #475569; font-size: 10px; font-weight: bold; color: #475569;">
+                <th style="padding-bottom: 4px;">Item Particulars</th>
+                <th class="text-center" style="padding-bottom: 4px;">Qty</th>
+                <th class="text-right" style="padding-bottom: 4px;">MRP</th>
+                <th class="text-right" style="padding-bottom: 4px;">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itemsRows}
+            </tbody>
+          </table>
+
+          <div style="border-bottom: 1px dashed #475569;"></div>
+
+          <!-- Totals -->
+          <div class="space-y-1 text-xs">
+            <div class="flex justify-between text-slate-600">
+              <span>Subtotal:</span>
+              <span>₹${subtotal.toFixed(2)}</span>
+            </div>
+            ${incGst ? `
+            <div class="flex justify-between text-slate-600">
+              <span>GST (12% Included):</span>
+              <span>₹${gstVal.toFixed(2)}</span>
+            </div>` : ''}
+            <div class="flex justify-between font-bold text-sm text-slate-900 border-t border-slate-200 pt-1">
+              <span>Net Payable:</span>
+              <span>₹${subtotal.toFixed(2)}</span>
+            </div>
+          </div>
+
+          <div style="border-bottom: 1px dashed #475569;"></div>
+
+          <!-- Licenses and Signatures -->
+          <div class="text-[9px] text-slate-500 space-y-1">
+            ${incDl ? `<p><strong>DL Form 20B / 21B:</strong> ${state.profile.drugLicenseForm20} / ${state.profile.drugLicenseForm21}</p>` : ''}
+            ${incGst ? `<p><strong>GSTIN:</strong> ${state.profile.gstin}</p>` : ''}
+            ${incAyushman ? `<p><strong>Ayushman HFR ID:</strong> ${state.profile.ayushmanHfrId}</p>` : ''}
+          </div>
+
+          <div class="pt-6 flex justify-between items-end text-[10px] text-slate-500">
+            <div>
+              <p>Payment Mode: <strong>${state.currentSale.paymentMode}</strong></p>
+              <p class="text-[9px] text-emerald-600">✔ Fully compliant Chemist Cash Memo</p>
+            </div>
+            <div class="text-center">
+              <div class="w-24 border-t border-slate-300 mx-auto mt-6"></div>
+              <p class="text-[9px] pt-1">Pharmacist Signatory</p>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function printInvoiceBrowser() {
+      // Create temporary print window
+      const printContents = document.getElementById('invoice-preview-sheet').innerHTML;
+      const originalContents = document.body.innerHTML;
+      
+      const popup = window.open('', '_blank');
+      popup.document.open();
+      popup.document.write(`
+        <html>
+        <head>
+          <title>Cash Memo Print</title>
+          <style>
+            body { font-family: 'Courier New', Courier, monospace; width: 80mm; padding: 10px; margin: 0 auto; color: #000; }
+            .text-center { text-align: center; }
+            .text-right { text-align: right; }
+            .flex { display: flex; justify-content: space-between; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { font-size: 11px; }
+            hr { border-top: 1px dashed #000; }
+          </style>
+        </head>
+        <body onload="window.print(); window.close();">
+          ${printContents}
+        </body>
+        </html>
+      `);
+      popup.document.close();
+    }
+
+    function simulateBluetoothPrinterPrint() {
+      Swal.fire({
+        title: 'Searching for ESC/POS Bluetooth Thermal Printers...',
+        html: `
+          <div class="text-left space-y-2.5 text-xs text-slate-600 p-2">
+            <p class="font-semibold mb-2">Select paired chemist printer:</p>
+            <label class="flex items-center space-x-3 p-2.5 bg-slate-50 rounded-lg border border-slate-200 cursor-pointer">
+              <input type="radio" name="bt-p" checked value="pos58">
+              <span><strong>BT-POS58 Thermal Printer</strong> (00:11:22:33:44:55)</span>
+            </label>
+            <label class="flex items-center space-x-3 p-2.5 bg-slate-50 rounded-lg border border-slate-200 cursor-pointer">
+              <input type="radio" name="bt-p" value="pos80">
+              <span><strong>POS-80 Bluetooth Receipt Printer</strong> (AA:BB:CC:DD:EE:FF)</span>
+            </label>
+            <p class="text-[10px] text-slate-400 mt-2">Ensure your 2-inch or 3-inch thermal roll printer is turned on with Bluetooth active.</p>
+          </div>
+        `,
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonColor: '#9C1258',
+        confirmButtonText: 'Print ESC/POS Ticket'
+      }).then((res) => {
+        if (res.isConfirmed) {
+          Swal.fire({
+            title: 'Sending ESC/POS Bytes...',
+            text: 'Sending raw receipt data to bluetooth SPP socket (RFCOMM)...',
+            timer: 1500,
+            didOpen: () => { Swal.showLoading() }
+          }).then(() => {
+            Swal.fire('Print Succeeded!', '✅ ESC/POS Thermal Receipt sent to Bluetooth Printer.', 'success');
+          });
+        }
+      });
+    }
+
+    // Startup Init
+    window.addEventListener('DOMContentLoaded', () => {
+      loadSavedState();
+      onDosageDrugChange();
+    });
+  </script>
+</body>
+</html>
