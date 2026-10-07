@@ -25,10 +25,9 @@ jobs:
         gradle-version: '9.3.1'
 
     - name: Generate Dummy Debug Keystore
-      # This places the keystore exactly where the runner base directory expects it
+      # This targets the actual project app folder explicitly using the workspace variable
       run: |
-        mkdir -p app
-        keytool -genkey -v -keystore app/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+        keytool -genkey -v -keystore ${{ github.workspace }}/app/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
 
     - name: Build Debug APK
       run: gradle assembleDebug
