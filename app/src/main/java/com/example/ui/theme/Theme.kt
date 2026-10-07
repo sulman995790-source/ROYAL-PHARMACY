@@ -30,25 +30,28 @@ private val LightColorScheme = lightColorScheme(
 )
 
 private val DarkColorScheme = darkColorScheme(
-  primary = Color(0xFFEC4899), // Bright Magenta for dark theme
-  onPrimary = Color.White,
-  primaryContainer = Color(0xFF831843),
+  primary = Color(0xFFF472B6), // Vibrant Pink 400
+  onPrimary = Color(0xFF500724),
+  primaryContainer = Color(0xFF831843), // Rich Magenta 900
   onPrimaryContainer = Color(0xFFFCE7F3),
-  secondary = Color(0xFF93C5FD), // Soft Blue
-  onSecondary = Color(0xFF0F172A),
+  secondary = Color(0xFF38BDF8), // Vibrant Sky 400
+  onSecondary = Color(0xFF082F49),
   secondaryContainer = Color(0xFF1E293B),
   onSecondaryContainer = Color(0xFFE2E8F0),
-  tertiary = Color(0xFFFB923C),
+  tertiary = Color(0xFFFB923C), // Orange 400
+  onTertiary = Color(0xFF431407),
   background = Color(0xFF0F172A), // Slate 900
-  onBackground = Color(0xFFF8FAFC),
+  onBackground = Color(0xFFF8FAFC), // Slate 50
   surface = Color(0xFF1E293B), // Slate 800
   onSurface = Color(0xFFF8FAFC),
-  surfaceVariant = Color(0xFF334155),
-  onSurfaceVariant = Color(0xFF94A3B8),
-  outline = Color(0xFF475569),
+  surfaceVariant = Color(0xFF334155), // Slate 700
+  onSurfaceVariant = Color(0xFFCBD5E1), // Slate 300
+  outline = Color(0xFF475569), // Slate 600
   outlineVariant = Color(0xFF334155),
   error = Color(0xFFF87171),
-  errorContainer = Color(0xFF7F1D1D)
+  onError = Color(0xFF450A0A),
+  errorContainer = Color(0xFF7F1D1D),
+  onErrorContainer = Color(0xFFFEE2E2)
 )
 
 @Composable

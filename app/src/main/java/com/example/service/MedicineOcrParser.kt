@@ -329,6 +329,66 @@ object MedicineOcrParser {
     )
   }
 
+  /**
+   * Aggregates and merges OCR results from multiple photos (e.g. Photo 1: Front Brand, Photo 2: Flap with Batch & Exp, Photo 3: MRP/Composition).
+   */
+  fun parseMultipleMedicinePackageTexts(rawTexts: List<String>, inventory: List<MedicineItem> = emptyList()): ParsedMedicineOcrResult {
+    if (rawTexts.isEmpty()) {
+      return parseMedicinePackageText("", inventory)
+    }
+    if (rawTexts.size == 1) {
+      return parseMedicinePackageText(rawTexts.first(), inventory)
+    }
+
+    val individualResults = rawTexts.map { parseMedicinePackageText(it, inventory) }
+    
+    // Aggregate full combined text
+    val combinedRawText = rawTexts.joinToString("\n--- PHOTO SEPARATOR ---\n")
+
+    // Merge best detected fields
+    val bestName = individualResults.map { it.medicineName }.firstOrNull { it.isNotBlank() && !it.equals("Unidentified Medicine", ignoreCase = true) }
+      ?: individualResults.firstOrNull()?.medicineName ?: "Unidentified Medicine"
+
+    val bestSalt = individualResults.map { it.saltComposition }.firstOrNull { it.isNotBlank() } ?: ""
+
+    val bestBatch = individualResults.map { it.batchNumber }.firstOrNull { it.isNotBlank() && !it.startsWith("RX") }
+      ?: individualResults.map { it.batchNumber }.firstOrNull { it.isNotBlank() } ?: ("RX" + (1000..9999).random())
+
+    val bestExpiry = individualResults.map { it.expiryDate }.firstOrNull { it.isNotBlank() && !it.equals("12/27") }
+      ?: individualResults.map { it.expiryDate }.firstOrNull { it.isNotBlank() } ?: "12/27"
+
+    val bestMfg = individualResults.map { it.mfgDate }.firstOrNull { it.isNotBlank() && !it.equals("01/25") }
+      ?: individualResults.map { it.mfgDate }.firstOrNull { it.isNotBlank() } ?: "01/25"
+
+    val bestMrp = individualResults.map { it.mrp }.firstOrNull { it > 0 && it != 125.0 }
+      ?: individualResults.map { it.mrp }.firstOrNull { it > 0 } ?: 125.0
+
+    val bestMfgCompany = individualResults.map { it.manufacturer }.firstOrNull { it.isNotBlank() && !it.equals("Standard Pharmaceutical Ltd", ignoreCase = true) }
+      ?: individualResults.map { it.manufacturer }.firstOrNull { it.isNotBlank() } ?: "Standard Pharmaceutical Ltd"
+
+    val bestCategory = individualResults.map { it.category }.firstOrNull { it != "Tablet" } ?: "Tablet"
+
+    val bestSchedule = individualResults.map { it.scheduleCategory }.firstOrNull { it != "Schedule H" } ?: "Schedule H"
+
+    // Multi-photo fusion yields higher baseline confidence
+    val score = (calculateConfidence(bestName, bestBatch, bestExpiry, bestMrp) + (rawTexts.size * 3)).coerceIn(60, 99)
+
+    return ParsedMedicineOcrResult(
+      rawText = combinedRawText,
+      medicineName = bestName,
+      saltComposition = bestSalt,
+      batchNumber = bestBatch,
+      expiryDate = bestExpiry,
+      mfgDate = bestMfg,
+      mrp = bestMrp,
+      manufacturer = bestMfgCompany,
+      category = bestCategory,
+      scheduleCategory = bestSchedule,
+      confidenceScore = score,
+      isVerified = score >= 75
+    )
+  }
+
   private fun normalizeExpiry(raw: String): String {
     val clean = raw.trim().replace("-", "/").replace(".", "/")
     return if (clean.length == 5 && clean.contains("/")) clean

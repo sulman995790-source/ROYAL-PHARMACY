@@ -16,19 +16,33 @@ android {
     applicationId = "com.aistudio.royalpharmacy.kpvmrx"
     minSdk = 26
     targetSdk = 36
-    versionCode = 1
-    versionName = "1.0"
+
+    // Dynamically checks the GitHub environment counter to auto-increment version code
+    val githubBuildNumber = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1
+    versionCode = githubBuildNumber
+    versionName = "1.0.$githubBuildNumber"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
 
   signingConfigs {
+    val releaseKeystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks"
+    val releaseStoreFile = file(releaseKeystorePath)
+    val hasReleaseSecret = !System.getenv("STORE_PASSWORD").isNullOrEmpty()
+
     create("release") {
-      val keystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks"
-      storeFile = file(keystorePath)
-      storePassword = System.getenv("STORE_PASSWORD")
-      keyAlias = "upload"
-      keyPassword = System.getenv("KEY_PASSWORD")
+      if (releaseStoreFile.exists() && hasReleaseSecret) {
+        storeFile = releaseStoreFile
+        storePassword = System.getenv("STORE_PASSWORD")
+        keyAlias = System.getenv("KEY_ALIAS") ?: "upload"
+        keyPassword = System.getenv("KEY_PASSWORD") ?: System.getenv("STORE_PASSWORD")
+      } else {
+        // Automatically fallback to debug.keystore so APK downloads from GitHub Actions are consistently signed
+        storeFile = file("${rootDir}/debug.keystore")
+        storePassword = "android"
+        keyAlias = "androiddebugkey"
+        keyPassword = "android"
+      }
     }
     create("debugConfig") {
       storeFile = file("${rootDir}/debug.keystore")

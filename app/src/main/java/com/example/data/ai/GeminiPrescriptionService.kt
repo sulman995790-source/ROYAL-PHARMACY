@@ -7,6 +7,7 @@ import android.net.Uri
 import android.util.Base64
 import com.example.BuildConfig
 import com.example.data.model.MedicineItem
+import com.example.service.ImageOcrPreprocessor
 import com.example.service.MedicineOcrParser
 import com.google.android.gms.tasks.Tasks
 import com.google.mlkit.vision.common.InputImage
@@ -69,17 +70,18 @@ object GeminiPrescriptionService {
   }
 
   private fun Bitmap.toBase64(): String {
+    val preprocessed = ImageOcrPreprocessor.preprocessForOcr(this, contrastGain = 1.4f, brightnessOffset = 5f, applySharpening = true)
     val maxDimension = 1200
-    val scaledBitmap = if (width > maxDimension || height > maxDimension) {
-      val ratio = width.toFloat() / height.toFloat()
-      val newWidth = if (width > height) maxDimension else (maxDimension * ratio).toInt()
-      val newHeight = if (height > width) maxDimension else (maxDimension / ratio).toInt()
-      Bitmap.createScaledBitmap(this, newWidth.coerceAtLeast(1), newHeight.coerceAtLeast(1), true)
+    val scaledBitmap = if (preprocessed.width > maxDimension || preprocessed.height > maxDimension) {
+      val ratio = preprocessed.width.toFloat() / preprocessed.height.toFloat()
+      val newWidth = if (preprocessed.width > preprocessed.height) maxDimension else (maxDimension * ratio).toInt()
+      val newHeight = if (preprocessed.height > preprocessed.width) maxDimension else (maxDimension / ratio).toInt()
+      Bitmap.createScaledBitmap(preprocessed, newWidth.coerceAtLeast(1), newHeight.coerceAtLeast(1), true)
     } else {
-      this
+      preprocessed
     }
     val outputStream = ByteArrayOutputStream()
-    scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 80, outputStream)
+    scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 85, outputStream)
     return Base64.encodeToString(outputStream.toByteArray(), Base64.NO_WRAP)
   }
 
@@ -95,7 +97,8 @@ object GeminiPrescriptionService {
 
   suspend fun extractTextFromBitmap(bitmap: Bitmap): String = withContext(Dispatchers.IO) {
     try {
-      val image = InputImage.fromBitmap(bitmap, 0)
+      val enhancedBitmap = ImageOcrPreprocessor.preprocessForOcr(bitmap)
+      val image = InputImage.fromBitmap(enhancedBitmap, 0)
       val visionText = Tasks.await(textRecognizer.process(image), 5000, TimeUnit.MILLISECONDS)
       visionText.text
     } catch (_: Exception) {

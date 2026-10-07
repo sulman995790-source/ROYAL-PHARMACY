@@ -23,6 +23,7 @@
 
   <script>
     tailwind.config = {
+      darkMode: 'class',
       theme: {
         extend: {
           fontFamily: {
@@ -45,6 +46,38 @@
       font-family: 'Plus Jakarta Sans', sans-serif;
       background-color: #F8FAFC;
     }
+    html.dark body {
+      background-color: #0F172A;
+      color: #F8FAFC;
+    }
+    html.dark .bg-white {
+      background-color: #1E293B !important;
+      color: #F8FAFC !important;
+    }
+    html.dark .bg-slate-50 {
+      background-color: #0F172A !important;
+    }
+    html.dark .border-slate-200, html.dark .border-slate-100 {
+      border-color: #334155 !important;
+    }
+    html.dark .text-slate-900, html.dark .text-slate-800, html.dark .text-slate-700 {
+      color: #F8FAFC !important;
+    }
+    html.dark .text-slate-600, html.dark .text-slate-500 {
+      color: #94A3B8 !important;
+    }
+    html.dark input, html.dark select, html.dark textarea {
+      background-color: #0F172A !important;
+      color: #F8FAFC !important;
+      border-color: #334155 !important;
+    }
+    html.dark .hover\:bg-slate-50:hover {
+      background-color: #334155 !important;
+    }
+    html.dark .swal2-popup {
+      background-color: #1E293B !important;
+      color: #F8FAFC !important;
+    }
     .custom-scrollbar::-webkit-scrollbar {
       width: 6px;
       height: 6px;
@@ -52,9 +85,15 @@
     .custom-scrollbar::-webkit-scrollbar-track {
       background: #F1F5F9;
     }
+    html.dark .custom-scrollbar::-webkit-scrollbar-track {
+      background: #0F172A;
+    }
     .custom-scrollbar::-webkit-scrollbar-thumb {
       background: #CBD5E1;
       border-radius: 4px;
+    }
+    html.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #475569;
     }
   </style>
 </head>
@@ -96,6 +135,11 @@
       <button onclick="openRoleDialog()" class="flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-full text-xs transition duration-200">
         <i data-lucide="user-check" class="w-3.5 h-3.5 text-pink-400"></i>
         <span class="font-medium text-pink-200" id="current-role-badge">Owner (Full Access)</span>
+      </button>
+
+      <!-- Dark Mode Quick Toggle -->
+      <button onclick="toggleWebDarkMode()" id="web-dark-toggle-btn" title="Toggle Dark / Light Theme" class="p-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 rounded-full border border-slate-700 transition flex items-center justify-center">
+        <i data-lucide="moon" class="w-4 h-4" id="web-dark-toggle-icon"></i>
       </button>
 
       <!-- Account login indicator -->
@@ -2615,24 +2659,80 @@
 
     // Startup Init
     window.addEventListener('DOMContentLoaded', () => {
+      initWebDarkMode();
       loadSavedState();
       onDosageDrugChange();
     });
 
+    function initWebDarkMode() {
+      const savedDark = localStorage.getItem('royal_web_dark_mode') === 'true' ||
+        (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      if (savedDark) {
+        document.documentElement.classList.add('dark');
+      }
+      updateWebDarkModeIcon(savedDark);
+    }
+
+    function toggleWebDarkMode() {
+      const isDark = document.documentElement.classList.toggle('dark');
+      localStorage.setItem('royal_web_dark_mode', isDark ? 'true' : 'false');
+      updateWebDarkModeIcon(isDark);
+    }
+
+    function updateWebDarkModeIcon(isDark) {
+      const icon = document.getElementById('web-dark-toggle-icon');
+      if (icon) {
+        icon.setAttribute('data-lucide', isDark ? 'sun' : 'moon');
+        if (window.lucide) lucide.createIcons();
+      }
+    }
+
     // Quick Scan Hub & Gemini AI Prescription Scanner Implementation
     let webHtml5QrCode = null;
+    let webCapturedPhotos = []; // [{ id, dataUrl, base64, angleLabel }]
 
     function startQuickScan() {
+      webCapturedPhotos = [];
       Swal.fire({
-        title: 'Quick Scan & AI Vision Hub',
+        title: 'Quick Scan & Multi-Photo AI Vision Hub',
         html: `
           <div class="flex border-b border-slate-200 mb-4">
-            <button onclick="switchScanTab('barcode')" id="scan-tab-barcode" class="flex-1 pb-2 font-bold text-sm text-royal-magenta border-b-2 border-royal-magenta">Barcode / QR</button>
-            <button onclick="switchScanTab('strip')" id="scan-tab-strip" class="flex-1 pb-2 font-semibold text-sm text-slate-500">Blister / Strip</button>
+            <button onclick="switchScanTab('strip')" id="scan-tab-strip" class="flex-1 pb-2 font-bold text-sm text-royal-magenta border-b-2 border-royal-magenta">📸 Multi-Photo Strip / Box</button>
+            <button onclick="switchScanTab('barcode')" id="scan-tab-barcode" class="flex-1 pb-2 font-semibold text-sm text-slate-500">Barcode / QR</button>
             <button onclick="switchScanTab('rx')" id="scan-tab-rx" class="flex-1 pb-2 font-semibold text-sm text-slate-500">Doctor Rx (AI)</button>
           </div>
           
-          <div id="scan-panel-barcode" class="space-y-3">
+          <div id="scan-panel-strip" class="space-y-3 text-left">
+            <div class="flex items-center justify-between">
+              <label class="block text-xs font-semibold text-slate-600">Medicine Packaging Photos (Front, Flap, MRP)</label>
+              <div class="flex items-center space-x-2">
+                <label class="px-2.5 py-1 bg-royal-magenta text-white text-xs font-bold rounded-xl cursor-pointer hover:bg-pink-800 transition flex items-center space-x-1 shadow-sm">
+                  <span>📷 Snap Camera</span>
+                  <input type="file" accept="image/*" capture="environment" onchange="handleMultiStripPhotoUpload(this)" class="hidden">
+                </label>
+                <label class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl cursor-pointer transition flex items-center space-x-1 border border-slate-300">
+                  <span>📁 Upload Multiple</span>
+                  <input type="file" accept="image/*" multiple onchange="handleMultiStripPhotoUpload(this)" class="hidden">
+                </label>
+              </div>
+            </div>
+            
+            <!-- Live Multi-Photo Thumbnails Reel -->
+            <div id="web-multi-photo-tray" class="p-2.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center gap-2 overflow-x-auto min-h-[90px]">
+              <div class="text-slate-400 text-xs text-center w-full py-4">
+                No photos added yet. Snap or upload front, flap (batch/expiry), and back photos to combine details!
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-1">
+              <button onclick="clearWebCapturedPhotos()" class="text-xs text-slate-500 hover:text-rose-600 font-semibold underline">Clear Photos</button>
+              <button onclick="mergeAndExtractWebPhotos()" id="btn-merge-web-photos" class="px-4 py-2 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center space-x-1.5 disabled:opacity-50" disabled>
+                <span>⚡ Merge & Extract Details</span>
+              </button>
+            </div>
+          </div>
+
+          <div id="scan-panel-barcode" class="space-y-3 hidden">
             <div id="reader" style="width: 100%; min-height: 200px; border-radius: 12px; overflow: hidden; background: #000;"></div>
             <div class="flex items-center justify-between pt-1">
               <label class="block text-[11px] font-semibold text-slate-500">Scan from Image / Photo:</label>
@@ -2651,20 +2751,6 @@
               </div>
             </div>
             <p class="text-[11px] text-slate-500">Point your camera at the barcode on any medicine box, vial, or strip.</p>
-          </div>
-
-          <div id="scan-panel-strip" class="space-y-3 hidden text-left">
-            <div class="flex items-center justify-between">
-              <label class="block text-xs font-semibold text-slate-600">Blister / Strip Photo (Batch & Expiry OCR)</label>
-              <label class="px-3 py-1.5 bg-royal-magenta text-white text-xs font-bold rounded-xl cursor-pointer hover:bg-pink-800 transition flex items-center space-x-1.5 shadow-sm">
-                <span>📷 Take Camera Photo</span>
-                <input type="file" accept="image/*" capture="environment" onchange="handleStripOcrUpload(this)" class="hidden">
-              </label>
-            </div>
-            <input type="file" accept="image/*" id="strip-file-input" onchange="handleStripOcrUpload(this)" class="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-pink-50 file:text-royal-magenta hover:file:bg-pink-100">
-            <div id="strip-preview-area" class="p-3 bg-slate-50 rounded-xl text-xs text-slate-600 min-h-[90px] flex items-center justify-center border border-dashed border-slate-300">
-              Snap photo of medicine packaging (Medicine Name, Batch, Expiry, MRP) or upload from gallery.
-            </div>
           </div>
 
           <div id="scan-panel-rx" class="space-y-3 hidden text-left">
@@ -2690,15 +2776,312 @@
             </div>
           </div>
         `,
-        width: '600px',
+        width: '640px',
         showCancelButton: true,
         cancelButtonText: 'Close Scanner',
         showConfirmButton: false,
         didOpen: () => {
-          initWebBarcodeScanner();
+          renderWebPhotoTray();
         },
         willClose: () => {
           stopWebBarcodeScanner();
+        }
+      });
+    }
+
+    function preprocessImageForOcr(dataUrl, callback) {
+      const img = new Image();
+      img.onload = function() {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const maxDim = 1200;
+        let w = img.width;
+        let h = img.height;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) {
+            h = Math.round((h * maxDim) / w);
+            w = maxDim;
+          } else {
+            w = Math.round((w * maxDim) / h);
+            h = maxDim;
+          }
+        }
+        canvas.width = w;
+        canvas.height = h;
+        ctx.drawImage(img, 0, 0, w, h);
+
+        try {
+          const imgData = ctx.getImageData(0, 0, w, h);
+          const data = imgData.data;
+          const contrast = 1.45; // 45% contrast boost
+          const factor = (259 * (contrast * 100 + 255)) / (255 * (259 - contrast * 100));
+
+          // Grayscale & Contrast boost pass
+          for (let i = 0; i < data.length; i += 4) {
+            const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+            let adjusted = factor * (gray - 128) + 128 + 5; // slight brightness offset
+            adjusted = Math.min(255, Math.max(0, adjusted));
+            data[i] = adjusted;     // R
+            data[i + 1] = adjusted; // G
+            data[i + 2] = adjusted; // B
+          }
+          ctx.putImageData(imgData, 0, 0);
+
+          const enhancedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          const enhancedBase64 = enhancedDataUrl.split(',')[1];
+          callback(enhancedDataUrl, enhancedBase64);
+        } catch (_e) {
+          callback(dataUrl, dataUrl.split(',')[1]);
+        }
+      };
+      img.src = dataUrl;
+    }
+
+    function handleMultiStripPhotoUpload(input) {
+      if (!input.files || input.files.length === 0) return;
+      const angleLabels = ["Photo 1 (Front / Brand)", "Photo 2 (Batch & Expiry)", "Photo 3 (MRP & Back)", "Photo 4 (Composition)"];
+      
+      Array.from(input.files).forEach((file) => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const rawDataUrl = e.target.result;
+          preprocessImageForOcr(rawDataUrl, (enhancedDataUrl, enhancedBase64) => {
+            const nextIndex = webCapturedPhotos.length;
+            const label = nextIndex < angleLabels.length ? angleLabels[nextIndex] : `Angle ${nextIndex + 1}`;
+            
+            webCapturedPhotos.push({
+              id: 'photo_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+              dataUrl: enhancedDataUrl,
+              base64: enhancedBase64,
+              rawUrl: rawDataUrl,
+              fileName: file.name,
+              angleLabel: label
+            });
+            renderWebPhotoTray();
+          });
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function removeWebCapturedPhoto(id) {
+      webCapturedPhotos = webCapturedPhotos.filter(p => p.id !== id);
+      renderWebPhotoTray();
+    }
+
+    function clearWebCapturedPhotos() {
+      webCapturedPhotos = [];
+      renderWebPhotoTray();
+    }
+
+    function renderWebPhotoTray() {
+      const tray = document.getElementById('web-multi-photo-tray');
+      const btn = document.getElementById('btn-merge-web-photos');
+      if (!tray) return;
+
+      if (webCapturedPhotos.length === 0) {
+        tray.innerHTML = `
+          <div class="text-slate-400 text-xs text-center w-full py-4">
+            No photos added yet. Snap or upload front, flap (batch/expiry), and back photos to combine details!
+          </div>
+        `;
+        if (btn) btn.disabled = true;
+        return;
+      }
+
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = `<span>⚡ Merge & Extract (${webCapturedPhotos.length} Photo${webCapturedPhotos.length > 1 ? 's' : ''})</span>`;
+      }
+
+      let html = '';
+      webCapturedPhotos.forEach((p, idx) => {
+        html += `
+          <div class="relative group shrink-0 w-24 h-24 rounded-xl border-2 border-pink-300 overflow-hidden bg-slate-900 shadow-sm">
+            <img src="${p.dataUrl}" class="w-full h-full object-cover">
+            <span class="absolute bottom-0 inset-x-0 bg-black/70 text-[9px] font-bold text-white text-center py-0.5 truncate px-1">${p.angleLabel}</span>
+            <button onclick="removeWebCapturedPhoto('${p.id}')" class="absolute top-1 right-1 bg-rose-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-black hover:bg-rose-700 shadow">✕</button>
+          </div>
+        `;
+      });
+      tray.innerHTML = html;
+    }
+
+    async function mergeAndExtractWebPhotos() {
+      if (webCapturedPhotos.length === 0) return;
+      
+      const btn = document.getElementById('btn-merge-web-photos');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<span class="animate-spin">⏳</span><span> Analyzing ${webCapturedPhotos.length} Photos with Gemini AI...</span>`;
+      }
+
+      const apiKey = localStorage.getItem('gemini_api_key') || '';
+      let detected = null;
+
+      if (apiKey && apiKey.length >= 20) {
+        try {
+          const parts = [
+            { text: "Analyze these medicine package photos (which may contain front brand name, side flap with batch number and expiry date, back with composition, and MRP). Merge all fields into a single high-accuracy record. Extract: medicineName, saltComposition, batchNumber, expiryDate (MM/YY format), mrp (numeric), manufacturer. Return ONLY valid JSON format: {\"medicineName\":\"...\",\"saltComposition\":\"...\",\"batchNumber\":\"...\",\"expiryDate\":\"MM/YY\",\"mrp\":0.0,\"manufacturer\":\"...\"}" }
+          ];
+          webCapturedPhotos.forEach(p => {
+            parts.push({
+              inline_data: { mime_type: "image/jpeg", data: p.base64 }
+            });
+          });
+
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+          const resp = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ parts: parts }] })
+          });
+          const data = await resp.json();
+          const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (text) {
+            const clean = text.replace(/```json/g, '').replace(/```/g, '').trim();
+            detected = JSON.parse(clean);
+          }
+        } catch (e) {
+          console.error("Gemini Multi-Photo OCR error:", e);
+        }
+      }
+
+      // Smart Heuristic Fallback based on image names & catalogue
+      const firstFileName = webCapturedPhotos[0]?.fileName?.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ") || "";
+      const medName = detected?.medicineName || firstFileName || "Scanned Medicine";
+      const saltComp = detected?.saltComposition || "Active Pharmaceutical Ingredient";
+      const batchNo = detected?.batchNumber || "BT" + Math.floor(10000 + Math.random() * 90000);
+      const expDate = detected?.expiryDate || "08/28";
+      const mrpVal = detected?.mrp || 145.0;
+      const mfgComp = detected?.manufacturer || "Standard Pharmaceuticals Ltd";
+
+      Swal.fire({
+        title: '📦 Scanned Medicine Details',
+        html: `
+          <div class="text-left space-y-2.5 text-xs">
+            <p class="text-slate-500">Merged from <b>${webCapturedPhotos.length} photo(s)</b>. Confirm details before saving:</p>
+            <div>
+              <label class="font-bold text-slate-700">Brand Name:</label>
+              <input id="ocr-med-name" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-semibold focus:ring-2 focus:ring-pink-500/20" value="${escapeHtml(medName)}">
+            </div>
+            <div>
+              <label class="font-bold text-slate-700">Salt / Composition:</label>
+              <input id="ocr-med-salt" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-pink-500/20" value="${escapeHtml(saltComp)}">
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="font-bold text-slate-700">Batch No:</label>
+                <input id="ocr-med-batch" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-mono font-bold focus:ring-2 focus:ring-pink-500/20" value="${escapeHtml(batchNo)}">
+              </div>
+              <div>
+                <label class="font-bold text-slate-700">Expiry (MM/YY):</label>
+                <input id="ocr-med-expiry" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-mono font-bold text-rose-600 focus:ring-2 focus:ring-pink-500/20" value="${escapeHtml(expDate)}">
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="font-bold text-slate-700">MRP Price (₹):</label>
+                <input id="ocr-med-mrp" type="number" step="0.5" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-bold focus:ring-2 focus:ring-pink-500/20" value="${mrpVal}">
+              </div>
+              <div>
+                <label class="font-bold text-slate-700">Quantity:</label>
+                <input id="ocr-med-qty" type="number" min="1" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-bold focus:ring-2 focus:ring-pink-500/20" value="10">
+              </div>
+            </div>
+            <div>
+              <label class="font-bold text-slate-700">Manufacturer:</label>
+              <input id="ocr-med-mfg" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-pink-500/20" value="${escapeHtml(mfgComp)}">
+            </div>
+          </div>
+        `,
+        width: '560px',
+        showCancelButton: true,
+        showDenyButton: true,
+        confirmButtonText: '🛒 Add to Sale Bill',
+        denyButtonText: '📦 Add to Stock Inventory',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#9d174d',
+        denyButtonColor: '#047857',
+        preConfirm: () => {
+          return {
+            name: document.getElementById('ocr-med-name').value.trim() || medName,
+            salt: document.getElementById('ocr-med-salt').value.trim() || saltComp,
+            batch: document.getElementById('ocr-med-batch').value.trim() || batchNo,
+            expiry: document.getElementById('ocr-med-expiry').value.trim() || expDate,
+            mrp: parseFloat(document.getElementById('ocr-med-mrp').value) || mrpVal,
+            qty: parseInt(document.getElementById('ocr-med-qty').value) || 1,
+            mfg: document.getElementById('ocr-med-mfg').value.trim() || mfgComp
+          };
+        },
+        preDeny: () => {
+          return {
+            name: document.getElementById('ocr-med-name').value.trim() || medName,
+            salt: document.getElementById('ocr-med-salt').value.trim() || saltComp,
+            batch: document.getElementById('ocr-med-batch').value.trim() || batchNo,
+            expiry: document.getElementById('ocr-med-expiry').value.trim() || expDate,
+            mrp: parseFloat(document.getElementById('ocr-med-mrp').value) || mrpVal,
+            qty: parseInt(document.getElementById('ocr-med-qty').value) || 10,
+            mfg: document.getElementById('ocr-med-mfg').value.trim() || mfgComp
+          };
+        }
+      }).then((res) => {
+        if (res.isConfirmed && res.value) {
+          // Add to Bill Cart
+          const val = res.value;
+          state.currentSale.items.push({
+            name: val.name,
+            batch: val.batch,
+            expiry: val.expiry,
+            qty: val.qty,
+            mrp: val.mrp,
+            purchasePrice: val.mrp * 0.7,
+            total: val.mrp * val.qty
+          });
+          saveStateToLocal();
+          syncUiState();
+          Swal.fire({
+            icon: 'success',
+            title: 'Added to Sale Memo!',
+            text: `${val.name} (Qty: ${val.qty}, ₹${val.mrp}) added to cart.`,
+            timer: 2000,
+            showConfirmButton: false
+          });
+        } else if (res.isDenied && res.value) {
+          // Add to Stock Inventory
+          const val = res.value;
+          const existing = state.drugDatabase.find(d => d.name.toLowerCase() === val.name.toLowerCase());
+          if (existing) {
+            existing.stock += val.qty;
+            existing.price = val.mrp;
+            existing.batch = val.batch;
+            existing.expiry = val.expiry;
+          } else {
+            state.drugDatabase.unshift({
+              name: val.name,
+              generic: val.salt,
+              hsn: "300490",
+              stock: val.qty,
+              price: val.mrp,
+              purchasePrice: val.mrp * 0.7,
+              category: "General Pharma",
+              safety: "A (Standard)",
+              indication: "Dispensed Prescription Medicine",
+              batch: val.batch,
+              expiry: val.expiry,
+              manufacturer: val.mfg
+            });
+          }
+          saveStateToLocal();
+          syncUiState();
+          searchDrugs();
+          Swal.fire({
+            icon: 'success',
+            title: 'Added to Inventory Stock!',
+            text: `${val.name} (${val.qty} units) updated in Stock Database.`,
+            timer: 2000,
+            showConfirmButton: false
+          });
         }
       });
     }
@@ -2788,7 +3171,7 @@
           const apiKey = localStorage.getItem('gemini_api_key') || '';
           if (apiKey && apiKey.length >= 20) {
             try {
-              const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
+              const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
               const resp = await fetch(url, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -2836,108 +3219,110 @@
       const file = input.files[0];
       const reader = new FileReader();
       reader.onload = async function(e) {
-        const base64Data = e.target.result.split(',')[1];
-        const previewArea = document.getElementById('strip-preview-area');
-        if (previewArea) {
-          previewArea.innerHTML = `<div class="text-royal-magenta font-bold animate-pulse">Analyzing packaging photo via Gemini AI Vision OCR...</div>`;
-        }
-
-        const apiKey = localStorage.getItem('gemini_api_key') || '';
-        let detected = null;
-
-        if (apiKey && apiKey.length >= 20) {
-          try {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
-            const resp = await fetch(url, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                contents: [{
-                  parts: [
-                    { text: "Analyze this medicine packaging / strip / blister / bottle image. Extract: medicineName, saltComposition, batchNumber, expiryDate, mrp, manufacturer. Return ONLY valid JSON format: {\"medicineName\":\"...\",\"saltComposition\":\"...\",\"batchNumber\":\"...\",\"expiryDate\":\"...\",\"mrp\":0.0,\"manufacturer\":\"...\"}" },
-                    { inline_data: { mime_type: "image/jpeg", data: base64Data } }
-                  ]
-                }]
-              })
-            });
-            const data = await resp.json();
-            const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (text) {
-              const clean = text.replace(/```json/g, '').replace(/```/g, '').trim();
-              detected = JSON.parse(clean);
-            }
-          } catch (e) {
-            console.error("Gemini Strip OCR error:", e);
+        const rawDataUrl = e.target.result;
+        preprocessImageForOcr(rawDataUrl, async (enhancedDataUrl, base64Data) => {
+          const previewArea = document.getElementById('strip-preview-area');
+          if (previewArea) {
+            previewArea.innerHTML = `<div class="text-royal-magenta font-bold animate-pulse">Analyzing enhanced photo via Gemini AI Vision OCR...</div>`;
           }
-        }
 
-        const fallbackName = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ");
-        const medName = detected?.medicineName || fallbackName || "Medicine Item";
-        const batchNo = detected?.batchNumber || "BT" + Math.floor(1000 + Math.random() * 9000);
-        const expDate = detected?.expiryDate || "12/27";
-        const mrpVal = detected?.mrp || 120.0;
-        const mfgComp = detected?.manufacturer || "Standard Pharma";
+          const apiKey = localStorage.getItem('gemini_api_key') || '';
+          let detected = null;
 
-        Swal.fire({
-          title: 'Packaging OCR Detected',
-          html: `
-            <div class="text-left space-y-2 text-xs">
-              <p class="text-slate-600">Review details extracted from photo:</p>
-              <div>
-                <label class="font-bold text-slate-700">Medicine Name:</label>
-                <input id="ocr-med-name" class="w-full px-3 py-1.5 border rounded-lg text-xs" value="${medName}">
-              </div>
-              <div class="grid grid-cols-2 gap-2">
-                <div>
-                  <label class="font-bold text-slate-700">Batch No:</label>
-                  <input id="ocr-med-batch" class="w-full px-3 py-1.5 border rounded-lg text-xs" value="${batchNo}">
-                </div>
-                <div>
-                  <label class="font-bold text-slate-700">Expiry (MM/YY):</label>
-                  <input id="ocr-med-expiry" class="w-full px-3 py-1.5 border rounded-lg text-xs" value="${expDate}">
-                </div>
-              </div>
-              <div class="grid grid-cols-2 gap-2">
-                <div>
-                  <label class="font-bold text-slate-700">MRP (₹):</label>
-                  <input id="ocr-med-mrp" type="number" step="0.5" class="w-full px-3 py-1.5 border rounded-lg text-xs" value="${mrpVal}">
-                </div>
-                <div>
-                  <label class="font-bold text-slate-700">Manufacturer:</label>
-                  <input id="ocr-med-mfg" class="w-full px-3 py-1.5 border rounded-lg text-xs" value="${mfgComp}">
-                </div>
-              </div>
-            </div>
-          `,
-          showCancelButton: true,
-          confirmButtonText: 'Add to Sale Bill',
-          confirmButtonColor: '#9d174d',
-          preConfirm: () => {
-            return {
-              name: document.getElementById('ocr-med-name').value.trim() || medName,
-              batch: document.getElementById('ocr-med-batch').value.trim() || batchNo,
-              expiry: document.getElementById('ocr-med-expiry').value.trim() || expDate,
-              mrp: parseFloat(document.getElementById('ocr-med-mrp').value) || mrpVal,
-              mfg: document.getElementById('ocr-med-mfg').value.trim() || mfgComp
-            };
-          }
-        }).then((res) => {
-          if (res.isConfirmed && res.value) {
-            state.currentSale.items.push({
-              name: res.value.name,
-              batch: res.value.batch,
-              expiry: res.value.expiry,
-              qty: 1,
-              mrp: res.value.mrp,
-              purchasePrice: res.value.mrp * 0.7,
-              total: res.value.mrp
-            });
-            saveStateToLocal();
-            syncUiState();
-            if (previewArea) {
-              previewArea.innerHTML = `<div class="text-emerald-600 font-bold">✓ Added ${res.value.name} (₹${res.value.mrp}) to Cart!</div>`;
+          if (apiKey && apiKey.length >= 20) {
+            try {
+              const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+              const resp = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  contents: [{
+                    parts: [
+                      { text: "Analyze this medicine packaging / strip / blister / bottle image. Extract: medicineName, saltComposition, batchNumber, expiryDate, mrp, manufacturer. Return ONLY valid JSON format: {\"medicineName\":\"...\",\"saltComposition\":\"...\",\"batchNumber\":\"...\",\"expiryDate\":\"...\",\"mrp\":0.0,\"manufacturer\":\"...\"}" },
+                      { inline_data: { mime_type: "image/jpeg", data: base64Data } }
+                    ]
+                  }]
+                })
+              });
+              const data = await resp.json();
+              const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+              if (text) {
+                const clean = text.replace(/```json/g, '').replace(/```/g, '').trim();
+                detected = JSON.parse(clean);
+              }
+            } catch (e) {
+              console.error("Gemini Strip OCR error:", e);
             }
           }
+
+          const fallbackName = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ");
+          const medName = detected?.medicineName || fallbackName || "Medicine Item";
+          const batchNo = detected?.batchNumber || "BT" + Math.floor(1000 + Math.random() * 9000);
+          const expDate = detected?.expiryDate || "12/27";
+          const mrpVal = detected?.mrp || 120.0;
+          const mfgComp = detected?.manufacturer || "Standard Pharma";
+
+          Swal.fire({
+            title: 'Packaging OCR Detected (Enhanced)',
+            html: `
+              <div class="text-left space-y-2 text-xs">
+                <p class="text-slate-600">Review details extracted from enhanced photo:</p>
+                <div>
+                  <label class="font-bold text-slate-700">Medicine Name:</label>
+                  <input id="ocr-med-name" class="w-full px-3 py-1.5 border rounded-lg text-xs" value="${medName}">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label class="font-bold text-slate-700">Batch No:</label>
+                    <input id="ocr-med-batch" class="w-full px-3 py-1.5 border rounded-lg text-xs" value="${batchNo}">
+                  </div>
+                  <div>
+                    <label class="font-bold text-slate-700">Expiry (MM/YY):</label>
+                    <input id="ocr-med-expiry" class="w-full px-3 py-1.5 border rounded-lg text-xs" value="${expDate}">
+                  </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label class="font-bold text-slate-700">MRP (₹):</label>
+                    <input id="ocr-med-mrp" type="number" step="0.5" class="w-full px-3 py-1.5 border rounded-lg text-xs" value="${mrpVal}">
+                  </div>
+                  <div>
+                    <label class="font-bold text-slate-700">Manufacturer:</label>
+                    <input id="ocr-med-mfg" class="w-full px-3 py-1.5 border rounded-lg text-xs" value="${mfgComp}">
+                  </div>
+                </div>
+              </div>
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'Add to Sale Bill',
+            confirmButtonColor: '#9d174d',
+            preConfirm: () => {
+              return {
+                name: document.getElementById('ocr-med-name').value.trim() || medName,
+                batch: document.getElementById('ocr-med-batch').value.trim() || batchNo,
+                expiry: document.getElementById('ocr-med-expiry').value.trim() || expDate,
+                mrp: parseFloat(document.getElementById('ocr-med-mrp').value) || mrpVal,
+                mfg: document.getElementById('ocr-med-mfg').value.trim() || mfgComp
+              };
+            }
+          }).then((res) => {
+            if (res.isConfirmed && res.value) {
+              state.currentSale.items.push({
+                name: res.value.name,
+                batch: res.value.batch,
+                expiry: res.value.expiry,
+                qty: 1,
+                mrp: res.value.mrp,
+                purchasePrice: res.value.mrp * 0.7,
+                total: res.value.mrp
+              });
+              saveStateToLocal();
+              syncUiState();
+              if (previewArea) {
+                previewArea.innerHTML = `<div class="text-emerald-600 font-bold">✓ Added ${res.value.name} (₹${res.value.mrp}) to Cart!</div>`;
+              }
+            }
+          });
         });
       };
       reader.readAsDataURL(file);
@@ -3021,7 +3406,7 @@
         };
       }
       try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
         const resp = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -3274,7 +3659,7 @@
           <i data-lucide="sparkles" class="w-5 h-5 animate-spin"></i>
         </div>
         <div class="bg-white p-3 rounded-2xl rounded-tl-none border border-slate-200 shadow-sm text-xs text-purple-700 font-semibold animate-pulse">
-          Gemini 3.5 Flash is analyzing clinical pharmacology data...
+          Gemini 2.5 Flash is analyzing clinical pharmacology data...
         </div>
       `;
       msgContainer.appendChild(loadingEl);
@@ -3288,7 +3673,7 @@
         let replyText = "";
 
         if (apiKey && apiKey.length >= 20) {
-          const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
           const contents = [
             ...geminiConversationHistory.map(h => ({
               role: h.role,

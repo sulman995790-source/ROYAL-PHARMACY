@@ -154,12 +154,8 @@ fun PrescriptionScannerScreen(
     }
   }
 
-  // Initial load with default sample preset if not yet analyzed
-  LaunchedEffect(Unit) {
-    if (scanResult == null) {
-      scanResult = GeminiPrescriptionService.generatePresetResult(selectedSamplePreset, inventory)
-    }
-  }
+  // Do not auto-load sample presets on launch so user sees their actual photos
+  // Sample presets can still be loaded on-demand by tapping the chips below
 
   // Automatically register scanned doctor in Doctor Directory
   LaunchedEffect(scanResult) {
@@ -367,6 +363,54 @@ fun PrescriptionScannerScreen(
       }
 
       val result = scanResult
+      if (result == null && !isAnalyzing) {
+        item {
+          Card(
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder),
+            modifier = Modifier.fillMaxWidth()
+          ) {
+            Column(
+              modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp),
+              horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+              Box(
+                modifier = Modifier
+                  .size(56.dp)
+                  .clip(CircleShape)
+                  .background(Color(0xFFEDE9FE)),
+                contentAlignment = Alignment.Center
+              ) {
+                Icon(
+                  Icons.Default.Description,
+                  contentDescription = null,
+                  tint = RoyalNavy,
+                  modifier = Modifier.size(30.dp)
+                )
+              }
+              Spacer(modifier = Modifier.height(12.dp))
+              Text(
+                "No Prescription Scanned Yet",
+                fontWeight = FontWeight.Bold,
+                fontSize = 15.sp,
+                color = TextDark
+              )
+              Spacer(modifier = Modifier.height(6.dp))
+              Text(
+                "Tap 'Take Photo' or 'Pick Image' above to scan doctor prescriptions using on-device OCR & Gemini Multimodal Vision.",
+                fontSize = 12.sp,
+                color = TextMuted,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                lineHeight = 17.sp
+              )
+            }
+          }
+        }
+      }
+
       if (result != null && !isAnalyzing) {
         // 3. Doctor & Patient Summary Card
         item {
