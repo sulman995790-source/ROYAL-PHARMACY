@@ -18,27 +18,10 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
-        cache: 'gradle'
 
-    - name: Create Gradle Wrapper Directory
-      run: mkdir -p gradle/wrapper
-
-    - name: Download Gradle Wrapper JAR
-      run: curl -L https://github.com -o gradle/wrapper/gradle-wrapper.jar
-
-    - name: Create Base Gradlew Script
-      run: |
-        echo '#!/bin/sh' > gradlew
-        echo 'DIR="$(cd "$(dirname "$0")" && pwd)"' >> gradlew
-        echo 'exec java -Xmx64m -Xms64m -Dorg.gradle.appname=gradlew -classpath "$DIR/gradle/wrapper/gradle-wrapper.jar" org.gradle.wrapper.GradleWrapperMain "$@"' >> gradlew
-        chmod +x gradlew
-
-    - name: Build Debug APK
-      run: ./gradlew assembleDebug
-
-    - name: Upload APK Asset
-      uses: actions/upload-artifact@v4
+    - name: Setup Gradle and Build
+      uses: gradle/actions/setup-gradle@v3
       with:
-        name: app-debug
-        path: app/build/outputs/apk/debug/app-debug.apk
+        arguments: assembleDebug
+        
         
