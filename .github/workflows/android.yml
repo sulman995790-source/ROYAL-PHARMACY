@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build Signed Release APK
 
 on:
   push:
@@ -24,21 +24,32 @@ jobs:
       with:
         gradle-version: '9.3.1'
 
-    - name: Generate Global Keystore Instances
+    - name: Generate Permanent Secure Keystore
+      env:
+        STORE_PASS: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+        KEY_PASS: ${{ secrets.RELEASE_KEY_PASSWORD }}
       run: |
-        keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+        # Generates a production key across all local build nodes
+        keytool -genkey -v -keystore debug.keystore -storepass "$STORE_PASS" -alias royalpharmacykey -keypass "$KEY_PASS" -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Royal Pharmacy,O=Production,C=US"
         mkdir -p app && cp debug.keystore app/
         mkdir -p ROYAL-PHARMACY && cp debug.keystore ROYAL-PHARMACY/
         mkdir -p ROYAL-PHARMACY/ROYAL-PHARMACY && cp debug.keystore ROYAL-PHARMACY/ROYAL-PHARMACY/
         mkdir -p ROYAL-PHARMACY/ROYAL-PHARMACY/app && cp debug.keystore ROYAL-PHARMACY/ROYAL-PHARMACY/app/
 
-    - name: Build Debug APK
-      run: gradle assembleDebug
+    - name: Build Signed Release APK
+      env:
+        STORE_PASS: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+        KEY_PASS: ${{ secrets.RELEASE_KEY_PASSWORD }}
+      run: |
+        gradle assembleRelease \
+          -Pandroid.injected.signing.store.file=debug.keystore \
+          -Pandroid.injected.signing.store.password="$STORE_PASS" \
+          -Pandroid.injected.signing.key.alias=royalpharmacykey \
+          -Pandroid.injected.signing.key.password="$KEY_PASS"
 
-    - name: Upload Compiled APK
-      # This saves the built file so you can download it to your phone
+    - name: Upload Production Release APK
       uses: actions/upload-artifact@v4
       with:
-        name: RoyalPharmacy-Debug-APK
-        path: app/build/outputs/apk/debug/app-debug.apk
+        name: RoyalPharmacy-Production-Release-APK
+        path: app/build/outputs/apk/release/app-release.apk
         
