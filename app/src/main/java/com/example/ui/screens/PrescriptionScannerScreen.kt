@@ -38,6 +38,8 @@ import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.FindReplace
+import androidx.compose.material.icons.filled.FlashOff
+import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.LocalPharmacy
 import androidx.compose.material.icons.filled.OpenInBrowser
@@ -78,6 +80,7 @@ import androidx.compose.ui.unit.sp
 import com.example.data.ai.GeminiPrescriptionService
 import com.example.data.ai.PrescribedDrug
 import com.example.data.ai.PrescriptionScanResult
+import com.example.ui.components.InAppSearchDialog
 import com.example.ui.theme.CardBorder
 import com.example.ui.theme.GrayBackground
 import com.example.ui.theme.RoyalMagenta
@@ -105,6 +108,9 @@ fun PrescriptionScannerScreen(
   var isAnalyzing by remember { mutableStateOf(false) }
   var scanResult by remember { mutableStateOf<PrescriptionScanResult?>(null) }
   var selectedSamplePreset by remember { mutableStateOf("General Physician Rx") }
+  var inAppSearchQuery by remember { mutableStateOf<String?>(null) }
+  var inAppSearchTitle by remember { mutableStateOf("Google Search") }
+  var isTorchOn by remember { mutableStateOf(false) }
 
   // Photo Picker
   val photoPickerLauncher = rememberLauncherForActivityResult(
@@ -152,6 +158,19 @@ fun PrescriptionScannerScreen(
   LaunchedEffect(Unit) {
     if (scanResult == null) {
       scanResult = GeminiPrescriptionService.generatePresetResult(selectedSamplePreset, inventory)
+    }
+  }
+
+  // Automatically register scanned doctor in Doctor Directory
+  LaunchedEffect(scanResult) {
+    scanResult?.let { res ->
+      if (res.doctorName.isNotBlank() && !res.doctorName.equals("Unknown", ignoreCase = true) && res.doctorName.length > 3) {
+        viewModel.autoRegisterDoctorFromPrescription(
+          name = res.doctorName,
+          specialty = res.doctorSpeciality,
+          clinic = res.clinicOrHospital
+        )
+      }
     }
   }
 
@@ -227,17 +246,18 @@ fun PrescriptionScannerScreen(
 
             Row(
               modifier = Modifier.fillMaxWidth(),
-              horizontalArrangement = Arrangement.spacedBy(10.dp)
+              horizontalArrangement = Arrangement.spacedBy(8.dp),
+              verticalAlignment = Alignment.CenterVertically
             ) {
               Button(
                 onClick = { cameraLauncher.launch(null) },
                 shape = RoundedCornerShape(8.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = RoyalNavy),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
                 modifier = Modifier.weight(1f).testTag("btn_camera_prescription_scan")
               ) {
                 Icon(Icons.Default.CameraAlt, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(4.dp))
                 Text("Take Photo", fontSize = 12.sp, fontWeight = FontWeight.Bold)
               }
 
@@ -248,12 +268,41 @@ fun PrescriptionScannerScreen(
                   )
                 },
                 shape = RoundedCornerShape(8.dp),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
                 modifier = Modifier.weight(1f).testTag("btn_gallery_prescription_scan")
               ) {
                 Icon(Icons.Default.Image, contentDescription = null, tint = RoyalNavy, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(4.dp))
                 Text("Pick Image", fontSize = 12.sp, color = RoyalNavy, fontWeight = FontWeight.Bold)
+              }
+
+              IconButton(
+                onClick = {
+                  val nextState = !isTorchOn
+                  isTorchOn = nextState
+                  try {
+                    val camManager = context.getSystemService(android.content.Context.CAMERA_SERVICE) as? android.hardware.camera2.CameraManager
+                    val cameraId = camManager?.cameraIdList?.firstOrNull()
+                    if (cameraId != null) {
+                      camManager.setTorchMode(cameraId, nextState)
+                    }
+                  } catch (_: Exception) {}
+                  Toast.makeText(
+                    context,
+                    if (nextState) "Flashlight Turned ON ⚡" else "Flashlight Turned OFF",
+                    Toast.LENGTH_SHORT
+                  ).show()
+                },
+                modifier = Modifier
+                  .clip(RoundedCornerShape(8.dp))
+                  .background(if (isTorchOn) Color(0xFFFFD54F).copy(alpha = 0.3f) else Color(0xFFF1F5F9))
+                  .testTag("btn_flash_light_toggle")
+              ) {
+                Icon(
+                  imageVector = if (isTorchOn) Icons.Default.FlashOn else Icons.Default.FlashOff,
+                  contentDescription = "Flashlight",
+                  tint = if (isTorchOn) Color(0xFFD97706) else RoyalNavy
+                )
               }
             }
 
@@ -488,8 +537,8 @@ fun PrescriptionScannerScreen(
               }
             },
             onGoogleSearch = {
-              val searchIntent = Intent(Intent.ACTION_VIEW, Uri.parse(drug.googleSearchUrl))
-              context.startActivity(searchIntent)
+              inAppSearchTitle = "${drug.medicineName} • Monograph"
+              inAppSearchQuery = drug.googleSearchUrl
             },
             onViewSubstitute = {
               viewModel.substituteQuery.value = drug.genericSalt
@@ -535,8 +584,8 @@ fun PrescriptionScannerScreen(
 
               Button(
                 onClick = {
-                  val globalUrl = "https://www.google.com/search?q=" + java.net.URLEncoder.encode(result.googleSearchGroundingQuery, "UTF-8")
-                  context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(globalUrl)))
+                  inAppSearchTitle = "Prescription Verification"
+                  inAppSearchQuery = "https://www.google.com/search?q=" + java.net.URLEncoder.encode(result.googleSearchGroundingQuery, "UTF-8")
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = RoyalNavy),
                 shape = RoundedCornerShape(8.dp),
@@ -545,12 +594,20 @@ fun PrescriptionScannerScreen(
               ) {
                 Icon(Icons.Default.OpenInBrowser, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("Open Google Search Drug Results", fontSize = 11.5.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                Text("Verify Drug on Google Search (In-App)", fontSize = 11.5.sp, color = Color.White, fontWeight = FontWeight.Bold)
               }
             }
           }
         }
       }
+    }
+
+    if (inAppSearchQuery != null) {
+      InAppSearchDialog(
+        initialQuery = inAppSearchQuery!!,
+        title = inAppSearchTitle,
+        onDismiss = { inAppSearchQuery = null }
+      )
     }
   }
 }

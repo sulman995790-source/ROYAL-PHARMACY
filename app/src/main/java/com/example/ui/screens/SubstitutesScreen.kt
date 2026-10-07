@@ -67,6 +67,7 @@ import androidx.compose.ui.unit.sp
 import com.example.data.ai.GeminiPharmacistService
 import com.example.data.model.BrandMedicine
 import com.example.data.model.MedicineItem
+import com.example.ui.components.InAppSearchDialog
 import com.example.ui.theme.CardBorder
 import com.example.ui.theme.RoyalMagenta
 import com.example.ui.theme.RoyalMagentaLight
@@ -88,6 +89,7 @@ fun SubstitutesScreen(
   val onlineSubstitutes by viewModel.onlineSubstitutes.collectAsState()
   val isSearchingOnline by viewModel.isSearchingOnlineSubstitutes.collectAsState()
   val cartItems by viewModel.distributorCart.collectAsState()
+  var inAppSearchQuery by remember { mutableStateOf<String?>(null) }
 
   var selectedBrandFilter by remember { mutableStateOf("All") } // "All", "IPCA", "GSK", "Cipla", "SUN PHARMA", "ALKEM", "Generic"
   var selectedCategoryFilter by remember { mutableStateOf("All") } // "All", "Injectable", "Tablet", "Syrup", "Generic"
@@ -351,12 +353,11 @@ fun SubstitutesScreen(
           }
         }
 
-        // Google Search Button
+        // Google Search Button (In-App)
         OutlinedButton(
           onClick = {
             val queryText = if (searchQuery.isNotBlank()) searchQuery else "Paracetamol 650mg substitutes IPCA GSK Cipla"
-            GeminiPharmacistService().openGoogleSearch(context, "$queryText medicine substitutes India IPCA GSK")
-            Toast.makeText(context, "Opening Google Search...", Toast.LENGTH_SHORT).show()
+            inAppSearchQuery = "$queryText medicine substitutes India IPCA GSK"
           },
           shape = RoundedCornerShape(8.dp),
           colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF38BDF8)),
@@ -364,7 +365,7 @@ fun SubstitutesScreen(
           modifier = Modifier.weight(1f).testTag("btn_search_google_substitutes"),
           contentPadding = PaddingValues(vertical = 10.dp)
         ) {
-          Icon(Icons.Default.OpenInBrowser, contentDescription = null, tint = Color(0xFF38BDF8), modifier = Modifier.size(16.dp))
+          Icon(Icons.Default.Search, contentDescription = null, tint = Color(0xFF38BDF8), modifier = Modifier.size(16.dp))
           Spacer(modifier = Modifier.width(6.dp))
           Text("Google Search", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFF38BDF8))
         }
@@ -542,6 +543,14 @@ fun SubstitutesScreen(
           }
         }
       }
+    }
+
+    inAppSearchQuery?.let { q ->
+      InAppSearchDialog(
+        initialQuery = q,
+        title = "Substitute Monograph Search",
+        onDismiss = { inAppSearchQuery = null }
+      )
     }
   }
 }

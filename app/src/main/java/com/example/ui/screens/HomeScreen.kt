@@ -35,7 +35,9 @@ import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.EventBusy
+import androidx.compose.material.icons.filled.Healing
 import androidx.compose.material.icons.filled.HealthAndSafety
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Inventory2
@@ -87,6 +89,7 @@ import com.example.ui.components.StoreUpiQrDialog
 import com.example.ui.theme.CardBorder
 import com.example.ui.theme.GrayBackground
 import com.example.ui.theme.RoyalMagenta
+import com.example.ui.theme.RoyalMagentaLight
 import com.example.ui.theme.RoyalNavy
 import com.example.ui.theme.StatusGreen
 import com.example.ui.theme.StatusRed
@@ -122,6 +125,8 @@ fun HomeScreen(
   val expiringCount = batchItems.count { it.daysRemaining in 1..60 || it.daysRemaining <= 0 }
 
   val isDarkMode by viewModel.isDarkMode.collectAsState()
+  val userRole by viewModel.currentUserRole.collectAsState()
+  val visualSyncState by viewModel.visualSyncState.collectAsState()
   var showCustomerUpiQrDialog by remember { mutableStateOf(false) }
 
   Box(
@@ -139,12 +144,16 @@ fun HomeScreen(
         RoyalPharmacyTopHeader(
           businessName = businessProfile.businessName,
           cartCount = distributorCart.size,
+          userRole = userRole,
+          visualSyncState = visualSyncState,
           onProfileClick = { viewModel.navigateTo(Screen.BUSINESS_PROFILE) },
           onNotificationClick = { viewModel.navigateTo(Screen.CRITICAL_STOCK_ALERTS) },
           onCartClick = { viewModel.navigateTo(Screen.CART) },
           onLockClick = { viewModel.lockAppNow() },
           onVoiceSearchClick = { viewModel.navigateTo(Screen.VOICE_SEARCH) },
           onSyncManagerClick = { viewModel.navigateTo(Screen.SYNC_MANAGER) },
+          onRoleClick = { viewModel.showUserRoleAuthDialog.value = true },
+          onVisualSyncClick = { viewModel.showVisualSyncStatusSheet.value = true },
           onDarkModeToggle = { viewModel.toggleDarkMode() },
           isDarkMode = isDarkMode
         )
@@ -207,6 +216,55 @@ fun HomeScreen(
             Icon(Icons.Default.QrCodeScanner, contentDescription = null, tint = RoyalNavy, modifier = Modifier.size(15.dp))
             Spacer(modifier = Modifier.width(3.dp))
             Text("Barcode", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = RoyalNavy)
+          }
+        }
+      }
+
+      // 2.5 Prominent AI Symptom & Disease Tracker Card
+      item {
+        Card(
+          onClick = { viewModel.navigateTo(Screen.SYMPTOM_DISEASE_TRACKER) },
+          shape = RoundedCornerShape(12.dp),
+          colors = CardDefaults.cardColors(containerColor = Color(0xFFFAF5FF)),
+          border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE9D5FF)),
+          modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .testTag("card_home_ai_disease_tracker")
+        ) {
+          Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+          ) {
+            Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+              Box(
+                modifier = Modifier
+                  .size(40.dp)
+                  .clip(CircleShape)
+                  .background(RoyalMagentaLight),
+                contentAlignment = Alignment.Center
+              ) {
+                Icon(Icons.Default.Healing, contentDescription = null, tint = RoyalMagenta, modifier = Modifier.size(22.dp))
+              }
+              Spacer(modifier = Modifier.width(10.dp))
+              Column {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                  Text("AI Disease & Symptom Tracker", fontSize = 13.5.sp, fontWeight = FontWeight.Bold, color = TextDark)
+                  Spacer(modifier = Modifier.width(6.dp))
+                  Box(
+                    modifier = Modifier
+                      .clip(RoundedCornerShape(4.dp))
+                      .background(RoyalMagenta)
+                      .padding(horizontal = 4.dp, vertical = 1.dp)
+                  ) {
+                    Text("NEW AI", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                  }
+                }
+                Text("Track patient symptoms, diagnose diseases & get oral + injectable protocols", fontSize = 11.sp, color = TextMuted)
+              }
+            }
+            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = RoyalMagenta)
           }
         }
       }

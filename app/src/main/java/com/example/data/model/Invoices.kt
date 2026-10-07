@@ -87,7 +87,13 @@ data class BusinessProfile(
   val addressLine2: String = "Hospital Road, Near Civil Hospital",
   val addressLine3: String = "Darrang, Assam - 784146",
   val timings: String = "08:00 AM - 10:30 PM",
-  val walletBalance: Double = 0.0
+  val walletBalance: Double = 0.0,
+  val businessFrontImageUri: String = "",
+  val avatarImageUri: String = "",
+  val form20ImageUri: String = "",
+  val form21ImageUri: String = "",
+  val latitude: Double = 26.4385,
+  val longitude: Double = 92.0305
 ) {
   val dlNumber: String
     get() = drugLicenseForm20.ifBlank { drugLicenseForm21 }

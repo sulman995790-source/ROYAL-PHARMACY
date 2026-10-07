@@ -123,15 +123,24 @@ fun DrugInteractionCheckerScreen(
     }
   }
 
-  fun runCheck() {
-    if (selectedDrugs.size < 2) {
-      Toast.makeText(context, "Select at least 2 medicines to check interactions", Toast.LENGTH_SHORT).show()
+  fun runCheck(overrideList: List<String>? = null) {
+    val listToCheck = (overrideList ?: selectedDrugs.toList()).toMutableList()
+    if (drugSearchQuery.isNotBlank() && !listToCheck.contains(drugSearchQuery.trim())) {
+      val clean = drugSearchQuery.trim()
+      listToCheck.add(clean)
+      if (!selectedDrugs.contains(clean)) {
+        selectedDrugs.add(clean)
+      }
+      drugSearchQuery = ""
+    }
+    if (listToCheck.isEmpty()) {
+      Toast.makeText(context, "Please enter or select medicines to evaluate", Toast.LENGTH_SHORT).show()
       return
     }
     scope.launch {
       isChecking = true
       try {
-        val res = interactionService.checkDrugInteractions(selectedDrugs.toList())
+        val res = interactionService.checkDrugInteractions(listToCheck)
         checkResult = res
       } catch (e: Exception) {
         Toast.makeText(context, "Error scanning interactions: ${e.message}", Toast.LENGTH_SHORT).show()
@@ -254,7 +263,9 @@ fun DrugInteractionCheckerScreen(
                   "Nitroglycerin + Sildenafil" to listOf("Nitroglycerin 2.6mg", "Sildenafil 50mg"),
                   "Warfarin + Aspirin" to listOf("Warfarin 5mg", "Aspirin 75mg"),
                   "Telmisartan + Spironolactone" to listOf("Telmisartan 40mg", "Spironolactone 25mg"),
-                  "Ciprofloxacin + Antacids" to listOf("Ciprofloxacin 500mg", "Digene / Antacid Gel")
+                  "Ciprofloxacin + Antacids" to listOf("Ciprofloxacin 500mg", "Digene / Antacid Gel"),
+                  "Digoxin + Amiodarone" to listOf("Digoxin 0.25mg", "Amiodarone 200mg"),
+                  "Metronidazole + Alcohol" to listOf("Metronidazole 400mg", "Alcohol")
                 ).forEach { (label, presetList) ->
                   Box(
                     modifier = Modifier
@@ -264,7 +275,8 @@ fun DrugInteractionCheckerScreen(
                       .clickable {
                         selectedDrugs.clear()
                         selectedDrugs.addAll(presetList)
-                        runCheck()
+                        drugSearchQuery = ""
+                        runCheck(presetList)
                       }
                       .padding(horizontal = 10.dp, vertical = 6.dp)
                   ) {
@@ -291,6 +303,49 @@ fun DrugInteractionCheckerScreen(
                 fontWeight = FontWeight.Bold,
                 color = TextDark
               )
+              Spacer(modifier = Modifier.height(6.dp))
+
+              // Quick Add Common Brand / Molecule Chips
+              Text("Quick Add Popular Drugs:", fontSize = 10.5.sp, color = TextMuted)
+              Spacer(modifier = Modifier.height(4.dp))
+              Row(
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+              ) {
+                listOf(
+                  "Dolo 650", "Pan 40", "Augmentin 625", "Telma 40", "Clopidogrel 75mg",
+                  "Omeprazole 20mg", "Sorbitrate 5mg", "Sildenafil 50mg", "Azithral 500",
+                  "Combiflam", "Shelcal 500", "Ciplox 500"
+                ).forEach { medName ->
+                  val isAdded = selectedDrugs.contains(medName)
+                  Box(
+                    modifier = Modifier
+                      .clip(RoundedCornerShape(16.dp))
+                      .background(if (isAdded) RoyalMagenta.copy(alpha = 0.15f) else Color(0xFFF3F4F6))
+                      .border(1.dp, if (isAdded) RoyalMagenta else Color(0xFFE5E7EB), RoundedCornerShape(16.dp))
+                      .clickable {
+                        if (!isAdded) {
+                          selectedDrugs.add(medName)
+                          checkResult = null
+                        } else {
+                          selectedDrugs.remove(medName)
+                          checkResult = null
+                        }
+                      }
+                      .padding(horizontal = 8.dp, vertical = 4.dp)
+                  ) {
+                    Text(
+                      text = if (isAdded) "✓ $medName" else "+ $medName",
+                      fontSize = 10.5.sp,
+                      fontWeight = if (isAdded) FontWeight.Bold else FontWeight.Normal,
+                      color = if (isAdded) RoyalMagenta else TextDark
+                    )
+                  }
+                }
+              }
+
               Spacer(modifier = Modifier.height(10.dp))
 
               // Search or Add custom input
@@ -428,7 +483,7 @@ fun DrugInteractionCheckerScreen(
 
                 Button(
                   onClick = { runCheck() },
-                  enabled = selectedDrugs.size >= 2 && !isChecking,
+                  enabled = (selectedDrugs.isNotEmpty() || drugSearchQuery.isNotBlank()) && !isChecking,
                   colors = ButtonDefaults.buttonColors(containerColor = RoyalMagenta),
                   shape = RoundedCornerShape(10.dp),
                   modifier = Modifier

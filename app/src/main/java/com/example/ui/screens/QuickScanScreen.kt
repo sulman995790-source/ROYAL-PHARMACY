@@ -3,6 +3,7 @@ package com.example.ui.screens
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.hardware.camera2.CameraManager
 import android.net.Uri
 import android.os.Build
 import android.os.VibrationEffect
@@ -11,6 +12,7 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -49,6 +51,7 @@ import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.LocalPharmacy
@@ -71,6 +74,7 @@ import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -153,6 +157,22 @@ fun QuickScanScreen(
   val cartItems by viewModel.billingCartItems.collectAsState()
   val allMedicines by viewModel.allMedicines.collectAsState()
 
+  // Camera & Flashlight Torch state
+  var cameraInstance by remember { mutableStateOf<Camera?>(null) }
+  var isTorchOn by remember { mutableStateOf(false) }
+
+  DisposableEffect(Unit) {
+    onDispose {
+      try {
+        cameraInstance?.cameraControl?.enableTorch(false)
+      } catch (_: Exception) {}
+      try {
+        val camManager = context.getSystemService(Context.CAMERA_SERVICE) as? CameraManager
+        camManager?.cameraIdList?.firstOrNull()?.let { camManager.setTorchMode(it, false) }
+      } catch (_: Exception) {}
+    }
+  }
+
   // OCR Verification Dialog State
   var activeParsedOcrResult by remember { mutableStateOf<ParsedMedicineOcrResult?>(null) }
   var isAnalyzingFrame by remember { mutableStateOf(false) }
@@ -194,6 +214,15 @@ fun QuickScanScreen(
       }
       activeParsedOcrResult = parsed
       isAnalyzingFrame = false
+    }
+  }
+
+  // Auto-register parsed doctor in Doctor directory
+  LaunchedEffect(activeParsedOcrResult) {
+    activeParsedOcrResult?.let { ocr ->
+      if (ocr.doctorName.isNotBlank() && !ocr.doctorName.equals("Unknown Doctor", ignoreCase = true) && ocr.doctorName.length > 3) {
+        viewModel.autoRegisterDoctorFromPrescription(ocr.doctorName)
+      }
     }
   }
 
@@ -320,7 +349,8 @@ fun QuickScanScreen(
               }
               val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
               cameraProvider.unbindAll()
-              cameraProvider.bindToLifecycle(lifecycleOwner, cameraSelector, preview)
+              val cam = cameraProvider.bindToLifecycle(lifecycleOwner, cameraSelector, preview)
+              cameraInstance = cam
             } catch (e: Exception) {
               // Gracefully handle emulator camera setup
             }
@@ -368,6 +398,15 @@ fun QuickScanScreen(
       drawLine(Color.White, Offset(left + reticleWidth, top + reticleHeight - cornerLength), Offset(left + reticleWidth, top + reticleHeight + 2), strokeW)
     }
 
+    // High-visibility Flashlight Screen Illumination (active on hardware & emulator)
+    if (isTorchOn) {
+      Box(
+        modifier = Modifier
+          .fillMaxSize()
+          .background(Color.White.copy(alpha = 0.35f))
+      )
+    }
+
     // 2. Top Header & Mode Tabs
     Column(
       modifier = Modifier
@@ -405,15 +444,59 @@ fun QuickScanScreen(
           }
         }
 
-        Row {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          if (isTorchOn) {
+            Box(
+              modifier = Modifier
+                .clip(RoundedCornerShape(12.dp))
+                .background(Color(0xFFFFD54F))
+                .padding(horizontal = 8.dp, vertical = 4.dp)
+            ) {
+              Text("FLASH ON", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+            }
+            Spacer(modifier = Modifier.width(4.dp))
+          }
+
           IconButton(onClick = {
             photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
           }) {
             Icon(Icons.Default.Image, contentDescription = "Pick Image from Gallery", tint = Color.White)
           }
 
-          IconButton(onClick = { triggerVibration() }) {
-            Icon(Icons.Default.FlashOn, contentDescription = "Torch", tint = Color(0xFFFFD54F))
+          IconButton(
+            onClick = {
+              val nextState = !isTorchOn
+              isTorchOn = nextState
+              triggerVibration()
+
+              if (cameraInstance != null) {
+                try {
+                  cameraInstance?.cameraControl?.enableTorch(nextState)
+                } catch (_: Exception) {}
+              } else {
+                try {
+                  val camManager = context.getSystemService(Context.CAMERA_SERVICE) as? CameraManager
+                  val cameraId = camManager?.cameraIdList?.firstOrNull()
+                  if (cameraId != null) {
+                    camManager.setTorchMode(cameraId, nextState)
+                  }
+                } catch (_: Exception) {}
+              }
+
+              Toast.makeText(
+                context,
+                if (nextState) "Flashlight Turned ON ⚡" else "Flashlight Turned OFF",
+                Toast.LENGTH_SHORT
+              ).show()
+            },
+            modifier = Modifier
+              .background(if (isTorchOn) Color(0xFFFFD54F).copy(alpha = 0.25f) else Color.Transparent, CircleShape)
+          ) {
+            Icon(
+              imageVector = if (isTorchOn) Icons.Default.FlashOn else Icons.Default.FlashOff,
+              contentDescription = if (isTorchOn) "Turn Off Flashlight" else "Turn On Flashlight",
+              tint = if (isTorchOn) Color(0xFFFFD54F) else Color.White
+            )
           }
         }
       }

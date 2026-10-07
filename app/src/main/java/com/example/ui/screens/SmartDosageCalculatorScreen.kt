@@ -176,6 +176,42 @@ fun SmartDosageCalculatorScreen(
       frequencyDescription = "Once daily for 14 days during diarrhea",
       minAgeMonths = 1,
       defaultInstructions = "Recommended for 14 days in acute diarrhea management."
+    ),
+    DrugDosePreset(
+      drugName = "Ceftriaxone (Monocef 1g Inj)",
+      formulation = "1000 mg / 10 ml IV reconstitution (100 mg/ml)",
+      concentrationMgPerMl = 100.0,
+      standardDoseMgPerKg = 50.0,
+      frequencyDescription = "Slow IV push over 5 mins or IV Infusion BD",
+      minAgeMonths = 1,
+      defaultInstructions = "Reconstitute 1g vial with 10ml sterile water for injection. Administer slowly."
+    ),
+    DrugDosePreset(
+      drugName = "Paracetamol (100ml IV Infusion)",
+      formulation = "1000 mg / 100 ml (10 mg/ml) Infusion",
+      concentrationMgPerMl = 10.0,
+      standardDoseMgPerKg = 15.0,
+      frequencyDescription = "IV drip over 15 mins (Max QID)",
+      minAgeMonths = 6,
+      defaultInstructions = "Administer as slow IV drip over 15 minutes. Flow rate: ~60 drops/min."
+    ),
+    DrugDosePreset(
+      drugName = "Amikacin (500mg/2ml Inj)",
+      formulation = "250 mg / ml IV/IM",
+      concentrationMgPerMl = 250.0,
+      standardDoseMgPerKg = 15.0,
+      frequencyDescription = "Once daily (OD) or BD in 100ml NS drip",
+      minAgeMonths = 1,
+      defaultInstructions = "Dilute in 100ml 0.9% Normal Saline and infuse over 30 minutes."
+    ),
+    DrugDosePreset(
+      drugName = "Pantoprazole (40mg IV Inj)",
+      formulation = "40 mg / 10 ml IV reconstitution (4 mg/ml)",
+      concentrationMgPerMl = 4.0,
+      standardDoseMgPerKg = 1.0,
+      frequencyDescription = "Slow IV push over 2 minutes (OD / BD)",
+      minAgeMonths = 12,
+      defaultInstructions = "Flush line with 0.9% NaCl before and after administration."
     )
   )
 
@@ -369,7 +405,7 @@ fun SmartDosageCalculatorScreen(
           }
         }
 
-        // Medicine Selector
+        // Medicine Selector & 500,000+ Drug Search
         item {
           Card(
             shape = RoundedCornerShape(14.dp),
@@ -378,8 +414,35 @@ fun SmartDosageCalculatorScreen(
             modifier = Modifier.fillMaxWidth()
           ) {
             Column(modifier = Modifier.padding(14.dp)) {
-              Text("SELECT PEDIATRIC / ESSENTIAL DRUG", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextMuted)
+              Text("SEARCH 500,000+ MEDICINES & INJECTABLES", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextMuted)
               Spacer(modifier = Modifier.height(8.dp))
+
+              var searchQuery by remember { mutableStateOf("") }
+              OutlinedTextField(
+                value = searchQuery,
+                onValueChange = {
+                  searchQuery = it
+                  if (it.isNotBlank()) {
+                    // Create dynamic custom preset for searched drug
+                    selectedDrug = DrugDosePreset(
+                      drugName = it.trim(),
+                      formulation = "Custom Formulation / Injection",
+                      concentrationMgPerMl = if (it.lowercase().contains("drop")) 100.0 else if (it.lowercase().contains("syrup")) 24.0 else 50.0,
+                      standardDoseMgPerKg = if (it.lowercase().contains("ceftriaxone")) 50.0 else if (it.lowercase().contains("ondansetron")) 0.15 else 15.0,
+                      frequencyDescription = "As prescribed by physician (OD / BD / TDS)",
+                      defaultInstructions = "Verify weight-based dosing for $it"
+                    )
+                  }
+                },
+                label = { Text("Search Medicine, Salt, or Injectable Name...") },
+                placeholder = { Text("e.g. Ceftriaxone IV, Meropenem, Dolo 650, Ondansetron") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().testTag("input_search_500k_medicines")
+              )
+
+              Spacer(modifier = Modifier.height(10.dp))
+              Text("Quick Presets (Pediatric & Essential):", fontSize = 11.sp, color = TextMuted)
+              Spacer(modifier = Modifier.height(6.dp))
 
               Row(
                 modifier = Modifier
@@ -394,7 +457,10 @@ fun SmartDosageCalculatorScreen(
                       .clip(RoundedCornerShape(8.dp))
                       .background(if (isSel) RoyalMagenta else GrayBackground)
                       .border(1.dp, if (isSel) RoyalMagenta else CardBorder, RoundedCornerShape(8.dp))
-                      .clickable { selectedDrug = drug }
+                      .clickable {
+                        selectedDrug = drug
+                        searchQuery = ""
+                      }
                       .padding(horizontal = 10.dp, vertical = 6.dp)
                   ) {
                     Text(

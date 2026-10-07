@@ -72,6 +72,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.ai.ChatMessage
+import com.example.ui.components.InAppSearchDialog
 import com.example.ui.theme.CardBorder
 import com.example.ui.theme.GrayBackground
 import com.example.ui.theme.RoyalMagenta
@@ -92,6 +93,8 @@ fun AiChatbotScreen(
   val isThinking by viewModel.isAiThinking.collectAsState()
   var inputQuery by remember { mutableStateOf("") }
   val listState = rememberLazyListState()
+  var inAppSearchQuery by remember { mutableStateOf<String?>(null) }
+  var inAppSearchTitle by remember { mutableStateOf("Google Search") }
 
   // Voice speech recognizer
   val speechLauncher = rememberLauncherForActivityResult(
@@ -165,6 +168,15 @@ fun AiChatbotScreen(
         }
 
         Row(verticalAlignment = Alignment.CenterVertically) {
+          Box(
+            modifier = Modifier
+              .clip(RoundedCornerShape(12.dp))
+              .background(Color(0xFF059669))
+              .padding(horizontal = 6.dp, vertical = 2.dp)
+          ) {
+            Text("HYBRID ONLINE/OFFLINE", fontSize = 8.5.sp, fontWeight = FontWeight.Bold, color = Color.White)
+          }
+          Spacer(modifier = Modifier.width(4.dp))
           IconButton(
             onClick = {
               val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
@@ -180,7 +192,7 @@ fun AiChatbotScreen(
             },
             modifier = Modifier.testTag("btn_voice_input_ai_chat")
           ) {
-            Icon(Icons.Default.Mic, contentDescription = "Voice Ask", tint = Color(0xFFFFE082), modifier = Modifier.size(22.dp))
+            Icon(Icons.Default.Mic, contentDescription = "Voice Ask", tint = Color(0xFFFFE082), modifier = Modifier.size(20.dp))
           }
         }
       }
@@ -224,12 +236,12 @@ fun AiChatbotScreen(
           ChatBubble(
             message = msg,
             onOpenMaps = { query ->
-              val geoUri = Uri.parse("https://www.google.com/maps/search/?api=1&query=${Uri.encode(query)}")
-              context.startActivity(Intent(Intent.ACTION_VIEW, geoUri))
+              inAppSearchTitle = "Google Maps Logistics"
+              inAppSearchQuery = "https://www.google.com/maps/search/?api=1&query=${Uri.encode(query)}"
             },
             onOpenSearch = { query ->
-              val searchUri = Uri.parse("https://www.google.com/search?q=${Uri.encode(query)}")
-              context.startActivity(Intent(Intent.ACTION_VIEW, searchUri))
+              inAppSearchTitle = "Google Search Verification"
+              inAppSearchQuery = query
             },
             onCopy = { text ->
               val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -311,6 +323,14 @@ fun AiChatbotScreen(
         }
       }
     }
+
+    if (inAppSearchQuery != null) {
+      InAppSearchDialog(
+        initialQuery = inAppSearchQuery!!,
+        title = inAppSearchTitle,
+        onDismiss = { inAppSearchQuery = null }
+      )
+    }
   }
 }
 
@@ -366,7 +386,8 @@ fun ChatBubble(
 
         // Action links for Maps and Search
         if (!isUser) {
-          if (message.text.contains("Maps") || message.text.contains("Route") || message.text.contains("km")) {
+          val hasLogisticsRoute = (message.text.contains("Logistics Hub") || message.text.contains("Logistics Route")) && message.text.contains("via NH")
+          if (hasLogisticsRoute) {
             Spacer(modifier = Modifier.height(8.dp))
             Row(
               verticalAlignment = Alignment.CenterVertically,
@@ -378,18 +399,26 @@ fun ChatBubble(
             ) {
               Icon(Icons.Default.Directions, contentDescription = null, tint = Color(0xFF0369A1), modifier = Modifier.size(14.dp))
               Spacer(modifier = Modifier.width(4.dp))
-              Text("Open in Google Maps", fontSize = 11.sp, color = Color(0xFF0369A1), fontWeight = FontWeight.Bold)
+              Text("View Route in Maps", fontSize = 11.sp, color = Color(0xFF0369A1), fontWeight = FontWeight.Bold)
             }
           }
 
-          if (message.text.contains("CDSCO") || message.text.contains("Gazette") || message.text.contains("Search") || message.text.contains("Substitute") || message.text.contains("Interaction")) {
+          val hasClinicalInfo = !message.text.startsWith("Namaste") &&
+            (message.text.contains("CDSCO") || message.text.contains("Substitute Analysis") || message.text.contains("Interaction Alert") || message.text.contains("Amoxicillin") || message.text.contains("Paracetamol"))
+          if (hasClinicalInfo) {
+            val searchQuery = when {
+              message.text.contains("Paracetamol") -> "Paracetamol 650 generic substitutes CDSCO"
+              message.text.contains("Aspirin") -> "Aspirin Warfarin interaction clinical advisory"
+              message.text.contains("Amoxicillin") -> "Amoxicillin Clavulanate 625 dosage CDSCO"
+              else -> message.text.lines().firstOrNull { it.isNotBlank() }?.take(45)?.replace("⚠️", "")?.replace("💡", "")?.replace("💊", "")?.trim() ?: "CDSCO drug safety monographs"
+            }
             Spacer(modifier = Modifier.height(8.dp))
             Row(
               verticalAlignment = Alignment.CenterVertically,
               modifier = Modifier
                 .clip(RoundedCornerShape(6.dp))
                 .background(Color(0xFFF1F5F9))
-                .clickable { onOpenSearch(message.text.take(60)) }
+                .clickable { onOpenSearch(searchQuery) }
                 .padding(horizontal = 8.dp, vertical = 4.dp)
             ) {
               Icon(Icons.Default.Search, contentDescription = null, tint = RoyalNavy, modifier = Modifier.size(14.dp))

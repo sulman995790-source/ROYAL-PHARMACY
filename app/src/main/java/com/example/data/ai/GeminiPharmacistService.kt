@@ -38,17 +38,27 @@ class GeminiPharmacistService {
     Tone: Professional, clinical, reassuring, precise, and supportive of community pharmacy operations in India.
   """.trimIndent()
 
+  private fun isApiKeyValid(key: String): Boolean {
+    val k = key.trim()
+    return k.isNotBlank() &&
+      !k.equals("DEFAULT_GEMINI_API_KEY", ignoreCase = true) &&
+      !k.equals("MY_GEMINI_API_KEY", ignoreCase = true) &&
+      !k.equals("YOUR_API_KEY", ignoreCase = true) &&
+      !k.contains("DEFAULT", ignoreCase = true) &&
+      k.length >= 20
+  }
+
   suspend fun sendMessage(
     userMessage: String,
     conversationHistory: List<ChatMessage>
   ): String = withContext(Dispatchers.IO) {
     val apiKey = try {
-      BuildConfig.GEMINI_API_KEY
+      BuildConfig.GEMINI_API_KEY.ifBlank { System.getenv("GEMINI_API_KEY") ?: "" }
     } catch (e: Exception) {
-      ""
+      System.getenv("GEMINI_API_KEY") ?: ""
     }
 
-    if (apiKey.isBlank() || apiKey == "MY_GEMINI_API_KEY") {
+    if (!isApiKeyValid(apiKey)) {
       // Offline Intelligent Clinical Rule-Based Fallback
       return@withContext generateLocalClinicalResponse(userMessage)
     }
@@ -58,40 +68,69 @@ class GeminiPharmacistService {
 
       val contentsArray = JSONArray()
 
-      // System instruction as first user/model context
-      val systemContent = JSONObject().apply {
-        put("role", "user")
-        put("parts", JSONArray().apply {
-          put(JSONObject().apply { put("text", "System: $systemPrompt") })
-        })
-      }
-      contentsArray.put(systemContent)
+      // Build valid alternating conversation turns starting with "user"
+      val validHistory = conversationHistory
+        .filter { it.text.isNotBlank() }
+        .takeLast(10)
 
-      // Add recent history
-      conversationHistory.takeLast(6).forEach { msg ->
+      val firstUserIndex = validHistory.indexOfFirst { it.sender == "user" }
+      val trimmedHistory = if (firstUserIndex != -1) {
+        validHistory.subList(firstUserIndex, validHistory.size)
+      } else {
+        emptyList()
+      }
+
+      var currentTurnRole = ""
+      var currentTurnParts = JSONArray()
+
+      trimmedHistory.forEach { msg ->
         val role = if (msg.sender == "user") "user" else "model"
-        val historyObj = JSONObject().apply {
-          put("role", role)
-          put("parts", JSONArray().apply {
+        if (role == currentTurnRole) {
+          currentTurnParts.put(JSONObject().apply { put("text", msg.text) })
+        } else {
+          if (currentTurnRole.isNotEmpty() && currentTurnParts.length() > 0) {
+            contentsArray.put(JSONObject().apply {
+              put("role", currentTurnRole)
+              put("parts", currentTurnParts)
+            })
+          }
+          currentTurnRole = role
+          currentTurnParts = JSONArray().apply {
             put(JSONObject().apply { put("text", msg.text) })
+          }
+        }
+      }
+
+      if (currentTurnRole == "user") {
+        currentTurnParts.put(JSONObject().apply { put("text", userMessage) })
+        contentsArray.put(JSONObject().apply {
+          put("role", "user")
+          put("parts", currentTurnParts)
+        })
+      } else {
+        if (currentTurnRole.isNotEmpty() && currentTurnParts.length() > 0) {
+          contentsArray.put(JSONObject().apply {
+            put("role", currentTurnRole)
+            put("parts", currentTurnParts)
           })
         }
-        contentsArray.put(historyObj)
-      }
-
-      // Add current message
-      val currentMsgObj = JSONObject().apply {
-        put("role", "user")
-        put("parts", JSONArray().apply {
-          put(JSONObject().apply { put("text", userMessage) })
+        contentsArray.put(JSONObject().apply {
+          put("role", "user")
+          put("parts", JSONArray().apply {
+            put(JSONObject().apply { put("text", userMessage) })
+          })
         })
       }
-      contentsArray.put(currentMsgObj)
 
       val rootJson = JSONObject().apply {
+        put("systemInstruction", JSONObject().apply {
+          put("parts", JSONArray().apply {
+            put(JSONObject().apply { put("text", systemPrompt) })
+          })
+        })
         put("contents", contentsArray)
         put("generationConfig", JSONObject().apply {
-          put("temperature", 0.4)
+          put("temperature", 0.3)
           put("topP", 0.95)
         })
       }
@@ -135,24 +174,24 @@ class GeminiPharmacistService {
       q.contains("augmentin") || q.contains("amoxyclav") || q.contains("antibiotic") -> {
         "💊 Amoxicillin + Clavulanate (625mg) formulation:\nStandard dosage is 1 tablet BID after meals to minimize GI distress. Check patient allergy records for penicillin hypersensitivity before dispensing."
       }
-      q.contains("route") || q.contains("direction") || q.contains("map") || q.contains("distributor") -> {
-        "📍 Google Maps Logistics Route:\n• Sun Pharma Distribution Hub (Guwahati): 42 km via NH-15 (~55 mins drive)\n• Cipla Regional Logistics: 48 km via NH-27\n• Civil Hospital Blood Bank: 1.2 km via Hospital Road (3 mins). Tap 'Open in Maps' to launch turn-by-turn navigation."
+      q.contains("route") || q.contains("direction") || q.contains("distributor") -> {
+        "📍 Distributor Logistics Hubs:\n• Sun Pharma Distribution Hub (Guwahati): 42 km via NH-15 (~55 mins drive)\n• Cipla Regional Logistics: 48 km via NH-27\n• Civil Hospital Blood Bank: 1.2 km via Hospital Road (3 mins)."
       }
       q.contains("search") || q.contains("news") || q.contains("cdsco") || q.contains("recall") -> {
-        "🔍 Google Search Pharma Update:\nCDSCO Gazette Notice: Fixed-Dose Combinations (FDCs) review for 2026 mandates stringent Schedule H1 labeling and QR codes on top 300 medicine brands. All Royal Pharmacy inventory adheres to current GS1 barcode standards."
+        "🔍 Regulatory & Formulation Update:\nCDSCO Gazette Notice: Fixed-Dose Combinations (FDCs) review mandates stringent Schedule H1 labeling and QR codes on top 300 medicine brands. All Royal Pharmacy inventory adheres to current GS1 barcode standards."
       }
       q.contains("udhar") || q.contains("credit") || q.contains("khata") -> {
         "📒 Udhar Khata Intelligence: Current total outstanding credit is ₹6,860.00 across 4 registered accounts. Highest pending balance is Dr. Amit Patel Clinic (₹3,850.00). You can send automatic WhatsApp payment reminders directly from the Udhar Khata tab."
       }
       else -> {
-        "Hello! I am your ROYAL PHARMACY AI Clinical & Operations Assistant. I can assist you with:\n1. Checking drug-drug interactions & dosage guidelines\n2. Recommending lower-cost generic substitutes by chemical salt\n3. Checking supplier purchase order status and Google Maps supplier routes\n4. Monitoring low stock and expiring batches\nHow can I help you today?"
+        "Namaste! I am your ROYAL PHARMACY AI Clinical & Operations Assistant. I can assist you with:\n1. Checking drug-drug interactions & dosage guidelines\n2. Recommending lower-cost generic substitutes by chemical salt\n3. Checking supplier purchase order status\n4. Monitoring low stock and expiring batches\nHow can I help you today?"
       }
     }
   }
 
   suspend fun searchBrandProductsOnline(brandName: String): List<com.example.data.model.BrandMedicine> = withContext(Dispatchers.IO) {
     val localList = BrandCatalogProvider.getBrandMedicines(brandName)
-    val apiKey = try { BuildConfig.GEMINI_API_KEY } catch (e: Exception) { "" }
+    val apiKey = try { BuildConfig.GEMINI_API_KEY.ifBlank { System.getenv("GEMINI_API_KEY") ?: "" } } catch (e: Exception) { System.getenv("GEMINI_API_KEY") ?: "" }
 
     if (apiKey.isBlank() || apiKey == "MY_GEMINI_API_KEY") {
       return@withContext localList
@@ -186,7 +225,7 @@ class GeminiPharmacistService {
   }
 
   suspend fun searchSubstitutesOnline(queryOrSalt: String): List<com.example.data.model.BrandMedicine> = withContext(Dispatchers.IO) {
-    val apiKey = try { BuildConfig.GEMINI_API_KEY } catch (e: Exception) { "" }
+    val apiKey = try { BuildConfig.GEMINI_API_KEY.ifBlank { System.getenv("GEMINI_API_KEY") ?: "" } } catch (e: Exception) { System.getenv("GEMINI_API_KEY") ?: "" }
     val q = queryOrSalt.trim()
 
     val fallbackSubstitutes = generateRichSubstitutesFallback(q)
@@ -233,6 +272,7 @@ class GeminiPharmacistService {
         })
       })
       put("generationConfig", JSONObject().apply {
+        put("responseMimeType", "application/json")
         put("temperature", 0.2)
       })
     }

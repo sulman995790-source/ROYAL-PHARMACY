@@ -253,10 +253,34 @@ object GoogleDriveSyncService {
     _userName.value = name
     val current = savedAccounts.value.toMutableList()
     if (current.none { it.email.equals(email, ignoreCase = true) }) {
-      current.add(GoogleAccountProfile(email, name, isPrimary = false))
+      current.add(GoogleAccountProfile(email, name, isPrimary = current.isEmpty()))
       savedAccounts.value = current
     }
     _statusMessage.value = "Google Drive Account switched to: $email"
+  }
+
+  fun addAccount(email: String, name: String) {
+    switchAccount(email, name)
+    _statusMessage.value = "Added Google Account: $email"
+  }
+
+  fun removeAccount(email: String) {
+    val current = savedAccounts.value.toMutableList()
+    val updated = current.filterNot { it.email.equals(email, ignoreCase = true) }
+    savedAccounts.value = updated
+    if (_userEmail.value.equals(email, ignoreCase = true)) {
+      if (updated.isNotEmpty()) {
+        val next = updated.first()
+        _userEmail.value = next.email
+        _userName.value = next.displayName
+        _isConnected.value = true
+      } else {
+        _isConnected.value = false
+        _userEmail.value = ""
+        _userName.value = "Disconnected"
+      }
+    }
+    _statusMessage.value = "Removed Google Account: $email"
   }
 
   fun connectAccount(email: String = DEFAULT_USER_EMAIL, name: String = DEFAULT_USER_NAME) {

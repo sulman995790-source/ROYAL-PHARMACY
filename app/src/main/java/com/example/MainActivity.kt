@@ -17,8 +17,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.service.StockAlertNotificationService
+import com.example.ui.components.OwnerPinVerificationDialog
 import com.example.ui.components.QuickActionsBottomSheet
 import com.example.ui.components.RoyalBottomNav
+import com.example.ui.components.UserRoleAuthDialog
+import com.example.ui.components.VisualSyncStatusDialog
 import com.example.ui.screens.AddSaleScreen
 import com.example.ui.screens.AiChatbotScreen
 import com.example.ui.screens.AppLockScreen
@@ -34,7 +37,9 @@ import com.example.ui.screens.CriticalStockAlertsScreen
 import com.example.ui.screens.CustomerHistoryScreen
 import com.example.ui.screens.DailyHuddleScreen
 import com.example.ui.screens.DailySalesReportScreen
+import com.example.ui.screens.DiseaseTrackerScreen
 import com.example.ui.screens.DistributorCartScreen
+import com.example.ui.screens.DoctorManagementScreen
 import com.example.ui.screens.DrugInteractionCheckerScreen
 import com.example.ui.screens.EditProfileScreen
 import com.example.ui.screens.HomeScreen
@@ -114,6 +119,22 @@ fun RoyalPharmacyApp(
   val profile by viewModel.businessProfile.collectAsState()
   val isAppLocked by viewModel.isAppLocked.collectAsState()
 
+  // User Role and Visual Sync Dialog States
+  val showUserRoleAuthDialog by viewModel.showUserRoleAuthDialog.collectAsState()
+  val showVisualSyncStatusSheet by viewModel.showVisualSyncStatusSheet.collectAsState()
+  val showOwnerPinAuthDialog by viewModel.showOwnerPinAuthDialog.collectAsState()
+  val currentUserRole by viewModel.currentUserRole.collectAsState()
+  val visualSyncState by viewModel.visualSyncState.collectAsState()
+  val pendingSyncQueueCount by viewModel.pendingSyncQueueCount.collectAsState()
+  val lastSyncTimeDisplay by viewModel.lastSyncTimeDisplay.collectAsState()
+  val currentUserEmail by viewModel.currentUserEmail.collectAsState()
+  val currentUserPhone by viewModel.currentUserPhone.collectAsState()
+  val currentUserName by viewModel.currentUserName.collectAsState()
+  val authLoginType by viewModel.authLoginType.collectAsState()
+  val ownerPin by viewModel.ownerPin.collectAsState()
+  val ownerPinErrorMessage by viewModel.ownerPinErrorMessage.collectAsState()
+  val pendingRestrictedActionName by viewModel.pendingRestrictedActionName.collectAsState()
+
   // Full-screen Biometric & PIN Security Lock
   if (isAppLocked) {
     AppLockScreen(viewModel = viewModel)
@@ -144,7 +165,7 @@ fun RoyalPharmacyApp(
       Screen.INVENTORY_DASHBOARD, Screen.BATCH_TRACKING, Screen.STOCK_ANALYTICS -> viewModel.navigateTo(Screen.STOCK)
       Screen.PURCHASE_ORDERS -> viewModel.navigateTo(Screen.PURCHASE)
       Screen.VOICE_SEARCH, Screen.SYNC_MANAGER, Screen.PRESCRIPTION_SCANNER, Screen.DAILY_HUDDLE, Screen.BACKUP_RESTORE, Screen.INVENTORY_QR -> viewModel.navigateTo(Screen.HOME)
-      Screen.CASH_BANK_ACCOUNTS, Screen.PRESCRIPTION_HISTORY, Screen.SMART_DOSAGE_CALCULATOR, Screen.UNIT_CONVERTER, Screen.DRUG_INTERACTION_CHECKER, Screen.SMART_INVENTORY_SUGGESTIONS -> viewModel.navigateTo(Screen.MORE)
+      Screen.CASH_BANK_ACCOUNTS, Screen.PRESCRIPTION_HISTORY, Screen.SMART_DOSAGE_CALCULATOR, Screen.UNIT_CONVERTER, Screen.DRUG_INTERACTION_CHECKER, Screen.SMART_INVENTORY_SUGGESTIONS, Screen.DOCTOR_MANAGEMENT, Screen.SYMPTOM_DISEASE_TRACKER -> viewModel.navigateTo(Screen.MORE)
       else -> viewModel.navigateTo(Screen.HOME)
     }
   }
@@ -217,6 +238,8 @@ fun RoyalPharmacyApp(
         Screen.UNIT_CONVERTER -> UnitConverterScreen(viewModel = viewModel)
         Screen.DRUG_INTERACTION_CHECKER -> DrugInteractionCheckerScreen(viewModel = viewModel)
         Screen.SMART_INVENTORY_SUGGESTIONS -> SmartInventorySuggestionScreen(viewModel = viewModel)
+        Screen.DOCTOR_MANAGEMENT -> DoctorManagementScreen(viewModel = viewModel)
+        Screen.SYMPTOM_DISEASE_TRACKER -> DiseaseTrackerScreen(viewModel = viewModel)
       }
 
       // Quick Actions Bottom Sheet
@@ -263,6 +286,44 @@ fun RoyalPharmacyApp(
           onOpenPrinterStation = {
             viewModel.openInvoicePrinter(lastInvoice)
           }
+        )
+      }
+
+      // Visual Sync Status Dialog Overlay
+      if (showVisualSyncStatusSheet) {
+        VisualSyncStatusDialog(
+          syncState = visualSyncState,
+          pendingCount = pendingSyncQueueCount,
+          lastSyncTime = lastSyncTimeDisplay,
+          userEmail = currentUserEmail,
+          onTriggerSync = { viewModel.triggerManualVisualSync() },
+          onDismiss = { viewModel.showVisualSyncStatusSheet.value = false }
+        )
+      }
+
+      // User Role & Login Options Dialog Overlay
+      if (showUserRoleAuthDialog) {
+        UserRoleAuthDialog(
+          currentRole = currentUserRole,
+          currentEmail = currentUserEmail,
+          currentPhone = currentUserPhone,
+          currentName = currentUserName,
+          authType = authLoginType,
+          ownerPin = ownerPin,
+          onLoginPhone = { phone, name, role -> viewModel.loginWithPhone(phone, name, role) },
+          onLoginGmail = { email, name, role -> viewModel.loginWithGmail(email, name, role) },
+          onRoleSwitched = { newRole, pin -> viewModel.switchUserRole(newRole, pin) },
+          onDismiss = { viewModel.showUserRoleAuthDialog.value = false }
+        )
+      }
+
+      // Owner Security PIN Verification Dialog Overlay
+      if (showOwnerPinAuthDialog) {
+        OwnerPinVerificationDialog(
+          actionTitle = pendingRestrictedActionName,
+          errorMessage = ownerPinErrorMessage,
+          onVerifyPin = { pin -> viewModel.verifyOwnerPinAndProceed(pin) },
+          onDismiss = { viewModel.showOwnerPinAuthDialog.value = false }
         )
       }
     }

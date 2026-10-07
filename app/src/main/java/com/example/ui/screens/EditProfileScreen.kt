@@ -1,5 +1,13 @@
 package com.example.ui.screens
 
+import android.content.Context
+import android.graphics.BitmapFactory
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -35,10 +43,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import com.example.ui.components.ImagePickerDialog
+import com.example.ui.components.ImagePickerType
 import com.example.ui.theme.CardBorder
 import com.example.ui.theme.GrayBackground
 import com.example.ui.theme.RoyalMagenta
@@ -47,16 +61,21 @@ import com.example.ui.theme.TextDark
 import com.example.ui.theme.TextMuted
 import com.example.viewmodel.PharmacyViewModel
 import com.example.viewmodel.Screen
+import java.io.File
+import java.io.FileOutputStream
 
 @Composable
 fun EditProfileScreen(
   viewModel: PharmacyViewModel,
   modifier: Modifier = Modifier
 ) {
+  val context = LocalContext.current
   val profile by viewModel.businessProfile.collectAsState()
   var name by remember(profile) { mutableStateOf(profile.ownerName) }
   var phone by remember(profile) { mutableStateOf(profile.phone) }
   var email by remember(profile) { mutableStateOf(profile.email) }
+  var avatarUri by remember(profile) { mutableStateOf(profile.avatarImageUri) }
+  var showAvatarPicker by remember { mutableStateOf(false) }
 
   Box(
     modifier = modifier
@@ -106,26 +125,36 @@ fun EditProfileScreen(
       ) {
         Box(
           modifier = Modifier
-            .size(76.dp)
+            .size(84.dp)
             .clip(CircleShape)
             .background(GrayBackground)
-            .border(1.dp, CardBorder, CircleShape)
-            .clickable { /* Select avatar */ },
+            .border(2.dp, if (avatarUri.isNotBlank()) RoyalMagenta else CardBorder, CircleShape)
+            .clickable { showAvatarPicker = true },
           contentAlignment = Alignment.Center
         ) {
-          Icon(
-            imageVector = Icons.Default.CameraAlt,
-            contentDescription = null,
-            tint = TextMuted,
-            modifier = Modifier.size(28.dp)
-          )
+          if (avatarUri.isNotBlank()) {
+            AsyncImage(
+              model = java.io.File(avatarUri).takeIf { it.exists() } ?: avatarUri,
+              contentDescription = "Profile Picture",
+              contentScale = ContentScale.Crop,
+              modifier = Modifier.fillMaxSize()
+            )
+          } else {
+            Icon(
+              imageVector = Icons.Default.CameraAlt,
+              contentDescription = null,
+              tint = TextMuted,
+              modifier = Modifier.size(32.dp)
+            )
+          }
         }
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-          text = "Add Profile picture",
+          text = if (avatarUri.isNotBlank()) "Change Profile Picture" else "Add Profile picture",
           fontSize = 12.sp,
-          color = TextDark,
-          fontWeight = FontWeight.Medium
+          color = if (avatarUri.isNotBlank()) RoyalNavy else TextDark,
+          fontWeight = FontWeight.Medium,
+          modifier = Modifier.clickable { showAvatarPicker = true }
         )
       }
 
@@ -162,7 +191,15 @@ fun EditProfileScreen(
 
       Button(
         onClick = {
-          viewModel.saveBusinessProfile(profile.copy(ownerName = name, phone = phone, email = email))
+          viewModel.saveBusinessProfile(
+            profile.copy(
+              ownerName = name,
+              phone = phone,
+              email = email,
+              avatarImageUri = avatarUri
+            )
+          )
+          Toast.makeText(context, "Profile updated successfully!", Toast.LENGTH_SHORT).show()
           viewModel.navigateTo(Screen.MORE)
         },
         shape = RoundedCornerShape(8.dp),
@@ -178,5 +215,34 @@ fun EditProfileScreen(
 
       Spacer(modifier = Modifier.height(24.dp))
     }
+
+    if (showAvatarPicker) {
+      ImagePickerDialog(
+        title = "Profile Picture",
+        pickerType = ImagePickerType.PROFILE_AVATAR,
+        onImageSelected = { path ->
+          avatarUri = path
+          viewModel.saveBusinessProfile(profile.copy(avatarImageUri = path))
+          showAvatarPicker = false
+          Toast.makeText(context, "Profile picture updated", Toast.LENGTH_SHORT).show()
+        },
+        onDismiss = { showAvatarPicker = false }
+      )
+    }
   }
 }
+
+private fun saveAvatarImage(context: Context, uri: Uri): String {
+  return try {
+    val file = File(context.filesDir, "avatar_${System.currentTimeMillis()}.jpg")
+    context.contentResolver.openInputStream(uri)?.use { input ->
+      FileOutputStream(file).use { output ->
+        input.copyTo(output)
+      }
+    }
+    file.absolutePath
+  } catch (_: Exception) {
+    uri.toString()
+  }
+}
+

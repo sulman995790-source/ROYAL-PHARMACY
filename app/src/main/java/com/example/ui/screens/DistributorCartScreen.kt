@@ -327,11 +327,35 @@ fun DistributorCartScreen(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Two Primary Export Buttons: XLS and PDF
+            // Four Batch Export Options: CSV, XLS, XLSX, and PDF
+            Text(
+              text = "Batch Export Options (Purchase Required Products):",
+              fontSize = 11.5.sp,
+              fontWeight = FontWeight.Bold,
+              color = TextDark,
+              modifier = Modifier.padding(bottom = 6.dp)
+            )
+
             Row(
               modifier = Modifier.fillMaxWidth(),
-              horizontalArrangement = Arrangement.spacedBy(8.dp)
+              horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
+              Button(
+                onClick = {
+                  if (cartItems.isEmpty()) {
+                    Toast.makeText(context, "Cart is empty! Add items first.", Toast.LENGTH_SHORT).show()
+                  } else {
+                    viewModel.exportCartToCsv(context, distributorName)
+                  }
+                },
+                modifier = Modifier.weight(1f).testTag("btn_export_csv"),
+                shape = RoundedCornerShape(8.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0F766E)), // Teal CSV
+                contentPadding = PaddingValues(vertical = 8.dp)
+              ) {
+                Text("CSV", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+              }
+
               Button(
                 onClick = {
                   if (cartItems.isEmpty()) {
@@ -343,21 +367,25 @@ fun DistributorCartScreen(
                 modifier = Modifier.weight(1f).testTag("btn_export_xls"),
                 shape = RoundedCornerShape(8.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1E7E34)), // Excel Green
-                contentPadding = PaddingValues(vertical = 10.dp)
+                contentPadding = PaddingValues(vertical = 8.dp)
               ) {
-                Icon(
-                  imageVector = Icons.Default.TableChart,
-                  contentDescription = null,
-                  tint = Color.White,
-                  modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                  text = "Export XLS/CSV",
-                  fontSize = 12.sp,
-                  fontWeight = FontWeight.Bold,
-                  color = Color.White
-                )
+                Text("XLS", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+              }
+
+              Button(
+                onClick = {
+                  if (cartItems.isEmpty()) {
+                    Toast.makeText(context, "Cart is empty! Add items first.", Toast.LENGTH_SHORT).show()
+                  } else {
+                    viewModel.exportCartToXlsx(context, distributorName)
+                  }
+                },
+                modifier = Modifier.weight(1f).testTag("btn_export_xlsx"),
+                shape = RoundedCornerShape(8.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF15803D)), // XLSX Green
+                contentPadding = PaddingValues(vertical = 8.dp)
+              ) {
+                Text("XLSX", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
               }
 
               Button(
@@ -371,21 +399,9 @@ fun DistributorCartScreen(
                 modifier = Modifier.weight(1f).testTag("btn_export_pdf"),
                 shape = RoundedCornerShape(8.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFC5221F)), // PDF Red
-                contentPadding = PaddingValues(vertical = 10.dp)
+                contentPadding = PaddingValues(vertical = 8.dp)
               ) {
-                Icon(
-                  imageVector = Icons.Default.PictureAsPdf,
-                  contentDescription = null,
-                  tint = Color.White,
-                  modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                  text = "Export PDF",
-                  fontSize = 12.sp,
-                  fontWeight = FontWeight.Bold,
-                  color = Color.White
-                )
+                Text("PDF", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
               }
             }
           }

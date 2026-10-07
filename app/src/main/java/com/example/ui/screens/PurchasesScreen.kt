@@ -19,13 +19,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.LocalShipping
-import androidx.compose.material.icons.filled.PlayCircleOutline
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -33,6 +35,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Tab
@@ -61,14 +64,13 @@ import com.example.data.model.PurchaseInvoice
 import com.example.ui.theme.CardBorder
 import com.example.ui.theme.GrayBackground
 import com.example.ui.theme.RoyalMagenta
-import com.example.ui.theme.RoyalMagentaLight
 import com.example.ui.theme.RoyalNavy
-import com.example.viewmodel.Screen
 import com.example.ui.theme.StatusGreen
 import com.example.ui.theme.StatusRed
 import com.example.ui.theme.TextDark
 import com.example.ui.theme.TextMuted
 import com.example.viewmodel.PharmacyViewModel
+import com.example.viewmodel.Screen
 import java.util.Locale
 
 @Composable
@@ -76,7 +78,7 @@ fun PurchasesScreen(
   viewModel: PharmacyViewModel,
   modifier: Modifier = Modifier
 ) {
-  val distributors by viewModel.allDistributors.collectAsState()
+  val distributors by viewModel.allDistributorsWithPurchases.collectAsState()
   val purchases by viewModel.allPurchases.collectAsState()
   var selectedTab by remember { mutableIntStateOf(0) } // 0: Distributor (N), 1: Purchases by Date
   var searchQuery by remember { mutableStateOf("") }
@@ -96,7 +98,7 @@ fun PurchasesScreen(
       .background(GrayBackground)
   ) {
     Column(modifier = Modifier.fillMaxSize()) {
-      // 1. Header (Screenshot 4)
+      // 1. Header
       Row(
         modifier = Modifier
           .fillMaxWidth()
@@ -105,12 +107,20 @@ fun PurchasesScreen(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
       ) {
-        Text(
-          text = "View Purchases",
-          fontSize = 17.sp,
-          fontWeight = FontWeight.Bold,
-          color = TextDark
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          IconButton(
+            onClick = { viewModel.navigateTo(Screen.HOME) },
+            modifier = Modifier.size(32.dp).padding(end = 4.dp)
+          ) {
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = TextDark)
+          }
+          Text(
+            text = "View Purchases",
+            fontSize = 17.sp,
+            fontWeight = FontWeight.Bold,
+            color = TextDark
+          )
+        }
 
         Row(verticalAlignment = Alignment.CenterVertically) {
           Button(
@@ -228,37 +238,77 @@ fun PurchasesScreen(
 
       // 4. Content List
       if (selectedTab == 0) {
-        LazyColumn(
-          modifier = Modifier.fillMaxSize(),
-          contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
-          verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-          items(filteredDistributors, key = { it.id }) { dist ->
-            DistributorCard(dist)
+        if (filteredDistributors.isEmpty()) {
+          Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+          ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+              Text("No distributors recorded yet", fontSize = 14.sp, color = TextMuted)
+              Spacer(modifier = Modifier.height(8.dp))
+              Button(
+                onClick = { showAddPurchaseDialog = true },
+                colors = ButtonDefaults.buttonColors(containerColor = RoyalNavy)
+              ) {
+                Text("Record Purchase & Add Distributor")
+              }
+            }
           }
+        } else {
+          LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+          ) {
+            items(filteredDistributors, key = { it.id }) { dist ->
+              DistributorCard(dist)
+            }
 
-          item {
-            Spacer(modifier = Modifier.height(80.dp))
+            item {
+              Spacer(modifier = Modifier.height(80.dp))
+            }
           }
         }
       } else {
-        LazyColumn(
-          modifier = Modifier.fillMaxSize(),
-          contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
-          verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-          items(filteredPurchases, key = { it.id }) { purchase ->
-            PurchaseInvoiceCard(purchase)
+        if (filteredPurchases.isEmpty()) {
+          Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+          ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+              Text("No purchases recorded yet", fontSize = 14.sp, color = TextMuted)
+              Spacer(modifier = Modifier.height(8.dp))
+              Button(
+                onClick = { showAddPurchaseDialog = true },
+                colors = ButtonDefaults.buttonColors(containerColor = RoyalNavy)
+              ) {
+                Text("+ Add New Purchase")
+              }
+            }
           }
+        } else {
+          LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+          ) {
+            items(filteredPurchases, key = { it.id }) { purchase ->
+              PurchaseInvoiceCard(
+                purchase = purchase,
+                onToggleStatus = { viewModel.togglePurchaseStatus(purchase) },
+                onDelete = { viewModel.deletePurchaseInvoice(purchase) }
+              )
+            }
 
-          item {
-            Spacer(modifier = Modifier.height(80.dp))
+            item {
+              Spacer(modifier = Modifier.height(80.dp))
+            }
           }
         }
       }
     }
 
-    // Floating Button: "+ Add Purchase" (Screenshot 4)
+    // Floating Button: "+ Add Purchase"
     Button(
       onClick = { showAddPurchaseDialog = true },
       shape = RoundedCornerShape(24.dp),
@@ -278,8 +328,16 @@ fun PurchasesScreen(
       AddPurchaseDialog(
         distributors = distributors,
         onDismiss = { showAddPurchaseDialog = false },
-        onSave = { name, gstin, amount, count, invNo ->
-          viewModel.addNewPurchase(name, gstin, amount, count, invNo)
+        onSave = { name, gstin, amount, count, invNo, status, payMode ->
+          viewModel.addNewPurchase(
+            distributorName = name,
+            gstin = gstin,
+            amount = amount,
+            itemCount = count,
+            invoiceNo = invNo,
+            status = status,
+            paymentMode = payMode
+          )
           showAddPurchaseDialog = false
         }
       )
@@ -316,7 +374,7 @@ fun DistributorCard(dist: Distributor) {
         verticalAlignment = Alignment.Top
       ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-          // Initials square badge (SA)
+          // Initials square badge
           Box(
             modifier = Modifier
               .size(42.dp)
@@ -354,7 +412,7 @@ fun DistributorCard(dist: Distributor) {
             Spacer(modifier = Modifier.height(4.dp))
 
             // GST Registered badge
-            if (dist.isGstRegistered) {
+            if (dist.isGstRegistered || dist.gstin.isNotBlank()) {
               Box(
                 modifier = Modifier
                   .clip(RoundedCornerShape(4.dp))
@@ -372,16 +430,16 @@ fun DistributorCard(dist: Distributor) {
           }
         }
 
-        // Amount payable (Screenshot 4)
+        // Amount payable
         Column(horizontalAlignment = Alignment.End) {
           Text(
             text = String.format(Locale.getDefault(), "₹%.2f", dist.balancePayable),
             fontSize = 15.sp,
             fontWeight = FontWeight.Bold,
-            color = StatusRed
+            color = if (dist.balancePayable > 0) StatusRed else StatusGreen
           )
           Text(
-            text = "You'll pay",
+            text = if (dist.balancePayable > 0) "You'll pay" else "All Settled",
             fontSize = 11.sp,
             color = TextMuted
           )
@@ -401,7 +459,7 @@ fun DistributorCard(dist: Distributor) {
           color = TextMuted
         )
         Text(
-          text = dist.gstin,
+          text = dist.gstin.ifBlank { "GST: Unregistered" },
           fontSize = 11.sp,
           fontWeight = FontWeight.Medium,
           color = TextDark
@@ -412,7 +470,13 @@ fun DistributorCard(dist: Distributor) {
 }
 
 @Composable
-fun PurchaseInvoiceCard(purchase: PurchaseInvoice) {
+fun PurchaseInvoiceCard(
+  purchase: PurchaseInvoice,
+  onToggleStatus: () -> Unit,
+  onDelete: () -> Unit
+) {
+  val isPaid = purchase.status.equals("Paid", ignoreCase = true)
+
   Card(
     shape = RoundedCornerShape(8.dp),
     colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -446,22 +510,56 @@ fun PurchaseInvoiceCard(purchase: PurchaseInvoice) {
           color = TextDark
         )
       }
-      Spacer(modifier = Modifier.height(6.dp))
+      Spacer(modifier = Modifier.height(8.dp))
+
       Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
       ) {
         Text(
           text = "${purchase.itemsCount} Items purchased",
           fontSize = 11.sp,
           color = TextMuted
         )
-        Text(
-          text = purchase.status,
-          fontSize = 11.sp,
-          fontWeight = FontWeight.Bold,
-          color = if (purchase.status == "Paid") StatusGreen else StatusRed
-        )
+
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+          // Interactive Paid / Unpaid Toggle Badge
+          Box(
+            modifier = Modifier
+              .clip(RoundedCornerShape(6.dp))
+              .background(if (isPaid) Color(0xFFE8F5E9) else Color(0xFFFFEBEE))
+              .border(1.dp, if (isPaid) Color(0xFFA5D6A7) else Color(0xFFFFCDD2), RoundedCornerShape(6.dp))
+              .clickable { onToggleStatus() }
+              .padding(horizontal = 8.dp, vertical = 4.dp)
+          ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+              Icon(
+                imageVector = Icons.Default.SwapHoriz,
+                contentDescription = "Toggle status",
+                tint = if (isPaid) StatusGreen else StatusRed,
+                modifier = Modifier.size(12.dp)
+              )
+              Spacer(modifier = Modifier.width(3.dp))
+              Text(
+                text = if (isPaid) "PAID" else "UNPAID",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (isPaid) StatusGreen else StatusRed
+              )
+            }
+          }
+
+          IconButton(
+            onClick = onDelete,
+            modifier = Modifier.size(24.dp)
+          ) {
+            Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Gray, modifier = Modifier.size(15.dp))
+          }
+        }
       }
     }
   }
@@ -471,13 +569,15 @@ fun PurchaseInvoiceCard(purchase: PurchaseInvoice) {
 fun AddPurchaseDialog(
   distributors: List<Distributor>,
   onDismiss: () -> Unit,
-  onSave: (String, String, Double, Int, String) -> Unit
+  onSave: (String, String, Double, Int, String, String, String) -> Unit
 ) {
-  var distributorName by remember { mutableStateOf(distributors.firstOrNull()?.name ?: "Sample Distributor") }
-  var gstin by remember { mutableStateOf(distributors.firstOrNull()?.gstin ?: "24ABCDE1234F1ZK") }
-  var invoiceNo by remember { mutableStateOf("PUR-${System.currentTimeMillis() % 10000}") }
+  var distributorName by remember { mutableStateOf(distributors.firstOrNull()?.name ?: "Sun Pharma Distribution Hub") }
+  var gstin by remember { mutableStateOf(distributors.firstOrNull()?.gstin ?: "18AABCS9988K1Z3") }
+  var invoiceNo by remember { mutableStateOf("PUR-${(1000..9999).random()}") }
   var totalAmount by remember { mutableStateOf("957.00") }
   var itemsCount by remember { mutableStateOf("3") }
+  var paymentStatus by remember { mutableStateOf("Paid") } // "Paid" or "Unpaid"
+  var paymentMode by remember { mutableStateOf("Cash") } // "Cash", "UPI", "Bank Transfer"
 
   AlertDialog(
     onDismissRequest = onDismiss,
@@ -489,10 +589,42 @@ fun AddPurchaseDialog(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp)
       ) {
+        // Quick distributor preset selector
+        if (distributors.isNotEmpty()) {
+          Text("Select Known Distributor:", fontSize = 11.sp, color = TextMuted)
+          Row(
+            modifier = Modifier
+              .fillMaxWidth()
+              .padding(bottom = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+          ) {
+            distributors.take(3).forEach { dist ->
+              Box(
+                modifier = Modifier
+                  .clip(RoundedCornerShape(6.dp))
+                  .background(if (distributorName == dist.name) RoyalMagenta.copy(alpha = 0.1f) else Color(0xFFF1F5F9))
+                  .border(1.dp, if (distributorName == dist.name) RoyalMagenta else CardBorder, RoundedCornerShape(6.dp))
+                  .clickable {
+                    distributorName = dist.name
+                    gstin = dist.gstin
+                  }
+                  .padding(horizontal = 6.dp, vertical = 3.dp)
+              ) {
+                Text(
+                  text = dist.name.take(12) + if (dist.name.length > 12) "..." else "",
+                  fontSize = 10.sp,
+                  fontWeight = FontWeight.Medium,
+                  color = if (distributorName == dist.name) RoyalMagenta else TextDark
+                )
+              }
+            }
+          }
+        }
+
         OutlinedTextField(
           value = distributorName,
           onValueChange = { distributorName = it },
-          label = { Text("Distributor Name*") },
+          label = { Text("Distributor / Supplier Name*") },
           modifier = Modifier.fillMaxWidth().testTag("input_purchase_dist_name")
         )
         OutlinedTextField(
@@ -521,6 +653,57 @@ fun AddPurchaseDialog(
             modifier = Modifier.weight(1f)
           )
         }
+
+        // Payment Status Selection
+        Text("Payment Status:", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = TextDark)
+        Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+          Box(
+            modifier = Modifier
+              .weight(1f)
+              .clip(RoundedCornerShape(8.dp))
+              .background(if (paymentStatus == "Paid") Color(0xFFE8F5E9) else Color(0xFFF8FAFC))
+              .border(
+                1.5.dp,
+                if (paymentStatus == "Paid") StatusGreen else CardBorder,
+                RoundedCornerShape(8.dp)
+              )
+              .clickable { paymentStatus = "Paid" }
+              .padding(vertical = 8.dp),
+            contentAlignment = Alignment.Center
+          ) {
+            Text(
+              "✓ Paid (Cash/UPI)",
+              fontSize = 12.sp,
+              fontWeight = FontWeight.Bold,
+              color = if (paymentStatus == "Paid") StatusGreen else TextDark
+            )
+          }
+
+          Box(
+            modifier = Modifier
+              .weight(1f)
+              .clip(RoundedCornerShape(8.dp))
+              .background(if (paymentStatus == "Unpaid") Color(0xFFFFEBEE) else Color(0xFFF8FAFC))
+              .border(
+                1.5.dp,
+                if (paymentStatus == "Unpaid") StatusRed else CardBorder,
+                RoundedCornerShape(8.dp)
+              )
+              .clickable { paymentStatus = "Unpaid" }
+              .padding(vertical = 8.dp),
+            contentAlignment = Alignment.Center
+          ) {
+            Text(
+              "⚠️ Unpaid (Credit)",
+              fontSize = 12.sp,
+              fontWeight = FontWeight.Bold,
+              color = if (paymentStatus == "Unpaid") StatusRed else TextDark
+            )
+          }
+        }
       }
     },
     confirmButton = {
@@ -528,7 +711,7 @@ fun AddPurchaseDialog(
         onClick = {
           val amt = totalAmount.toDoubleOrNull() ?: 0.0
           val cnt = itemsCount.toIntOrNull() ?: 1
-          onSave(distributorName, gstin, amt, cnt, invoiceNo)
+          onSave(distributorName, gstin, amt, cnt, invoiceNo, paymentStatus, paymentMode)
         },
         colors = ButtonDefaults.buttonColors(containerColor = RoyalMagenta),
         modifier = Modifier.testTag("btn_save_purchase")

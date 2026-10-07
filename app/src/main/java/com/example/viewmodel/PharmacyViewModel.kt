@@ -13,6 +13,7 @@ import com.example.data.model.BusinessProfile
 import com.example.data.model.CartItem
 import com.example.data.model.Customer
 import com.example.data.model.Distributor
+import com.example.data.model.Doctor
 import com.example.data.model.MedicineItem
 import com.example.data.model.Patient
 import com.example.data.model.PurchaseInvoice
@@ -92,7 +93,9 @@ enum class Screen {
   SMART_DOSAGE_CALCULATOR,
   UNIT_CONVERTER,
   DRUG_INTERACTION_CHECKER,
-  SMART_INVENTORY_SUGGESTIONS
+  SMART_INVENTORY_SUGGESTIONS,
+  DOCTOR_MANAGEMENT,
+  SYMPTOM_DISEASE_TRACKER
 }
 
 enum class BatchRiskTier {
@@ -101,6 +104,23 @@ enum class BatchRiskTier {
   SHORT_60,
   UPCOMING_90,
   SAFE
+}
+
+enum class UserRole(val label: String, val badgeColorHex: Long) {
+  OWNER("Owner (Full Access)", 0xFF9C1258),
+  STAFF("Staff (General Work)", 0xFF2563EB)
+}
+
+enum class AuthLoginType(val label: String) {
+  GMAIL("Gmail Account"),
+  PHONE("Phone Number")
+}
+
+enum class VisualSyncState(val label: String, val statusColorHex: Long) {
+  SYNCED("Synced", 0xFF10B981),
+  SYNCING("Syncing...", 0xFF3B82F6),
+  PENDING_OFFLINE("Offline (Pending)", 0xFFF59E0B),
+  ERROR("Sync Error", 0xFFEF4444)
 }
 
 data class BatchExpiryItem(
@@ -208,7 +228,7 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
     listOf(
       ChatMessage(
         sender = "gemini",
-        text = "Namaste! I am your ROYAL PHARMACY AI Assistant. Ask me about generic substitutes, drug interactions, Google Maps supplier routes, or Udhar Khata summaries."
+        text = "Namaste! I am your ROYAL PHARMACY AI Assistant. Ask me about generic substitutes, drug interactions, clinical dosage guidelines, or inventory management."
       )
     )
   )
@@ -274,6 +294,95 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
   val isAppLockEnabled = MutableStateFlow(false)
   val isAppLocked = MutableStateFlow(false)
   val savedPin = MutableStateFlow("1234")
+
+  // User Role (Owner vs Staff) & Phone / Gmail Login Options
+  val currentUserRole = MutableStateFlow(UserRole.OWNER)
+  val currentUserPhone = MutableStateFlow("+91 99579 05450")
+  val currentUserEmail = MutableStateFlow("sulman995790@gmail.com")
+  val currentUserName = MutableStateFlow("Suleman Hoque")
+  val authLoginType = MutableStateFlow(AuthLoginType.GMAIL)
+  val isLoggedIn = MutableStateFlow(true)
+  val ownerPin = MutableStateFlow("1234")
+  val showUserRoleAuthDialog = MutableStateFlow(false)
+  val showOwnerPinAuthDialog = MutableStateFlow(false)
+  val ownerPinErrorMessage = MutableStateFlow<String?>(null)
+  val pendingRestrictedActionName = MutableStateFlow<String?>(null)
+  private var pendingRestrictedCallback: (() -> Unit)? = null
+
+  // Visual Sync Status State
+  val visualSyncState = MutableStateFlow(VisualSyncState.SYNCED)
+  val pendingSyncQueueCount = MutableStateFlow(0)
+  val lastSyncTimeDisplay = MutableStateFlow("Just now")
+  val showVisualSyncStatusSheet = MutableStateFlow(false)
+
+  fun switchUserRole(newRole: UserRole, enteredPin: String? = null): Boolean {
+    if (newRole == UserRole.OWNER && currentUserRole.value == UserRole.STAFF) {
+      if (enteredPin != ownerPin.value) {
+        ownerPinErrorMessage.value = "Invalid Owner PIN! Default PIN is '1234'."
+        return false
+      }
+    }
+    currentUserRole.value = newRole
+    ownerPinErrorMessage.value = null
+    scanFeedbackMessage.value = "Active role: ${newRole.label}"
+    return true
+  }
+
+  fun loginWithPhone(phone: String, userName: String = "Pharmacy Staff", role: UserRole = UserRole.STAFF) {
+    currentUserPhone.value = phone
+    currentUserName.value = userName
+    authLoginType.value = AuthLoginType.PHONE
+    currentUserRole.value = role
+    isLoggedIn.value = true
+    scanFeedbackMessage.value = "Signed in via Mobile ($phone) as ${role.label}"
+  }
+
+  fun loginWithGmail(email: String, userName: String = "Suleman Hoque", role: UserRole = UserRole.OWNER) {
+    currentUserEmail.value = email
+    currentUserName.value = userName
+    authLoginType.value = AuthLoginType.GMAIL
+    currentUserRole.value = role
+    isLoggedIn.value = true
+    GoogleDriveSyncService.switchAccount(email, userName)
+    scanFeedbackMessage.value = "Signed in via Gmail ($email) as ${role.label}"
+  }
+
+  fun executeWithOwnerPermission(actionTitle: String, onPermissionGranted: () -> Unit) {
+    if (currentUserRole.value == UserRole.OWNER) {
+      onPermissionGranted()
+    } else {
+      pendingRestrictedActionName.value = actionTitle
+      pendingRestrictedCallback = onPermissionGranted
+      showOwnerPinAuthDialog.value = true
+    }
+  }
+
+  fun verifyOwnerPinAndProceed(pin: String): Boolean {
+    if (pin == ownerPin.value) {
+      showOwnerPinAuthDialog.value = false
+      ownerPinErrorMessage.value = null
+      val cb = pendingRestrictedCallback
+      pendingRestrictedCallback = null
+      cb?.invoke()
+      scanFeedbackMessage.value = "Owner PIN verified successfully."
+      return true
+    } else {
+      ownerPinErrorMessage.value = "Incorrect PIN! Enter Owner PIN ('1234') to proceed."
+      return false
+    }
+  }
+
+  fun triggerManualVisualSync() {
+    viewModelScope.launch {
+      visualSyncState.value = VisualSyncState.SYNCING
+      val dao = PharmacyDatabase.getDatabase(getApplication(), viewModelScope).pharmacyDao()
+      GoogleDriveSyncService.manualSyncNow(getApplication(), dao)
+      visualSyncState.value = VisualSyncState.SYNCED
+      lastSyncTimeDisplay.value = "Just now"
+      pendingSyncQueueCount.value = 0
+      scanFeedbackMessage.value = "Cloud & Local Sync Completed!"
+    }
+  }
 
   // Google Drive Cloud Backup & Google Account Integration
   val isDriveConnected = GoogleDriveSyncService.isConnected
@@ -529,10 +638,53 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
   val allDistributors: StateFlow<List<Distributor>> = repository.allDistributors
     .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-  val allSales: StateFlow<List<SaleInvoice>> = repository.allSales
+  val allDoctors: StateFlow<List<Doctor>> = repository.allDoctors
     .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
   val allPurchases: StateFlow<List<PurchaseInvoice>> = repository.allPurchases
+    .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+  // Dynamic synchronized distributors combined with purchases
+  val allDistributorsWithPurchases: StateFlow<List<Distributor>> = combine(
+    allDistributors,
+    allPurchases
+  ) { dists, purchases ->
+    val distMap = LinkedHashMap<String, Distributor>()
+    // First put all registered distributors
+    dists.forEach { d ->
+      val key = d.name.trim().lowercase()
+      if (key.isNotBlank()) distMap[key] = d
+    }
+    // Aggregate purchases and compute pending balances or add missing distributors
+    purchases.forEach { p ->
+      val key = p.distributorName.trim().lowercase()
+      if (key.isNotBlank()) {
+        val existing = distMap[key]
+        if (existing == null) {
+          distMap[key] = Distributor(
+            id = p.id + 10000,
+            name = p.distributorName.trim(),
+            phone = "+91 98765 43210",
+            email = "orders@${p.distributorName.trim().lowercase().replace(" ", "")}.com",
+            gstin = p.distributorGstin.ifBlank { "18ABCDE1234F1ZK" },
+            isGstRegistered = p.distributorGstin.isNotBlank(),
+            balancePayable = if (p.status == "Unpaid") p.totalAmount else 0.0,
+            lastTxnDate = p.invoiceDate
+          )
+        } else {
+          // If invoice is unpaid, ensure balance reflects unpaid purchases
+          val unpaidTotal = purchases.filter { it.distributorName.trim().equals(existing.name.trim(), ignoreCase = true) && it.status == "Unpaid" }.sumOf { it.totalAmount }
+          distMap[key] = existing.copy(
+            balancePayable = if (unpaidTotal > 0) unpaidTotal else existing.balancePayable,
+            lastTxnDate = p.invoiceDate
+          )
+        }
+      }
+    }
+    distMap.values.toList()
+  }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+  val allSales: StateFlow<List<SaleInvoice>> = repository.allSales
     .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
   val allPatients: StateFlow<List<Patient>> = repository.allPatients
@@ -883,6 +1035,11 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
     scanFeedbackMessage.value = "Active Google Drive account: $email"
   }
 
+  fun removeGoogleDriveAccount(email: String) {
+    GoogleDriveSyncService.removeAccount(email)
+    scanFeedbackMessage.value = "Removed Google Drive account: $email"
+  }
+
   fun shareDriveSnapshot(context: Context, snapshot: DriveBackupSnapshot) {
     GoogleDriveSyncService.shareBackupFile(context, snapshot)
   }
@@ -1139,21 +1296,151 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
     gstin: String,
     amount: Double,
     itemCount: Int,
-    invoiceNo: String
+    invoiceNo: String,
+    status: String = "Paid",
+    paymentMode: String = "Cash"
   ) {
     viewModelScope.launch {
       val dateStr = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()).format(Date())
+      val trimmedDist = distributorName.trim().ifBlank { "Royal Pharma Dist" }
+      val trimmedGstin = gstin.trim()
       val inv = PurchaseInvoice(
-        distributorName = distributorName,
-        distributorGstin = gstin,
+        distributorName = trimmedDist,
+        distributorGstin = trimmedGstin,
         invoiceNumber = invoiceNo.ifBlank { "PUR-${(1000..9999).random()}" },
         invoiceDate = dateStr,
         totalAmount = amount,
         itemsCount = itemCount,
-        status = "Unpaid"
+        status = status
       )
       repository.createPurchase(inv)
-      scanFeedbackMessage.value = "Purchase recorded for $distributorName"
+
+      // Ensure Distributor is created or updated in Room DB
+      val existingDist = repository.getDistributorByName(trimmedDist)
+      if (existingDist == null) {
+        repository.insertDistributor(
+          Distributor(
+            name = trimmedDist,
+            gstin = trimmedGstin.ifBlank { "18ABCDE1234F1ZK" },
+            isGstRegistered = trimmedGstin.isNotBlank(),
+            balancePayable = if (status == "Unpaid") amount else 0.0,
+            lastTxnDate = dateStr
+          )
+        )
+      } else {
+        val newBalance = if (status == "Unpaid") existingDist.balancePayable + amount else existingDist.balancePayable
+        repository.updateDistributor(
+          existingDist.copy(
+            balancePayable = newBalance,
+            lastTxnDate = dateStr,
+            gstin = if (existingDist.gstin.isBlank() && trimmedGstin.isNotBlank()) trimmedGstin else existingDist.gstin
+          )
+        )
+      }
+
+      // Ensure Supplier is also synced for Orders (PO) integration!
+      val existingSup = allSuppliers.value.firstOrNull { it.name.equals(trimmedDist, ignoreCase = true) }
+      if (existingSup == null) {
+        repository.insertSupplier(
+          Supplier(
+            name = trimmedDist,
+            phone = "+91 98765 43210",
+            gstin = trimmedGstin,
+            outstandingPayable = if (status == "Unpaid") amount else 0.0
+          )
+        )
+      } else if (status == "Unpaid") {
+        repository.updateSupplier(
+          existingSup.copy(
+            outstandingPayable = existingSup.outstandingPayable + amount
+          )
+        )
+      }
+
+      scanFeedbackMessage.value = "Purchase of ₹$amount recorded as $status for $trimmedDist"
+    }
+  }
+
+  fun togglePurchaseStatus(purchase: PurchaseInvoice) {
+    viewModelScope.launch {
+      val newStatus = if (purchase.status == "Paid") "Unpaid" else "Paid"
+      repository.updatePurchaseStatus(purchase.id, newStatus)
+
+      // Adjust distributor balance
+      val dist = repository.getDistributorByName(purchase.distributorName.trim())
+      if (dist != null) {
+        val delta = if (newStatus == "Unpaid") purchase.totalAmount else -purchase.totalAmount
+        val updatedBal = (dist.balancePayable + delta).coerceAtLeast(0.0)
+        repository.updateDistributor(dist.copy(balancePayable = updatedBal))
+      }
+
+      scanFeedbackMessage.value = "Invoice ${purchase.invoiceNumber} marked as $newStatus"
+    }
+  }
+
+  fun deletePurchaseInvoice(purchase: PurchaseInvoice) {
+    viewModelScope.launch {
+      repository.deletePurchase(purchase)
+      if (purchase.status == "Unpaid") {
+        val dist = repository.getDistributorByName(purchase.distributorName.trim())
+        if (dist != null) {
+          val updatedBal = (dist.balancePayable - purchase.totalAmount).coerceAtLeast(0.0)
+          repository.updateDistributor(dist.copy(balancePayable = updatedBal))
+        }
+      }
+      scanFeedbackMessage.value = "Purchase invoice deleted"
+    }
+  }
+
+  // --- Doctor Management ---
+  fun addDoctor(doctor: Doctor) {
+    viewModelScope.launch {
+      repository.insertDoctor(doctor)
+      scanFeedbackMessage.value = "Doctor ${doctor.name} registered"
+    }
+  }
+
+  fun updateDoctor(doctor: Doctor) {
+    viewModelScope.launch {
+      repository.updateDoctor(doctor)
+      scanFeedbackMessage.value = "Doctor ${doctor.name} updated"
+    }
+  }
+
+  fun deleteDoctor(doctor: Doctor) {
+    viewModelScope.launch {
+      repository.deleteDoctor(doctor)
+      scanFeedbackMessage.value = "Doctor ${doctor.name} removed"
+    }
+  }
+
+  fun autoRegisterDoctorFromPrescription(
+    name: String,
+    specialty: String = "General Medicine",
+    clinic: String = "",
+    phone: String = ""
+  ) {
+    val cleanName = name.trim().replace(Regex("^(Dr\\.?|Doctor)\\s*", RegexOption.IGNORE_CASE), "").trim()
+    if (cleanName.isBlank() || cleanName.equals("Unknown", ignoreCase = true) || cleanName.length < 3) return
+    val fullName = if (name.startsWith("Dr", ignoreCase = true)) name.trim() else "Dr. ${name.trim()}"
+
+    viewModelScope.launch {
+      val existing = repository.getDoctorByName(fullName) ?: repository.getDoctorByName(cleanName)
+      if (existing == null) {
+        repository.insertDoctor(
+          Doctor(
+            name = fullName,
+            specialty = specialty.ifBlank { "General Practitioner" },
+            clinicHospital = clinic.ifBlank { "Prescription Clinic" },
+            phone = phone.ifBlank { "+91 98640 11223" },
+            prescriptionCount = 1,
+            autoAddedFromRx = true,
+            notes = "Auto-registered from Prescription Rx scan"
+          )
+        )
+      } else {
+        repository.incrementDoctorPrescriptionCount(existing.name)
+      }
     }
   }
 
@@ -1182,12 +1469,12 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
   fun sendChatMessage(text: String) {
     if (text.isBlank()) return
     val userMsg = ChatMessage(sender = "user", text = text)
-    val currentHistory = chatMessages.value + userMsg
-    chatMessages.value = currentHistory
+    val priorHistory = chatMessages.value
+    chatMessages.value = priorHistory + userMsg
     isAiThinking.value = true
 
     viewModelScope.launch {
-      val responseText = geminiService.sendMessage(text, currentHistory)
+      val responseText = geminiService.sendMessage(text, priorHistory)
       val botMsg = ChatMessage(sender = "gemini", text = responseText)
       chatMessages.value = chatMessages.value + botMsg
       isAiThinking.value = false
@@ -1441,6 +1728,34 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
   fun clearCart() {
     distributorCart.value = emptyList()
     scanFeedbackMessage.value = "Cart cleared"
+  }
+
+  fun exportCartToCsv(context: android.content.Context, distributorName: String) {
+    if (distributorCart.value.isEmpty()) {
+      scanFeedbackMessage.value = "Cart is empty! Add items first."
+      return
+    }
+    DistributorExportService.generateAndShareCsv(
+      context = context,
+      cartItems = distributorCart.value,
+      distributorName = distributorName.ifBlank { "Wholesale Distributor" },
+      pharmacyName = businessProfile.value.businessName
+    )
+    scanFeedbackMessage.value = "Exported CSV batch purchase order!"
+  }
+
+  fun exportCartToXlsx(context: android.content.Context, distributorName: String) {
+    if (distributorCart.value.isEmpty()) {
+      scanFeedbackMessage.value = "Cart is empty! Add items first."
+      return
+    }
+    DistributorExportService.generateAndShareXlsx(
+      context = context,
+      cartItems = distributorCart.value,
+      distributorName = distributorName.ifBlank { "Wholesale Distributor" },
+      pharmacyName = businessProfile.value.businessName
+    )
+    scanFeedbackMessage.value = "Exported XLSX Excel Workbook!"
   }
 
   fun exportCartToXls(context: android.content.Context, distributorName: String) {

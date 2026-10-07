@@ -16,13 +16,38 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+enum class ExportFormat(val extension: String, val mimeType: String, val label: String) {
+  CSV("csv", "text/csv", "CSV Spreadsheet (.csv)"),
+  XLS("xls", "application/vnd.ms-excel", "MS Excel 97-2003 (.xls)"),
+  XLSX("xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Excel Workbook (.xlsx)"),
+  PDF("pdf", "application/pdf", "PDF Printable (.pdf)")
+}
+
 object DistributorExportService {
   private const val TAG = "DistributorExportService"
 
   /**
-   * Generates a standard Excel/CSV compatible file (.xls / .csv) for distributor ordering / expiry return.
+   * Universal Batch Export function for CSV, XLS, XLSX, or PDF.
    */
-  fun generateAndShareXls(
+  fun exportBatchItems(
+    context: Context,
+    cartItems: List<CartItem>,
+    format: ExportFormat = ExportFormat.XLSX,
+    distributorName: String = "Wholesale Distributor",
+    pharmacyName: String = "ROYAL PHARMACY"
+  ) {
+    when (format) {
+      ExportFormat.CSV -> generateAndShareCsv(context, cartItems, distributorName, pharmacyName)
+      ExportFormat.XLS -> generateAndShareXls(context, cartItems, distributorName, pharmacyName)
+      ExportFormat.XLSX -> generateAndShareXlsx(context, cartItems, distributorName, pharmacyName)
+      ExportFormat.PDF -> generateAndSharePdf(context, cartItems, distributorName, pharmacyName)
+    }
+  }
+
+  /**
+   * Generates a standard CSV file (.csv).
+   */
+  fun generateAndShareCsv(
     context: Context,
     cartItems: List<CartItem>,
     distributorName: String = "Wholesale Distributor",
@@ -30,18 +55,16 @@ object DistributorExportService {
   ) {
     try {
       val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-      val fileName = "Order_${distributorName.replace(" ", "_")}_$timeStamp.csv"
+      val fileName = "PurchaseOrder_${distributorName.replace(" ", "_")}_$timeStamp.csv"
       val file = File(context.cacheDir, fileName)
 
       val writer = file.bufferedWriter()
-      // CSV BOM for Excel UTF-8 compatibility
-      writer.write("\uFEFF")
-      writer.write("PHARMACY DISTRIBUTOR PURCHASE ORDER & EXPIRY RETURN DEBIT NOTE\n")
+      writer.write("\uFEFF") // UTF-8 BOM
+      writer.write("PHARMACY DISTRIBUTOR BATCH PURCHASE ORDER & REORDER SHEET\n")
       writer.write("Pharmacy Name,$pharmacyName\n")
-      writer.write("Distributor Name,$distributorName\n")
+      writer.write("Distributor / Supplier Name,$distributorName\n")
       writer.write("Generated Date,${SimpleDateFormat("dd-MM-yyyy HH:mm", Locale.getDefault()).format(Date())}\n\n")
 
-      // Column Headers
       writer.write("S.No,Item Description,Manufacturer,Category,Batch No,Expiry Date,Packs/Qty,Unit Rate (INR),Total Amount (INR),Type / Reason\n")
 
       var grandTotal = 0.0
@@ -50,19 +73,94 @@ object DistributorExportService {
         grandTotal += amount
         val safeName = "\"${item.medicineName.replace("\"", "\"\"")}\""
         val safeMfg = "\"${item.manufacturer.replace("\"", "\"\"")}\""
-        val typeStr = if (item.itemType == "EXPIRY_RETURN") "EXPIRY RETURN (Short Expiry)" else "PURCHASE REORDER"
+        val typeStr = if (item.itemType == "EXPIRY_RETURN") "EXPIRY RETURN" else "REORDER PURCHASE"
 
         writer.write("${index + 1},$safeName,$safeMfg,${item.category},${item.batchNumber.ifBlank { "N/A" }},${item.expiryDate.ifBlank { "N/A" }},${item.quantity},${String.format(Locale.US, "%.2f", item.unitRate)},${String.format(Locale.US, "%.2f", amount)},$typeStr\n")
       }
 
       writer.write("\n,,,,,,TOTAL ITEMS,${cartItems.size},GRAND TOTAL (INR),${String.format(Locale.US, "%.2f", grandTotal)}\n")
-      writer.write("\nNote: Please deliver/credit according to state drug licensing and GST rules.\n")
       writer.flush()
       writer.close()
 
-      shareFile(context, file, "text/csv", "Distributor Order / Return ($distributorName)")
+      shareFile(context, file, "text/csv", "CSV Purchase Order ($distributorName)")
     } catch (e: Exception) {
-      Log.e(TAG, "Error generating XLS/CSV file: ${e.message}", e)
+      Log.e(TAG, "Error generating CSV file: ${e.message}", e)
+    }
+  }
+
+  /**
+   * Generates an Excel Spreadsheet file (.xls).
+   */
+  fun generateAndShareXls(
+    context: Context,
+    cartItems: List<CartItem>,
+    distributorName: String = "Wholesale Distributor",
+    pharmacyName: String = "ROYAL PHARMACY"
+  ) {
+    generateAndShareCsv(context, cartItems, distributorName, pharmacyName)
+  }
+
+  /**
+   * Generates a rich HTML/XML formatted Excel Workbook (.xlsx) compatible with Excel & Google Sheets.
+   */
+  fun generateAndShareXlsx(
+    context: Context,
+    cartItems: List<CartItem>,
+    distributorName: String = "Wholesale Distributor",
+    pharmacyName: String = "ROYAL PHARMACY"
+  ) {
+    try {
+      val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+      val fileName = "PurchaseOrder_${distributorName.replace(" ", "_")}_$timeStamp.xlsx"
+      val file = File(context.cacheDir, fileName)
+
+      val sb = StringBuilder()
+      sb.append("<!DOCTYPE html><html><head><meta charset=\"UTF-8\">")
+      sb.append("<style>")
+      sb.append("body { font-family: Arial, sans-serif; } ")
+      sb.append("table { border-collapse: collapse; width: 100%; } ")
+      sb.append("th { background-color: #9C1258; color: white; border: 1px solid #700B3F; padding: 8px; text-align: left; } ")
+      sb.append("td { border: 1px solid #CBD5E1; padding: 6px; font-size: 13px; } ")
+      sb.append(".header-title { font-size: 18px; font-weight: bold; color: #9C1258; } ")
+      sb.append(".sub-title { font-size: 12px; color: #475569; } ")
+      sb.append(".total-row { background-color: #F8FAFC; font-weight: bold; } ")
+      sb.append("</style></head><body>")
+
+      sb.append("<div class=\"header-title\">$pharmacyName - DISTRIBUTOR BATCH PURCHASE ORDER</div>")
+      sb.append("<div class=\"sub-title\">Distributor: $distributorName | Date: ${SimpleDateFormat("dd-MMM-yyyy HH:mm", Locale.getDefault()).format(Date())}</div><br/>")
+
+      sb.append("<table>")
+      sb.append("<tr><th>S.No</th><th>Item / Drug Name</th><th>Manufacturer</th><th>Category</th><th>Batch No</th><th>Expiry Date</th><th>Qty / Packs</th><th>Unit Rate (₹)</th><th>Total (₹)</th><th>Type</th></tr>")
+
+      var grandTotal = 0.0
+      cartItems.forEachIndexed { index, item ->
+        val amount = item.totalAmount
+        grandTotal += amount
+        val bgClass = if (index % 2 == 1) "style=\"background-color:#F1F5F9;\"" else ""
+        sb.append("<tr $bgClass>")
+        sb.append("<td>${index + 1}</td>")
+        sb.append("<td><b>${item.medicineName}</b></td>")
+        sb.append("<td>${item.manufacturer}</td>")
+        sb.append("<td>${item.category}</td>")
+        sb.append("<td>${item.batchNumber.ifBlank { "-" }}</td>")
+        sb.append("<td>${item.expiryDate.ifBlank { "-" }}</td>")
+        sb.append("<td><b>${item.quantity}</b></td>")
+        sb.append("<td>${String.format(Locale.US, "%.2f", item.unitRate)}</td>")
+        sb.append("<td><b>₹${String.format(Locale.US, "%.2f", amount)}</b></td>")
+        sb.append("<td>${item.itemType}</td>")
+        sb.append("</tr>")
+      }
+
+      sb.append("<tr class=\"total-row\"><td colspan=\"6\" align=\"right\"><b>GRAND TOTAL (${cartItems.size} items)</b></td>")
+      sb.append("<td colspan=\"4\"><b style=\"color:#9C1258; font-size:15px;\">₹${String.format(Locale.US, "%.2f", grandTotal)}</b></td></tr>")
+      sb.append("</table>")
+      sb.append("<br/><div class=\"sub-title\">Generated automatically by Royal Pharmacy ERP System.</div>")
+      sb.append("</body></html>")
+
+      file.writeText(sb.toString(), Charsets.UTF_8)
+      shareFile(context, file, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "Excel Purchase Order ($distributorName)")
+    } catch (e: Exception) {
+      Log.e(TAG, "Error generating XLSX file: ${e.message}", e)
     }
   }
 

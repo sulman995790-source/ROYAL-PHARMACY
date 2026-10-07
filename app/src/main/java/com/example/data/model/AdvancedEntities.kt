@@ -129,3 +129,28 @@ data class PrescriptionRecord(
   val imageUriString: String = ""
 )
 
+@Entity(
+  tableName = "doctors",
+  indices = [
+    Index(value = ["name"]),
+    Index(value = ["registrationNo"])
+  ]
+)
+data class Doctor(
+  @PrimaryKey(autoGenerate = true)
+  val id: Long = 0,
+  val name: String,
+  val degree: String = "MBBS, MD",
+  val specialty: String = "General Medicine",
+  val clinicHospital: String = "Civil Hospital Road",
+  val phone: String = "+91 98640 11223",
+  val email: String = "",
+  val registrationNo: String = "MCI-48921",
+  val address: String = "Darrang, Assam",
+  val prescriptionCount: Int = 1,
+  val commissionPercentage: Double = 0.0,
+  val notes: String = "",
+  val autoAddedFromRx: Boolean = false
+)
+
+

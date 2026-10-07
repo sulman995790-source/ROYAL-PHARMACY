@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.CloudUpload
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
@@ -1655,6 +1656,21 @@ fun CloudSyncScreen(
                       }
                     }
                     Text(acc.email, fontSize = 11.5.sp, color = TextMuted)
+                  }
+
+                  IconButton(
+                    onClick = {
+                      viewModel.removeGoogleDriveAccount(acc.email)
+                      Toast.makeText(context, "Removed account ${acc.email}", Toast.LENGTH_SHORT).show()
+                    },
+                    modifier = Modifier.size(28.dp)
+                  ) {
+                    Icon(
+                      imageVector = Icons.Default.Delete,
+                      contentDescription = "Remove account",
+                      tint = StatusRed,
+                      modifier = Modifier.size(16.dp)
+                    )
                   }
                 }
               }

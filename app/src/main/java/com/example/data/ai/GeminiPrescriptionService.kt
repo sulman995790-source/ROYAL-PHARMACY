@@ -60,9 +60,28 @@ object GeminiPrescriptionService {
     .build()
 
   private fun Bitmap.toBase64(): String {
+    val maxDimension = 1200
+    val scaledBitmap = if (width > maxDimension || height > maxDimension) {
+      val ratio = width.toFloat() / height.toFloat()
+      val newWidth = if (width > height) maxDimension else (maxDimension * ratio).toInt()
+      val newHeight = if (height > width) maxDimension else (maxDimension / ratio).toInt()
+      Bitmap.createScaledBitmap(this, newWidth.coerceAtLeast(1), newHeight.coerceAtLeast(1), true)
+    } else {
+      this
+    }
     val outputStream = ByteArrayOutputStream()
-    compress(Bitmap.CompressFormat.JPEG, 85, outputStream)
+    scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 80, outputStream)
     return Base64.encodeToString(outputStream.toByteArray(), Base64.NO_WRAP)
+  }
+
+  private fun isApiKeyValid(key: String): Boolean {
+    val k = key.trim()
+    return k.isNotBlank() &&
+      !k.equals("DEFAULT_GEMINI_API_KEY", ignoreCase = true) &&
+      !k.equals("MY_GEMINI_API_KEY", ignoreCase = true) &&
+      !k.equals("YOUR_API_KEY", ignoreCase = true) &&
+      !k.contains("DEFAULT", ignoreCase = true) &&
+      k.length >= 20
   }
 
   suspend fun analyzePrescription(
@@ -73,9 +92,9 @@ object GeminiPrescriptionService {
     availableInventory: List<MedicineItem>
   ): PrescriptionScanResult = withContext(Dispatchers.IO) {
     val apiKey = try {
-      BuildConfig.GEMINI_API_KEY
+      BuildConfig.GEMINI_API_KEY.ifBlank { System.getenv("GEMINI_API_KEY") ?: "" }
     } catch (_: Exception) {
-      ""
+      System.getenv("GEMINI_API_KEY") ?: ""
     }
 
     // If sample preset provided and no custom image, generate rich preset
@@ -98,7 +117,7 @@ object GeminiPrescriptionService {
       return@withContext generatePresetResult("General Physician Rx", availableInventory)
     }
 
-    if (apiKey.isBlank() || apiKey == "MY_GEMINI_API_KEY") {
+    if (!isApiKeyValid(apiKey)) {
       // Return clinical offline OCR fallback
       return@withContext generateOfflineOcrAnalysis(samplePreset ?: "Dr. A. K. Sharma Rx", availableInventory)
     }
@@ -172,6 +191,11 @@ object GeminiPrescriptionService {
       }
 
       val rootJson = JSONObject().apply {
+        put("systemInstruction", JSONObject().apply {
+          put("parts", JSONArray().apply {
+            put(JSONObject().apply { put("text", "You are an expert AI clinical pharmacist assistant for ROYAL PHARMACY. Analyze prescription images accurately and return valid JSON.") })
+          })
+        })
         put("contents", contentsArray)
         put("generationConfig", JSONObject().apply {
           put("responseMimeType", "application/json")

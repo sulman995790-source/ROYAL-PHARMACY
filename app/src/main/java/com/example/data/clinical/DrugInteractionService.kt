@@ -140,37 +140,186 @@ class DrugInteractionService {
     // 10. Doxycycline + Dairy Products / Iron
     DrugPairInteraction(
       drug1 = "Doxycycline / Tetracycline",
-      drug2 = "Milk / Calcium / Iron Supplements",
+      drug2 = "Milk / Calcium / Iron Supplements / Shelcal",
       severity = InteractionSeverity.MINOR_CAUTION,
       riskTitle = "Chelation & Reduced Bioavailability",
       mechanism = "Calcium and polyvalent cations bind Doxycycline in the digestive tract preventing therapeutic blood levels.",
       clinicalAdvice = "Take Doxycycline with a full glass of water, at least 2 hours apart from dairy products, milk, cheese, or antacids.",
       foodPrecaution = "Avoid consuming milk, curd, or dairy within 2 hours of taking medication."
+    ),
+    // 11. Digoxin + Amiodarone
+    DrugPairInteraction(
+      drug1 = "Digoxin / Lanoxin",
+      drug2 = "Amiodarone / Cordarone",
+      severity = InteractionSeverity.SEVERE_CONTRAINDICATED,
+      riskTitle = "Digoxin Toxicity (Fatal Arrhythmia & Heart Block)",
+      mechanism = "Amiodarone inhibits P-glycoprotein renal clearance of Digoxin, doubling serum Digoxin concentrations.",
+      clinicalAdvice = "Reduce Digoxin dose by 50% immediately if Amiodarone is initiated. Monitor serum Digoxin levels and ECG closely.",
+      alternativeSuggestion = "Alternative rate control agent (Beta-blocker) under cardiologist guidance."
+    ),
+    // 12. Lithium + NSAIDs
+    DrugPairInteraction(
+      drug1 = "Lithium",
+      drug2 = "Ibuprofen / Diclofenac / Naproxen / Combiflam",
+      severity = InteractionSeverity.SEVERE_CONTRAINDICATED,
+      riskTitle = "Severe Lithium Toxicity (Tremors, Ataxia, Renal Failure)",
+      mechanism = "NSAIDs reduce renal prostaglandin synthesis and decrease renal lithium clearance, causing toxic accumulation.",
+      clinicalAdvice = "Avoid NSAIDs in patients on Lithium. Use Paracetamol or Aspirin for pain relief.",
+      alternativeSuggestion = "Paracetamol 650mg."
+    ),
+    // 13. Metronidazole + Alcohol
+    DrugPairInteraction(
+      drug1 = "Metronidazole / Flagyl / Tinidazole",
+      drug2 = "Alcohol / Ethanol",
+      severity = InteractionSeverity.SEVERE_CONTRAINDICATED,
+      riskTitle = "Disulfiram-like Reaction (Severe Vomiting, Tachycardia)",
+      mechanism = "Metronidazole inhibits aldehyde dehydrogenase, causing toxic acetaldehyde buildup in blood.",
+      clinicalAdvice = "Strictly abstain from alcohol during and for 48 hours after completing Metronidazole therapy.",
+      foodPrecaution = "Avoid all alcoholic beverages, wine, and alcohol-containing cough syrups."
+    ),
+    // 14. Levothyroxine + Calcium / Iron
+    DrugPairInteraction(
+      drug1 = "Levothyroxine / Eltroxin / Thyronorm",
+      drug2 = "Calcium / Iron / Shelcal / Autrin",
+      severity = InteractionSeverity.MODERATE_MONITOR,
+      riskTitle = "Decreased Thyroid Hormone Absorption (Hypothyroidism)",
+      mechanism = "Calcium carbonate and ferrous sulfate bind levothyroxine in the stomach, forming non-absorbable chelates.",
+      clinicalAdvice = "Take Levothyroxine on an empty stomach in the morning, at least 4 hours before calcium or iron supplements.",
+      foodPrecaution = "Take on an empty stomach with plain water at least 30-60 mins before breakfast."
+    ),
+    // 15. Theophylline + Ciprofloxacin
+    DrugPairInteraction(
+      drug1 = "Theophylline / Deriphyllin",
+      drug2 = "Ciprofloxacin / Ciplox",
+      severity = InteractionSeverity.MODERATE_MONITOR,
+      riskTitle = "Theophylline Toxicity (Seizures, Cardiac Tachycardia)",
+      mechanism = "Ciprofloxacin is a potent CYP1A2 inhibitor that blocks hepatic degradation of Theophylline.",
+      clinicalAdvice = "Reduce theophylline dosage by 30-50% and monitor serum levels, or switch to an alternative antibiotic.",
+      alternativeSuggestion = "Switch to Azithromycin or Amoxyclav."
+    ),
+    // 16. Sildenafil + Nitroglycerin
+    DrugPairInteraction(
+      drug1 = "Sildenafil / Tadalafil / Manforce",
+      drug2 = "Nitroglycerin / Sorbitrate / Monit",
+      severity = InteractionSeverity.SEVERE_CONTRAINDICATED,
+      riskTitle = "Fatal Refractory Hypotension & Cardiac Collapse",
+      mechanism = "Excessive cGMP buildup causing massive systemic vasodilation.",
+      clinicalAdvice = "ABSOLUTELY CONTRAINDICATED. Do not administer nitrates within 24-48 hours of PDE5 inhibitors.",
+      alternativeSuggestion = "Beta-blocker or Calcium channel blocker for chest pain."
+    ),
+    // 17. Paracetamol + Alcohol (Chronic)
+    DrugPairInteraction(
+      drug1 = "Paracetamol / Dolo / Calpol / Pacimol",
+      drug2 = "Alcohol / Ethanol",
+      severity = InteractionSeverity.MODERATE_MONITOR,
+      riskTitle = "Hepatotoxicity & Liver Damage Risk",
+      mechanism = "Chronic alcohol induces CYP2E1, converting Paracetamol into toxic NAPQI metabolite faster than glutathione can detoxify.",
+      clinicalAdvice = "Limit daily Paracetamol intake to under 2g in patients with regular alcohol consumption.",
+      foodPrecaution = "Avoid consuming alcohol while taking high-dose paracetamol."
     )
   )
 
+  // Brand Name to Active Molecule Mapping for Smart Indian Retail Search
+  private val brandToMoleculesMap = mapOf(
+    "dolo" to listOf("paracetamol"),
+    "calpol" to listOf("paracetamol"),
+    "pacimol" to listOf("paracetamol"),
+    "crocin" to listOf("paracetamol"),
+    "combiflam" to listOf("ibuprofen", "paracetamol"),
+    "augmentin" to listOf("amoxicillin", "clavulanate"),
+    "clavam" to listOf("amoxicillin", "clavulanate"),
+    "amoxyclav" to listOf("amoxicillin", "clavulanate"),
+    "pan 40" to listOf("pantoprazole"),
+    "pantocid" to listOf("pantoprazole"),
+    "pantosec" to listOf("pantoprazole"),
+    "omeprazole" to listOf("omeprazole"),
+    "omez" to listOf("omeprazole"),
+    "clopidogrel" to listOf("clopidogrel"),
+    "clopilet" to listOf("clopidogrel"),
+    "ecosprin" to listOf("aspirin"),
+    "aspirin" to listOf("aspirin"),
+    "warfarin" to listOf("warfarin"),
+    "coumadin" to listOf("warfarin"),
+    "sorbitrate" to listOf("nitroglycerin", "isosorbide"),
+    "nitroglycerin" to listOf("nitroglycerin"),
+    "sildenafil" to listOf("sildenafil"),
+    "manforce" to listOf("sildenafil"),
+    "tadalafil" to listOf("tadalafil"),
+    "azithral" to listOf("azithromycin"),
+    "azee" to listOf("azithromycin"),
+    "ciplox" to listOf("ciprofloxacin"),
+    "ciprofloxacin" to listOf("ciprofloxacin"),
+    "telma" to listOf("telmisartan"),
+    "telmisartan" to listOf("telmisartan"),
+    "spironolactone" to listOf("spironolactone"),
+    "aldactone" to listOf("spironolactone"),
+    "digoxin" to listOf("digoxin"),
+    "amiodarone" to listOf("amiodarone"),
+    "flagyl" to listOf("metronidazole"),
+    "metronidazole" to listOf("metronidazole"),
+    "shelcal" to listOf("calcium", "vitamin d3"),
+    "asthalin" to listOf("salbutamol"),
+    "volini" to listOf("diclofenac"),
+    "clarithromycin" to listOf("clarithromycin"),
+    "atorvastatin" to listOf("atorvastatin"),
+    "lipitor" to listOf("atorvastatin"),
+    "doxycycline" to listOf("doxycycline"),
+    "methotrexate" to listOf("methotrexate"),
+    "deriphyllin" to listOf("theophylline"),
+    "alcohol" to listOf("alcohol", "ethanol"),
+    "antacid" to listOf("antacids", "digene")
+  )
+
+  private fun resolveMolecules(drugInput: String): List<String> {
+    val lower = drugInput.lowercase().trim()
+    val found = mutableListOf<String>()
+    found.add(lower)
+    brandToMoleculesMap.forEach { (brand, molecules) ->
+      if (lower.contains(brand)) {
+        found.addAll(molecules)
+      }
+    }
+    return found.distinct()
+  }
+
   suspend fun checkDrugInteractions(medicines: List<String>): InteractionCheckResult = withContext(Dispatchers.IO) {
     if (medicines.size < 2) {
+      val singleDrug = medicines.firstOrNull() ?: ""
+      val singleResolved = resolveMolecules(singleDrug)
+      val singleWarnings = offlineInteractions.filter { rule ->
+        val rule1Matches = rule.drug1.lowercase().split("/").any { part -> singleResolved.any { it.contains(part.trim()) } }
+        val rule2Matches = rule.drug2.lowercase().split("/").any { part -> singleResolved.any { it.contains(part.trim()) } }
+        rule1Matches || rule2Matches
+      }.take(3)
+
+      val foodList = singleWarnings.mapNotNull { it.foodPrecaution.takeIf { p -> p.isNotBlank() } }.distinct()
+
       return@withContext InteractionCheckResult(
         totalDrugsChecked = medicines.size,
-        overallSeverity = InteractionSeverity.NO_KNOWN_INTERACTION,
-        interactions = emptyList(),
-        clinicalSummary = "Please select at least 2 medicines to evaluate drug-drug, drug-food, and pharmacokinetic interactions.",
-        foodWarnings = emptyList()
+        overallSeverity = if (singleWarnings.isNotEmpty()) InteractionSeverity.MINOR_CAUTION else InteractionSeverity.NO_KNOWN_INTERACTION,
+        interactions = singleWarnings,
+        clinicalSummary = if (singleWarnings.isNotEmpty()) "Monograph loaded for $singleDrug. Select an additional medicine to evaluate co-administration safety." else "Select at least 2 medicines to evaluate drug-drug, drug-food, and pharmacokinetic interactions.",
+        foodWarnings = foodList
       )
     }
 
-    // First check local high-priority clinical pairings
+    // First check local high-priority clinical pairings with fuzzy molecule resolution
     val localMatches = mutableListOf<DrugPairInteraction>()
     for (i in 0 until medicines.size) {
       for (j in (i + 1) until medicines.size) {
-        val medA = medicines[i].lowercase()
-        val medB = medicines[j].lowercase()
+        val molsA = resolveMolecules(medicines[i])
+        val molsB = resolveMolecules(medicines[j])
 
         val found = offlineInteractions.firstOrNull { rule ->
-          val rule1Matches = rule.drug1.lowercase().split("/").any { part -> medA.contains(part.trim()) || medB.contains(part.trim()) }
-          val rule2Matches = rule.drug2.lowercase().split("/").any { part -> medA.contains(part.trim()) || medB.contains(part.trim()) }
-          rule1Matches && rule2Matches
+          val r1Parts = rule.drug1.lowercase().split("/").map { it.trim() }
+          val r2Parts = rule.drug2.lowercase().split("/").map { it.trim() }
+
+          val aMatchesR1 = r1Parts.any { p -> molsA.any { it.contains(p) || p.contains(it) } }
+          val bMatchesR2 = r2Parts.any { p -> molsB.any { it.contains(p) || p.contains(it) } }
+          val aMatchesR2 = r2Parts.any { p -> molsA.any { it.contains(p) || p.contains(it) } }
+          val bMatchesR1 = r1Parts.any { p -> molsB.any { it.contains(p) || p.contains(it) } }
+
+          (aMatchesR1 && bMatchesR2) || (aMatchesR2 && bMatchesR1)
         }
 
         if (found != null) {
@@ -216,6 +365,16 @@ class DrugInteractionService {
     )
   }
 
+  private fun isApiKeyValid(key: String): Boolean {
+    val k = key.trim()
+    return k.isNotBlank() &&
+      !k.equals("DEFAULT_GEMINI_API_KEY", ignoreCase = true) &&
+      !k.equals("MY_GEMINI_API_KEY", ignoreCase = true) &&
+      !k.equals("YOUR_API_KEY", ignoreCase = true) &&
+      !k.contains("DEFAULT", ignoreCase = true) &&
+      k.length >= 20
+  }
+
   private suspend fun callGeminiInteractionApi(medicines: List<String>): InteractionCheckResult? = withContext(Dispatchers.IO) {
     val apiKey = try {
       BuildConfig.GEMINI_API_KEY
@@ -223,7 +382,7 @@ class DrugInteractionService {
       ""
     }
 
-    if (apiKey.isBlank() || apiKey == "MY_GEMINI_API_KEY") return@withContext null
+    if (!isApiKeyValid(apiKey)) return@withContext null
 
     try {
       val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=$apiKey"
@@ -250,6 +409,11 @@ class DrugInteractionService {
       """.trimIndent()
 
       val bodyJson = JSONObject().apply {
+        put("systemInstruction", JSONObject().apply {
+          put("parts", JSONArray().apply {
+            put(JSONObject().apply { put("text", "You are an expert clinical pharmacologist. Check drug-drug interactions accurately. Return strictly JSON.") })
+          })
+        })
         put("contents", JSONArray().apply {
           put(JSONObject().apply {
             put("role", "user")

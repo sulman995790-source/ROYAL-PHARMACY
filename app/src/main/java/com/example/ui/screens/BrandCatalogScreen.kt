@@ -67,6 +67,7 @@ import com.example.data.ai.BrandCatalogProvider
 import com.example.data.ai.GeminiPharmacistService
 import com.example.data.model.BrandMedicine
 import com.example.data.model.MedicineItem
+import com.example.ui.components.InAppSearchDialog
 import com.example.ui.theme.CardBorder
 import com.example.ui.theme.GrayBackground
 import com.example.ui.theme.RoyalMagenta
@@ -89,6 +90,7 @@ fun BrandCatalogScreen(
   val isLoading by viewModel.isBrandLoading.collectAsState()
   val cartItems by viewModel.distributorCart.collectAsState()
   val localInventory by viewModel.allMedicines.collectAsState()
+  var inAppSearchQuery by remember { mutableStateOf<String?>(null) }
 
   var selectedCategoryFilter by remember { mutableStateOf("All") } // "All", "Injectable", "Tablet", "Syrup"
   var searchQuery by remember { mutableStateOf("") }
@@ -252,16 +254,16 @@ fun BrandCatalogScreen(
               modifier = Modifier.fillMaxWidth(),
               horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-              // Google Search Button
+              // Google Search Button (In-App)
               OutlinedButton(
                 onClick = {
-                  GeminiPharmacistService().openGoogleSearch(context, "$selectedBrand medicines injectables price list 1mg India")
+                  inAppSearchQuery = "$selectedBrand medicines injectables price list 1mg India"
                 },
                 shape = RoundedCornerShape(8.dp),
                 modifier = Modifier.weight(1f).testTag("btn_google_search_brand")
               ) {
                 Icon(
-                  imageVector = Icons.Default.OpenInBrowser,
+                  imageVector = Icons.Default.Search,
                   contentDescription = null,
                   modifier = Modifier.size(14.dp),
                   tint = RoyalNavy
@@ -371,6 +373,14 @@ fun BrandCatalogScreen(
           )
         }
       }
+    }
+
+    inAppSearchQuery?.let { q ->
+      InAppSearchDialog(
+        initialQuery = q,
+        title = "$selectedBrand - Drug Monograph Search",
+        onDismiss = { inAppSearchQuery = null }
+      )
     }
   }
 }

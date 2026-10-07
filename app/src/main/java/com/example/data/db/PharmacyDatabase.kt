@@ -8,6 +8,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.data.model.BusinessProfile
 import com.example.data.model.Customer
 import com.example.data.model.Distributor
+import com.example.data.model.Doctor
 import com.example.data.model.MedicineItem
 import com.example.data.model.Patient
 import com.example.data.model.PurchaseInvoice
@@ -32,9 +33,10 @@ import kotlinx.coroutines.launch
     Supplier::class,
     PurchaseOrder::class,
     UdharTransaction::class,
-    SyncQueueItem::class
+    SyncQueueItem::class,
+    Doctor::class
   ],
-  version = 6,
+  version = 8,
   exportSchema = false
 )
 abstract class PharmacyDatabase : RoomDatabase() {
@@ -851,6 +853,142 @@ abstract class PharmacyDatabase : RoomDatabase() {
           isPaid = true
         )
       )
+
+      // 9. Initial Distributors
+      val distributors = listOf(
+        Distributor(
+          id = 1,
+          name = "Sun Pharma Distribution Hub",
+          phone = "+91 98765 43210",
+          email = "orders.assam@sunpharma.com",
+          gstin = "18AABCS9988K1Z3",
+          dlNumber = "DL-ASS-20B-7788",
+          isGstRegistered = true,
+          balancePayable = 957.0,
+          lastTxnDate = "07-10-2026"
+        ),
+        Distributor(
+          id = 2,
+          name = "Cipla Regional Wholesale Agency",
+          phone = "+91 98640 12345",
+          email = "orders@ciplaregional.com",
+          gstin = "18AACCC4455D1ZQ",
+          dlNumber = "DL-ASS-20B-3344",
+          isGstRegistered = true,
+          balancePayable = 0.0,
+          lastTxnDate = "04-10-2026"
+        ),
+        Distributor(
+          id = 3,
+          name = "MedPlus Pharma Logistics",
+          phone = "+91 94350 98765",
+          email = "supply@medpluslogistics.in",
+          gstin = "18AAPPL1234P1Z2",
+          dlNumber = "DL-ASS-20B-1122",
+          isGstRegistered = true,
+          balancePayable = 1250.0,
+          lastTxnDate = "02-10-2026"
+        ),
+        Distributor(
+          id = 4,
+          name = "Ipca Laboratories Hub",
+          phone = "+91 98540 22334",
+          email = "dist.ipca@assampharma.in",
+          gstin = "18AAACI3322K1Z9",
+          dlNumber = "DL-ASS-20B-9988",
+          isGstRegistered = true,
+          balancePayable = 450.0,
+          lastTxnDate = "01-10-2026"
+        )
+      )
+      for (dist in distributors) {
+        dao.insertDistributor(dist)
+      }
+
+      // 10. Initial Purchases
+      dao.insertPurchase(
+        PurchaseInvoice(
+          id = 1,
+          distributorName = "Sun Pharma Distribution Hub",
+          distributorGstin = "18AABCS9988K1Z3",
+          invoiceNumber = "PUR-2741",
+          invoiceDate = "07-10-2026",
+          totalAmount = 957.0,
+          itemsCount = 3,
+          status = "Unpaid"
+        )
+      )
+      dao.insertPurchase(
+        PurchaseInvoice(
+          id = 2,
+          distributorName = "MedPlus Pharma Logistics",
+          distributorGstin = "18AAPPL1234P1Z2",
+          invoiceNumber = "PUR-2690",
+          invoiceDate = "02-10-2026",
+          totalAmount = 1250.0,
+          itemsCount = 5,
+          status = "Paid"
+        )
+      )
+
+      // 11. Initial Doctors Directory
+      val initialDoctors = listOf(
+        Doctor(
+          name = "Dr. Amit Patel, MD",
+          degree = "MBBS, MD (Medicine)",
+          specialty = "General Physician",
+          clinicHospital = "Patel Care Clinic, Hospital Road",
+          phone = "+91 98765 43210",
+          email = "dr.amit@patelclinic.org",
+          registrationNo = "MCI-49201",
+          address = "Hospital Road, Darrang",
+          prescriptionCount = 54,
+          commissionPercentage = 5.0,
+          notes = "Prefers prescribing Azithral, Pan 40 and Augmentin"
+        ),
+        Doctor(
+          name = "Dr. A. K. Sharma",
+          degree = "MBBS, MS (General Surgery)",
+          specialty = "Surgeon & Trauma Care",
+          clinicHospital = "Civil Hospital Darrang",
+          phone = "+91 94350 11223",
+          email = "dr.aksharma@civildarrang.gov.in",
+          registrationNo = "ASSAM-7821",
+          address = "Civil Hospital Campus, Mangaldai",
+          prescriptionCount = 38,
+          commissionPercentage = 0.0,
+          notes = "Civil Hospital Chief Medical Officer"
+        ),
+        Doctor(
+          name = "Dr. P. Baruah, MD (Pediatrics)",
+          degree = "MBBS, DCH, MD (Pediatrics)",
+          specialty = "Pediatrician / Child Specialist",
+          clinicHospital = "Care Child Clinic",
+          phone = "+91 98640 99887",
+          email = "drpbaruah@carechild.in",
+          registrationNo = "MCI-33891",
+          address = "Teachers Colony, Darrang",
+          prescriptionCount = 27,
+          commissionPercentage = 5.0,
+          notes = "Specialist for pediatric suspensions and infant drops"
+        ),
+        Doctor(
+          name = "Dr. N. Hazarika, MD (Cardiology)",
+          degree = "MBBS, MD, DM (Cardiology)",
+          specialty = "Cardiologist",
+          clinicHospital = "Apex Heart & Medical Center",
+          phone = "+91 99540 88776",
+          email = "drhazarika@apexheart.com",
+          registrationNo = "MCI-22198",
+          address = "Station Road, Mangaldai",
+          prescriptionCount = 22,
+          commissionPercentage = 5.0,
+          notes = "Prescribes Telma 40, Ecosprin, Rosuvas regularly"
+        )
+      )
+      for (doc in initialDoctors) {
+        dao.insertDoctor(doc)
+      }
     }
   }
 }

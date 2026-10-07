@@ -69,7 +69,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.TextButton
+import com.example.data.model.BusinessProfile
 import com.example.data.model.SaleInvoice
+import com.example.service.BluetoothPrinterDeviceInfo
 import com.example.service.InvoiceCopyType
 import com.example.service.InvoicePrintOptions
 import com.example.service.InvoicePrinterService
@@ -129,6 +136,11 @@ fun InvoicePrinterScreen(
   var includeLoyaltyRewards by remember { mutableStateOf(true) }
   var isBluetoothSimulating by remember { mutableStateOf(false) }
 
+  var showEditInvoiceDetailsDialog by remember { mutableStateOf(false) }
+  var showBluetoothPrinterPickerDialog by remember { mutableStateOf(false) }
+  var pairedPrinters by remember { mutableStateOf<List<BluetoothPrinterDeviceInfo>>(emptyList()) }
+  var selectedBluetoothPrinter by remember { mutableStateOf<BluetoothPrinterDeviceInfo?>(null) }
+
   val currentOptions = remember(
     selectedPaperSize,
     selectedCopyType,
@@ -180,6 +192,18 @@ fun InvoicePrinterScreen(
       }
 
       Row(verticalAlignment = Alignment.CenterVertically) {
+        Button(
+          onClick = { showEditInvoiceDetailsDialog = true },
+          colors = ButtonDefaults.buttonColors(containerColor = RoyalMagenta),
+          shape = RoundedCornerShape(16.dp),
+          contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+          modifier = Modifier.padding(end = 6.dp).testTag("btn_edit_invoice_header_details")
+        ) {
+          Icon(Icons.Default.Edit, contentDescription = null, tint = Color.White, modifier = Modifier.size(13.dp))
+          Spacer(modifier = Modifier.width(4.dp))
+          Text("Edit My Details", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
+        }
+
         IconButton(
           onClick = {
             InvoicePrinterService.shareInvoiceOnWhatsApp(context, selectedInvoice, profile)
@@ -620,27 +644,18 @@ fun InvoicePrinterScreen(
             Text("Print Invoice (Android Print System)", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
           }
 
-          // Bluetooth Thermal POS Test Print button
+          // Bluetooth Thermal POS Print button
           OutlinedButton(
             onClick = {
-              isBluetoothSimulating = true
-              android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                isBluetoothSimulating = false
-                Toast.makeText(context, "✅ ESC/POS Thermal Receipt sent to BT-POS58 Printer (Port 9100)", Toast.LENGTH_LONG).show()
-              }, 1200)
+              pairedPrinters = InvoicePrinterService.getPairedBluetoothPrinters(context)
+              showBluetoothPrinterPickerDialog = true
             },
             shape = RoundedCornerShape(10.dp),
             modifier = Modifier.fillMaxWidth().height(46.dp).testTag("btn_bluetooth_thermal_print")
           ) {
-            if (isBluetoothSimulating) {
-              CircularProgressIndicator(modifier = Modifier.size(18.dp), color = RoyalMagenta, strokeWidth = 2.dp)
-              Spacer(modifier = Modifier.width(8.dp))
-              Text("Connecting to Bluetooth Thermal Printer...", color = RoyalMagenta, fontSize = 13.sp)
-            } else {
-              Icon(Icons.Default.Bluetooth, contentDescription = null, tint = RoyalMagenta, modifier = Modifier.size(18.dp))
-              Spacer(modifier = Modifier.width(8.dp))
-              Text("Send to Bluetooth Thermal POS (58mm/80mm)", color = RoyalMagenta, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-            }
+            Icon(Icons.Default.Bluetooth, contentDescription = null, tint = RoyalMagenta, modifier = Modifier.size(18.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Send to Bluetooth Thermal POS (58mm/80mm)", color = RoyalMagenta, fontWeight = FontWeight.Bold, fontSize = 13.sp)
           }
 
           // Row for WhatsApp & PDF
@@ -677,4 +692,213 @@ fun InvoicePrinterScreen(
       }
     }
   }
+
+  // Dialog 1: Edit Pharmacy & Invoice Header Details
+  if (showEditInvoiceDetailsDialog) {
+    EditPharmacyInvoiceDetailsDialog(
+      profile = profile,
+      invoice = selectedInvoice,
+      onSave = { updatedProfile, newCustomerName, newDoctorName ->
+        viewModel.saveBusinessProfile(updatedProfile)
+        selectedInvoice = selectedInvoice.copy(
+          customerName = newCustomerName,
+          doctorName = newDoctorName
+        )
+        Toast.makeText(context, "Invoice details updated successfully!", Toast.LENGTH_SHORT).show()
+      },
+      onDismiss = { showEditInvoiceDetailsDialog = false }
+    )
+  }
+
+  // Dialog 2: Bluetooth Thermal POS Printer Picker
+  if (showBluetoothPrinterPickerDialog) {
+    BluetoothPrinterPickerDialog(
+      printers = pairedPrinters,
+      onPrinterSelected = { printer ->
+        selectedBluetoothPrinter = printer
+        Toast.makeText(context, "Connecting to ${printer.name}...", Toast.LENGTH_SHORT).show()
+        InvoicePrinterService.printInvoiceViaBluetooth(
+          context = context,
+          deviceAddress = printer.address,
+          invoice = selectedInvoice,
+          profile = profile,
+          options = currentOptions
+        ) { success, msg ->
+          Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+        }
+      },
+      onDismiss = { showBluetoothPrinterPickerDialog = false }
+    )
+  }
+}
+
+@Composable
+fun EditPharmacyInvoiceDetailsDialog(
+  profile: BusinessProfile,
+  invoice: SaleInvoice,
+  onSave: (BusinessProfile, String, String) -> Unit,
+  onDismiss: () -> Unit
+) {
+  var name by remember { mutableStateOf(profile.businessName) }
+  var phone by remember { mutableStateOf(profile.phone) }
+  var email by remember { mutableStateOf(profile.email) }
+  var address1 by remember { mutableStateOf(profile.addressLine1) }
+  var address2 by remember { mutableStateOf(profile.addressLine2) }
+  var dl20 by remember { mutableStateOf(profile.drugLicenseForm20) }
+  var dl21 by remember { mutableStateOf(profile.drugLicenseForm21) }
+  var gstin by remember { mutableStateOf(profile.gstin) }
+  var ayushmanHfr by remember { mutableStateOf(profile.ayushmanHfrId) }
+  var ownerName by remember { mutableStateOf(profile.ownerName) }
+  var customerName by remember { mutableStateOf(invoice.customerName) }
+  var doctorName by remember { mutableStateOf(invoice.doctorName) }
+
+  AlertDialog(
+    onDismissRequest = onDismiss,
+    title = {
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Default.Edit, contentDescription = null, tint = RoyalMagenta)
+        Spacer(modifier = Modifier.width(8.dp))
+        Text("Edit Invoice & Pharmacy Details", fontSize = 17.sp, fontWeight = FontWeight.Bold)
+      }
+    },
+    text = {
+      LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.height(360.dp)) {
+        item {
+          OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Pharmacy Business Name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        }
+        item {
+          OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("Contact Phone Number") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        }
+        item {
+          OutlinedTextField(value = email, onValueChange = { email = it }, label = { Text("Email Address") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        }
+        item {
+          OutlinedTextField(value = address1, onValueChange = { address1 = it }, label = { Text("Address Line 1 (City / Zip)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        }
+        item {
+          OutlinedTextField(value = address2, onValueChange = { address2 = it }, label = { Text("Address Line 2 (Locality)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        }
+        item {
+          OutlinedTextField(value = dl20, onValueChange = { dl20 = it }, label = { Text("Drug License Form 20B") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        }
+        item {
+          OutlinedTextField(value = dl21, onValueChange = { dl21 = it }, label = { Text("Drug License Form 21B") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        }
+        item {
+          OutlinedTextField(value = gstin, onValueChange = { gstin = it }, label = { Text("GSTIN Number") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        }
+        item {
+          OutlinedTextField(value = ayushmanHfr, onValueChange = { ayushmanHfr = it }, label = { Text("Ayushman HFR ID") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        }
+        item {
+          OutlinedTextField(value = ownerName, onValueChange = { ownerName = it }, label = { Text("Pharmacist Signatory Name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        }
+        item {
+          OutlinedTextField(value = customerName, onValueChange = { customerName = it }, label = { Text("Customer Name on Invoice") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        }
+        item {
+          OutlinedTextField(value = doctorName, onValueChange = { doctorName = it }, label = { Text("Prescribing Doctor Name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        }
+      }
+    },
+    confirmButton = {
+      Button(
+        onClick = {
+          val updatedProfile = profile.copy(
+            businessName = name,
+            phone = phone,
+            email = email,
+            addressLine1 = address1,
+            addressLine2 = address2,
+            drugLicenseForm20 = dl20,
+            drugLicenseForm21 = dl21,
+            gstin = gstin,
+            ayushmanHfrId = ayushmanHfr,
+            ownerName = ownerName
+          )
+          onSave(updatedProfile, customerName, doctorName)
+          onDismiss()
+        },
+        colors = ButtonDefaults.buttonColors(containerColor = RoyalMagenta)
+      ) {
+        Text("Save & Update Invoice")
+      }
+    },
+    dismissButton = {
+      TextButton(onClick = onDismiss) { Text("Cancel") }
+    }
+  )
+}
+
+@Composable
+fun BluetoothPrinterPickerDialog(
+  printers: List<BluetoothPrinterDeviceInfo>,
+  onPrinterSelected: (BluetoothPrinterDeviceInfo) -> Unit,
+  onDismiss: () -> Unit
+) {
+  var selectedPrinterAddress by remember { mutableStateOf(printers.firstOrNull()?.address ?: "") }
+
+  AlertDialog(
+    onDismissRequest = onDismiss,
+    title = {
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Default.Bluetooth, contentDescription = null, tint = RoyalMagenta)
+        Spacer(modifier = Modifier.width(8.dp))
+        Text("Select Bluetooth Thermal Printer", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+      }
+    },
+    text = {
+      Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text("Paired ESC/POS Bluetooth Thermal Printers:", fontSize = 12.sp, color = TextMuted)
+
+        printers.forEach { printer ->
+          Card(
+            modifier = Modifier
+              .fillMaxWidth()
+              .clickable { selectedPrinterAddress = printer.address },
+            colors = CardDefaults.cardColors(
+              containerColor = if (selectedPrinterAddress == printer.address) Color(0xFFFBE4EE) else Color(0xFFF8FAFC)
+            ),
+            border = if (selectedPrinterAddress == printer.address) androidx.compose.foundation.BorderStroke(1.5.dp, RoyalMagenta) else CardDefaults.outlinedCardBorder()
+          ) {
+            Row(
+              modifier = Modifier.padding(12.dp),
+              verticalAlignment = Alignment.CenterVertically
+            ) {
+              RadioButton(
+                selected = selectedPrinterAddress == printer.address,
+                onClick = { selectedPrinterAddress = printer.address }
+              )
+              Spacer(modifier = Modifier.width(8.dp))
+              Column {
+                Text(printer.name, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextDark)
+                Text("MAC Address: ${printer.address}", fontSize = 11.sp, color = TextMuted)
+              }
+            }
+          }
+        }
+
+        Text(
+          "Ensure your 58mm / 80mm Bluetooth printer is turned on & paired in Android Bluetooth settings.",
+          fontSize = 10.5.sp,
+          color = TextMuted
+        )
+      }
+    },
+    confirmButton = {
+      Button(
+        onClick = {
+          val printer = printers.find { it.address == selectedPrinterAddress } ?: printers.firstOrNull()
+          printer?.let { onPrinterSelected(it) }
+          onDismiss()
+        },
+        colors = ButtonDefaults.buttonColors(containerColor = RoyalMagenta)
+      ) {
+        Text("Print ESC/POS Receipt")
+      }
+    },
+    dismissButton = {
+      TextButton(onClick = onDismiss) { Text("Cancel") }
+    }
+  )
 }

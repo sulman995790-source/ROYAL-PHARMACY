@@ -44,6 +44,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.ui.components.InAppSearchDialog
 import com.example.ui.theme.CardBorder
 import com.example.ui.theme.GrayBackground
 import com.example.ui.theme.RoyalMagenta
@@ -60,6 +61,7 @@ fun SearchAnythingScreen(
   modifier: Modifier = Modifier
 ) {
   var searchQuery by remember { mutableStateOf("") }
+  var inAppSearchQuery by remember { mutableStateOf<String?>(null) }
   val recentSearches by viewModel.recentSearches.collectAsState()
   val medicines by viewModel.allMedicines.collectAsState()
 
@@ -163,6 +165,33 @@ fun SearchAnythingScreen(
           contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
           verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+          if (searchResults.isEmpty()) {
+            item {
+              Card(
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = GrayBackground),
+                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)
+              ) {
+                Column(
+                  modifier = Modifier.fillMaxWidth().padding(20.dp),
+                  horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                  Text("No local pharmacy stock matching '$searchQuery'", fontSize = 13.sp, color = TextMuted)
+                  Spacer(modifier = Modifier.height(10.dp))
+                  Button(
+                    onClick = { inAppSearchQuery = "$searchQuery medicine composition dosage India" },
+                    colors = ButtonDefaults.buttonColors(containerColor = RoyalNavy),
+                    shape = RoundedCornerShape(8.dp)
+                  ) {
+                    Icon(Icons.Default.Search, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Search on Google in App", fontSize = 12.sp, color = Color.White)
+                  }
+                }
+              }
+            }
+          }
+
           items(searchResults) { med ->
             Card(
               onClick = {
@@ -193,20 +222,46 @@ fun SearchAnythingScreen(
       }
     }
 
-    // 4. Bottom Button: [Scan Barcode] (Screenshot 19)
-    Button(
-      onClick = { viewModel.navigateTo(Screen.QUICK_SCAN) },
-      shape = RoundedCornerShape(24.dp),
-      colors = ButtonDefaults.buttonColors(containerColor = RoyalNavy),
+    // 4. Bottom Button Row
+    Row(
       modifier = Modifier
         .align(Alignment.BottomCenter)
-        .padding(bottom = 24.dp)
-        .height(44.dp)
-        .testTag("btn_search_scan_barcode")
+        .padding(bottom = 24.dp),
+      horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-      Icon(Icons.Default.QrCodeScanner, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
-      Spacer(modifier = Modifier.width(6.dp))
-      Text("Scan Barcode", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+      if (searchQuery.isNotBlank()) {
+        Button(
+          onClick = { inAppSearchQuery = "$searchQuery medicine composition uses India" },
+          shape = RoundedCornerShape(24.dp),
+          colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0284C7)),
+          modifier = Modifier.height(44.dp)
+        ) {
+          Icon(Icons.Default.Search, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+          Spacer(modifier = Modifier.width(6.dp))
+          Text("Google In-App", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+        }
+      }
+
+      Button(
+        onClick = { viewModel.navigateTo(Screen.QUICK_SCAN) },
+        shape = RoundedCornerShape(24.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = RoyalNavy),
+        modifier = Modifier
+          .height(44.dp)
+          .testTag("btn_search_scan_barcode")
+      ) {
+        Icon(Icons.Default.QrCodeScanner, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+        Spacer(modifier = Modifier.width(6.dp))
+        Text("Scan Barcode", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+      }
+    }
+
+    inAppSearchQuery?.let { q ->
+      InAppSearchDialog(
+        initialQuery = q,
+        title = "In-App Search: $searchQuery",
+        onDismiss = { inAppSearchQuery = null }
+      )
     }
   }
 }

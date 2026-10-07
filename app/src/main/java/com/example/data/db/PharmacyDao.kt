@@ -9,6 +9,7 @@ import androidx.room.Update
 import com.example.data.model.BusinessProfile
 import com.example.data.model.Customer
 import com.example.data.model.Distributor
+import com.example.data.model.Doctor
 import com.example.data.model.MedicineItem
 import com.example.data.model.Patient
 import com.example.data.model.PurchaseInvoice
@@ -158,6 +159,50 @@ interface PharmacyDao {
 
   @Insert(onConflict = OnConflictStrategy.REPLACE)
   suspend fun insertPurchase(purchase: PurchaseInvoice): Long
+
+  @Update
+  suspend fun updatePurchase(purchase: PurchaseInvoice)
+
+  @Delete
+  suspend fun deletePurchase(purchase: PurchaseInvoice)
+
+  @Query("UPDATE purchase_invoices SET status = :status WHERE id = :id")
+  suspend fun updatePurchaseStatus(id: Long, status: String)
+
+  // Doctors
+  @Query("SELECT * FROM doctors ORDER BY name ASC")
+  fun getAllDoctors(): Flow<List<Doctor>>
+
+  @Query("SELECT * FROM doctors WHERE name LIKE '%' || :query || '%' OR specialty LIKE '%' || :query || '%' OR clinicHospital LIKE '%' || :query || '%'")
+  fun searchDoctors(query: String): Flow<List<Doctor>>
+
+  @Query("SELECT * FROM doctors WHERE LOWER(name) = LOWER(:name) LIMIT 1")
+  suspend fun getDoctorByName(name: String): Doctor?
+
+  @Insert(onConflict = OnConflictStrategy.REPLACE)
+  suspend fun insertDoctor(doctor: Doctor): Long
+
+  @Update
+  suspend fun updateDoctor(doctor: Doctor)
+
+  @Delete
+  suspend fun deleteDoctor(doctor: Doctor)
+
+  @Query("DELETE FROM doctors WHERE id = :id")
+  suspend fun deleteDoctorById(id: Long)
+
+  @Query("UPDATE doctors SET prescriptionCount = prescriptionCount + 1 WHERE LOWER(name) = LOWER(:name)")
+  suspend fun incrementDoctorPrescriptionCount(name: String)
+
+  // Distributors update/delete
+  @Update
+  suspend fun updateDistributor(distributor: Distributor)
+
+  @Delete
+  suspend fun deleteDistributor(distributor: Distributor)
+
+  @Query("SELECT * FROM distributors WHERE LOWER(name) = LOWER(:name) LIMIT 1")
+  suspend fun getDistributorByName(name: String): Distributor?
 
   // Business Profile
   @Query("SELECT * FROM business_profile WHERE id = 1 LIMIT 1")

@@ -1,5 +1,13 @@
 package com.example.ui.screens
 
+import android.content.Context
+import android.graphics.BitmapFactory
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,11 +26,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.Button
@@ -47,6 +58,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,10 +67,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import com.example.ui.components.ImagePickerDialog
+import com.example.ui.components.ImagePickerType
+import com.example.ui.components.LocationPickerDialog
 import com.example.ui.theme.CardBorder
 import com.example.ui.theme.GrayBackground
 import com.example.ui.theme.RoyalMagenta
@@ -70,6 +89,8 @@ import com.example.ui.theme.TextLight
 import com.example.ui.theme.TextMuted
 import com.example.viewmodel.PharmacyViewModel
 import com.example.viewmodel.Screen
+import java.io.File
+import java.io.FileOutputStream
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -99,7 +120,13 @@ fun BusinessProfileScreen(
   var address2 by remember(profile) { mutableStateOf(profile.addressLine2) }
   var address3 by remember(profile) { mutableStateOf(profile.addressLine3) }
   var timings by remember(profile) { mutableStateOf(profile.timings) }
+  var businessFrontImage by remember(profile) { mutableStateOf(profile.businessFrontImageUri) }
+  var form20Image by remember(profile) { mutableStateOf(profile.form20ImageUri) }
+  var form21Image by remember(profile) { mutableStateOf(profile.form21ImageUri) }
+  var currentLat by remember(profile) { mutableDoubleStateOf(profile.latitude) }
+  var currentLng by remember(profile) { mutableDoubleStateOf(profile.longitude) }
 
+  var showLocationPicker by remember { mutableStateOf(false) }
   var showSavedBanner by remember { mutableStateOf(false) }
 
   fun saveProfile() {
@@ -120,7 +147,12 @@ fun BusinessProfileScreen(
         addressLine1 = address1,
         addressLine2 = address2,
         addressLine3 = address3,
-        timings = timings
+        timings = timings,
+        businessFrontImageUri = businessFrontImage,
+        form20ImageUri = form20Image,
+        form21ImageUri = form21Image,
+        latitude = currentLat,
+        longitude = currentLng
       )
     )
     showSavedBanner = true
@@ -225,45 +257,21 @@ fun BusinessProfileScreen(
                 )
 
                 // Business Front Picture Box (Screenshot 12)
-                Column {
-                  Text("Business Front Picture", fontSize = 12.sp, color = TextMuted)
-                  Spacer(modifier = Modifier.height(6.dp))
-                  Box(
-                    modifier = Modifier
-                      .fillMaxWidth()
-                      .height(180.dp)
-                      .clip(RoundedCornerShape(8.dp))
-                      .background(Color(0xFFF3F4F6))
-                      .border(1.dp, CardBorder, RoundedCornerShape(8.dp))
-                      .clickable { /* Select picture */ },
-                    contentAlignment = Alignment.Center
-                  ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                      Box(
-                        modifier = Modifier
-                          .size(54.dp)
-                          .clip(RoundedCornerShape(8.dp))
-                          .background(Color(0xFFE1BEE7)),
-                        contentAlignment = Alignment.Center
-                      ) {
-                        Icon(
-                          imageVector = Icons.Default.FileUpload,
-                          contentDescription = "Upload",
-                          tint = Color(0xFF6A1B9A),
-                          modifier = Modifier.size(28.dp)
-                        )
-                      }
-                      Spacer(modifier = Modifier.height(8.dp))
-                      Text("Click to Upload", fontSize = 12.sp, color = TextDark, fontWeight = FontWeight.Medium)
-                    }
-                  }
-                  Spacer(modifier = Modifier.height(4.dp))
-                  Text(
-                    text = "Note: Store nameboard should be clearly visible in the picture",
-                    fontSize = 11.sp,
-                    color = TextMuted
-                  )
-                }
+                ProfileImageUploadBox(
+                  label = "Business Front Picture",
+                  imagePath = businessFrontImage,
+                  pickerType = ImagePickerType.STORE_FRONT,
+                  onImagePicked = {
+                    businessFrontImage = it
+                    viewModel.saveBusinessProfile(profile.copy(businessFrontImageUri = it))
+                    showSavedBanner = true
+                  },
+                  onRemove = {
+                    businessFrontImage = ""
+                    viewModel.saveBusinessProfile(profile.copy(businessFrontImageUri = ""))
+                  },
+                  note = "Note: Store nameboard should be clearly visible in the picture"
+                )
 
                 Spacer(modifier = Modifier.height(10.dp))
                 SaveButton(onClick = { saveProfile() })
@@ -295,33 +303,21 @@ fun BusinessProfileScreen(
                 )
 
                 // Form 20 Image Upload Box (Screenshot 13)
-                Column {
-                  Text("Form 20 Image*", fontSize = 12.sp, color = TextMuted)
-                  Spacer(modifier = Modifier.height(6.dp))
-                  Box(
-                    modifier = Modifier
-                      .fillMaxWidth()
-                      .height(140.dp)
-                      .clip(RoundedCornerShape(8.dp))
-                      .background(Color(0xFFF3F4F6))
-                      .border(1.dp, CardBorder, RoundedCornerShape(8.dp)),
-                    contentAlignment = Alignment.Center
-                  ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                      Box(
-                        modifier = Modifier
-                          .size(44.dp)
-                          .clip(RoundedCornerShape(8.dp))
-                          .background(Color(0xFFE1BEE7)),
-                        contentAlignment = Alignment.Center
-                      ) {
-                        Icon(Icons.Default.FileUpload, contentDescription = null, tint = Color(0xFF6A1B9A), modifier = Modifier.size(24.dp))
-                      }
-                      Spacer(modifier = Modifier.height(6.dp))
-                      Text("Click to Upload", fontSize = 12.sp, color = TextDark)
-                    }
-                  }
-                }
+                ProfileImageUploadBox(
+                  label = "Form 20 Image*",
+                  imagePath = form20Image,
+                  pickerType = ImagePickerType.LICENSE_DOCUMENT,
+                  onImagePicked = {
+                    form20Image = it
+                    viewModel.saveBusinessProfile(profile.copy(form20ImageUri = it))
+                    showSavedBanner = true
+                  },
+                  onRemove = {
+                    form20Image = ""
+                    viewModel.saveBusinessProfile(profile.copy(form20ImageUri = ""))
+                  },
+                  note = "Upload clear copy of Drug License Form 20"
+                )
 
                 OutlinedTextField(
                   value = dlForm21,
@@ -340,6 +336,23 @@ fun BusinessProfileScreen(
                     Icon(Icons.Default.CalendarToday, contentDescription = null, tint = TextMuted, modifier = Modifier.size(16.dp))
                   },
                   modifier = Modifier.fillMaxWidth().testTag("profile_form_21_expiry")
+                )
+
+                // Form 21 Image Upload Box
+                ProfileImageUploadBox(
+                  label = "Form 21 Image",
+                  imagePath = form21Image,
+                  pickerType = ImagePickerType.LICENSE_DOCUMENT,
+                  onImagePicked = {
+                    form21Image = it
+                    viewModel.saveBusinessProfile(profile.copy(form21ImageUri = it))
+                    showSavedBanner = true
+                  },
+                  onRemove = {
+                    form21Image = ""
+                    viewModel.saveBusinessProfile(profile.copy(form21ImageUri = ""))
+                  },
+                  note = "Upload clear copy of Drug License Form 21"
                 )
 
                 Spacer(modifier = Modifier.height(10.dp))
@@ -470,12 +483,45 @@ fun BusinessProfileScreen(
                   modifier = Modifier.fillMaxWidth().testTag("profile_address_3")
                 )
 
+                // Coordinates preview card
+                Card(
+                  shape = RoundedCornerShape(10.dp),
+                  colors = CardDefaults.cardColors(containerColor = GrayBackground),
+                  border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder),
+                  modifier = Modifier.fillMaxWidth()
+                ) {
+                  Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                  ) {
+                    Box(
+                      modifier = Modifier
+                        .size(38.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFFCE4EC)),
+                      contentAlignment = Alignment.Center
+                    ) {
+                      Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color(0xFFE91E63), modifier = Modifier.size(20.dp))
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                      Text("Pinned Store Coordinates:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextDark)
+                      Text(
+                        "%.4f° N, %.4f° E (Darrang District, Assam)".format(currentLat, currentLng),
+                        fontSize = 11.5.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFF0369A1)
+                      )
+                    }
+                  }
+                }
+
                 // Update Location from Map Button (Screenshot 15)
                 Button(
-                  onClick = { /* simulated map location update */ },
+                  onClick = { showLocationPicker = true },
                   shape = RoundedCornerShape(8.dp),
                   colors = ButtonDefaults.buttonColors(containerColor = RoyalNavy),
-                  modifier = Modifier.fillMaxWidth().height(48.dp)
+                  modifier = Modifier.fillMaxWidth().height(48.dp).testTag("btn_update_location_map")
                 ) {
                   Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color(0xFFE91E63), modifier = Modifier.size(18.dp))
                   Spacer(modifier = Modifier.width(8.dp))
@@ -512,6 +558,142 @@ fun BusinessProfileScreen(
         }
       }
     }
+
+    if (showLocationPicker) {
+      LocationPickerDialog(
+        currentAddress1 = address1,
+        currentAddress2 = address2,
+        currentAddress3 = address3,
+        onLocationSelected = { newA1, newA2, newA3, lat, lng ->
+          address1 = newA1
+          address2 = newA2
+          address3 = newA3
+          currentLat = lat
+          currentLng = lng
+          showLocationPicker = false
+
+          // Auto-save immediately to database
+          viewModel.saveBusinessProfile(
+            profile.copy(
+              businessName = businessName,
+              addressLine1 = newA1,
+              addressLine2 = newA2,
+              addressLine3 = newA3,
+              latitude = lat,
+              longitude = lng,
+              businessFrontImageUri = businessFrontImage,
+              form20ImageUri = form20Image,
+              form21ImageUri = form21Image
+            )
+          )
+          showSavedBanner = true
+        },
+        onDismiss = { showLocationPicker = false }
+      )
+    }
+  }
+}
+
+@Composable
+fun ProfileImageUploadBox(
+  label: String,
+  imagePath: String,
+  pickerType: ImagePickerType = ImagePickerType.STORE_FRONT,
+  onImagePicked: (String) -> Unit,
+  onRemove: () -> Unit,
+  note: String? = null
+) {
+  var showPicker by remember { mutableStateOf(false) }
+
+  Column {
+    Text(label, fontSize = 12.sp, color = TextMuted)
+    Spacer(modifier = Modifier.height(6.dp))
+
+    if (imagePath.isNotBlank()) {
+      Box(
+        modifier = Modifier
+          .fillMaxWidth()
+          .height(180.dp)
+          .clip(RoundedCornerShape(8.dp))
+          .border(1.dp, CardBorder, RoundedCornerShape(8.dp))
+      ) {
+        AsyncImage(
+          model = java.io.File(imagePath).takeIf { it.exists() } ?: imagePath,
+          contentDescription = label,
+          contentScale = ContentScale.Crop,
+          modifier = Modifier.fillMaxSize()
+        )
+        Row(
+          modifier = Modifier
+            .align(Alignment.TopEnd)
+            .padding(8.dp)
+            .background(Color.Black.copy(alpha = 0.65f), RoundedCornerShape(20.dp))
+            .padding(horizontal = 6.dp, vertical = 2.dp),
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          IconButton(
+            onClick = { showPicker = true },
+            modifier = Modifier.size(32.dp)
+          ) {
+            Icon(Icons.Default.Edit, contentDescription = "Change", tint = Color.White, modifier = Modifier.size(16.dp))
+          }
+          IconButton(
+            onClick = onRemove,
+            modifier = Modifier.size(32.dp)
+          ) {
+            Icon(Icons.Default.Delete, contentDescription = "Remove", tint = Color(0xFFFF5252), modifier = Modifier.size(16.dp))
+          }
+        }
+      }
+    } else {
+      Box(
+        modifier = Modifier
+          .fillMaxWidth()
+          .height(150.dp)
+          .clip(RoundedCornerShape(8.dp))
+          .background(Color(0xFFF3F4F6))
+          .border(1.dp, CardBorder, RoundedCornerShape(8.dp))
+          .clickable { showPicker = true },
+        contentAlignment = Alignment.Center
+      ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+          Box(
+            modifier = Modifier
+              .size(50.dp)
+              .clip(RoundedCornerShape(8.dp))
+              .background(Color(0xFFE1BEE7)),
+            contentAlignment = Alignment.Center
+          ) {
+            Icon(
+              imageVector = Icons.Default.FileUpload,
+              contentDescription = "Upload",
+              tint = Color(0xFF6A1B9A),
+              modifier = Modifier.size(26.dp)
+            )
+          }
+          Spacer(modifier = Modifier.height(8.dp))
+          Text("Click to Upload", fontSize = 12.sp, color = TextDark, fontWeight = FontWeight.Medium)
+          Text("Camera, Gallery & Sample Photos", fontSize = 10.sp, color = TextMuted)
+        }
+      }
+    }
+
+    if (note != null) {
+      Spacer(modifier = Modifier.height(4.dp))
+      Text(note, fontSize = 11.sp, color = TextMuted)
+    }
+  }
+
+  if (showPicker) {
+    ImagePickerDialog(
+      title = label,
+      pickerType = pickerType,
+      onImageSelected = { path ->
+        onImagePicked(path)
+        showPicker = false
+      },
+      onDismiss = { showPicker = false }
+    )
   }
 }
 

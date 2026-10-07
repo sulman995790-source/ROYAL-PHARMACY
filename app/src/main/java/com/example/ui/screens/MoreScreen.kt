@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -39,6 +40,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EventBusy
 import androidx.compose.material.icons.filled.FindReplace
 import androidx.compose.material.icons.filled.Fingerprint
+import androidx.compose.material.icons.filled.Healing
 import androidx.compose.material.icons.filled.HealthAndSafety
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Inventory2
@@ -65,12 +67,15 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -213,7 +218,16 @@ fun MoreScreen(
             .clickable { viewModel.navigateTo(Screen.EDIT_PROFILE) },
           contentAlignment = Alignment.Center
         ) {
-          Icon(Icons.Default.CameraAlt, contentDescription = null, tint = TextMuted, modifier = Modifier.size(22.dp))
+          if (profile.avatarImageUri.isNotBlank()) {
+            AsyncImage(
+              model = java.io.File(profile.avatarImageUri).takeIf { it.exists() } ?: profile.avatarImageUri,
+              contentDescription = "Profile Picture",
+              contentScale = ContentScale.Crop,
+              modifier = Modifier.fillMaxSize()
+            )
+          } else {
+            Icon(Icons.Default.CameraAlt, contentDescription = null, tint = TextMuted, modifier = Modifier.size(22.dp))
+          }
         }
 
         Spacer(modifier = Modifier.width(14.dp))
@@ -267,6 +281,90 @@ fun MoreScreen(
       }
     }
 
+    // 2.5 User Role (Owner / Staff) & Cloud Visual Sync Card
+    item {
+      val userRole by viewModel.currentUserRole.collectAsState()
+      val userEmail by viewModel.currentUserEmail.collectAsState()
+      val userPhone by viewModel.currentUserPhone.collectAsState()
+      val visualSyncState by viewModel.visualSyncState.collectAsState()
+
+      Card(
+        modifier = Modifier
+          .fillMaxWidth()
+          .padding(horizontal = 16.dp, vertical = 8.dp)
+          .testTag("card_user_role_sync"),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC)),
+        border = BorderStroke(1.dp, CardBorder)
+      ) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+          Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            Column {
+              Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                  text = "Active Role: ",
+                  fontSize = 12.sp,
+                  color = TextMuted
+                )
+                Text(
+                  text = userRole.label,
+                  fontSize = 12.5.sp,
+                  fontWeight = FontWeight.Bold,
+                  color = Color(userRole.badgeColorHex)
+                )
+              }
+              Text(
+                text = "User: $userEmail • $userPhone",
+                fontSize = 11.sp,
+                color = TextDark
+              )
+            }
+
+            Box(
+              modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color(visualSyncState.statusColorHex).copy(alpha = 0.15f))
+                .clickable { viewModel.showVisualSyncStatusSheet.value = true }
+                .padding(horizontal = 8.dp, vertical = 4.dp)
+            ) {
+              Text(
+                text = "● ${visualSyncState.label}",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(visualSyncState.statusColorHex)
+              )
+            }
+          }
+
+          Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+          ) {
+            Button(
+              onClick = { viewModel.showUserRoleAuthDialog.value = true },
+              colors = ButtonDefaults.buttonColors(containerColor = RoyalMagenta),
+              shape = RoundedCornerShape(8.dp),
+              modifier = Modifier.weight(1f).testTag("btn_switch_role_login")
+            ) {
+              Text("Switch Role / Login Options", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            }
+
+            OutlinedButton(
+              onClick = { viewModel.showVisualSyncStatusSheet.value = true },
+              shape = RoundedCornerShape(8.dp),
+              modifier = Modifier.weight(0.8f).testTag("btn_check_visual_sync")
+            ) {
+              Text("Visual Sync", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            }
+          }
+        }
+      }
+    }
+
     // SECTION 1: FINANCE & BANKING
     item {
       SectionHeader("Finance & Accounts")
@@ -294,6 +392,20 @@ fun MoreScreen(
     // SECTION 2: CLINICAL & PHARMACY TOOLS
     item {
       SectionHeader("Clinical & Smart Tools")
+      MoreMenuRow(
+        icon = Icons.Default.Healing,
+        title = "AI Disease & Symptom Tracker",
+        subtitle = "Track symptoms, diagnose disease & generate medicine/injectable protocols",
+        hasNewTag = true,
+        onClick = { viewModel.navigateTo(Screen.SYMPTOM_DISEASE_TRACKER) }
+      )
+      MoreMenuRow(
+        icon = Icons.Default.MedicalServices,
+        title = "Doctor Directory & CRM",
+        subtitle = "Manage prescribing doctors, contact info & Rx auto-detection",
+        hasNewTag = true,
+        onClick = { viewModel.navigateTo(Screen.DOCTOR_MANAGEMENT) }
+      )
       MoreMenuRow(
         icon = Icons.Default.CameraAlt,
         title = "AI Prescription Scanner",

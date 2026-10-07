@@ -4,6 +4,7 @@ import com.example.data.db.PharmacyDao
 import com.example.data.model.BusinessProfile
 import com.example.data.model.Customer
 import com.example.data.model.Distributor
+import com.example.data.model.Doctor
 import com.example.data.model.MedicineItem
 import com.example.data.model.Patient
 import com.example.data.model.PurchaseInvoice
@@ -20,6 +21,7 @@ class PharmacyRepository(private val dao: PharmacyDao) {
   val allMedicines: Flow<List<MedicineItem>> = dao.getAllMedicines()
   val allCustomers: Flow<List<Customer>> = dao.getAllCustomers()
   val allDistributors: Flow<List<Distributor>> = dao.getAllDistributors()
+  val allDoctors: Flow<List<Doctor>> = dao.getAllDoctors()
   val allSales: Flow<List<SaleInvoice>> = dao.getAllSales()
   val allPurchases: Flow<List<PurchaseInvoice>> = dao.getAllPurchases()
   val businessProfile: Flow<BusinessProfile?> = dao.getBusinessProfile()
@@ -342,11 +344,83 @@ class PharmacyRepository(private val dao: PharmacyDao) {
       put("distributorName", purchase.distributorName)
       put("totalAmount", purchase.totalAmount)
       put("invoiceDate", purchase.invoiceDate)
+      put("status", purchase.status)
     }
     queueSync("PURCHASE", id, "INSERT", json)
     return id
   }
 
+  suspend fun updatePurchase(purchase: PurchaseInvoice) {
+    dao.updatePurchase(purchase)
+    val json = org.json.JSONObject().apply {
+      put("id", purchase.id)
+      put("status", purchase.status)
+      put("totalAmount", purchase.totalAmount)
+    }
+    queueSync("PURCHASE", purchase.id, "UPDATE", json)
+  }
+
+  suspend fun updatePurchaseStatus(id: Long, status: String) {
+    dao.updatePurchaseStatus(id, status)
+    val json = org.json.JSONObject().apply {
+      put("id", id)
+      put("status", status)
+    }
+    queueSync("PURCHASE", id, "UPDATE_STATUS", json)
+  }
+
+  suspend fun deletePurchase(purchase: PurchaseInvoice) {
+    dao.deletePurchase(purchase)
+    queueSync("PURCHASE", purchase.id, "DELETE", org.json.JSONObject().put("id", purchase.id))
+  }
+
+  // Doctor Operations
+  fun searchDoctors(query: String): Flow<List<Doctor>> = dao.searchDoctors(query)
+  suspend fun getDoctorByName(name: String): Doctor? = dao.getDoctorByName(name)
+
+  suspend fun insertDoctor(doctor: Doctor): Long {
+    val id = dao.insertDoctor(doctor)
+    val json = org.json.JSONObject().apply {
+      put("id", id)
+      put("name", doctor.name)
+      put("specialty", doctor.specialty)
+      put("clinicHospital", doctor.clinicHospital)
+      put("phone", doctor.phone)
+      put("registrationNo", doctor.registrationNo)
+    }
+    queueSync("DOCTOR", id, "INSERT", json)
+    return id
+  }
+
+  suspend fun updateDoctor(doctor: Doctor) {
+    dao.updateDoctor(doctor)
+    val json = org.json.JSONObject().apply {
+      put("id", doctor.id)
+      put("name", doctor.name)
+      put("specialty", doctor.specialty)
+      put("phone", doctor.phone)
+    }
+    queueSync("DOCTOR", doctor.id, "UPDATE", json)
+  }
+
+  suspend fun deleteDoctor(doctor: Doctor) {
+    dao.deleteDoctor(doctor)
+    queueSync("DOCTOR", doctor.id, "DELETE", org.json.JSONObject().put("id", doctor.id))
+  }
+
+  suspend fun deleteDoctorById(id: Long) {
+    dao.deleteDoctorById(id)
+    queueSync("DOCTOR", id, "DELETE", org.json.JSONObject().put("id", id))
+  }
+
+  suspend fun incrementDoctorPrescriptionCount(name: String) {
+    dao.incrementDoctorPrescriptionCount(name)
+  }
+
   suspend fun insertDistributor(distributor: Distributor): Long = dao.insertDistributor(distributor)
+  suspend fun updateDistributor(distributor: Distributor) = dao.updateDistributor(distributor)
+  suspend fun deleteDistributor(distributor: Distributor) = dao.deleteDistributor(distributor)
+  suspend fun getDistributorByName(name: String): Distributor? = dao.getDistributorByName(name)
+
   suspend fun updateBusinessProfile(profile: BusinessProfile) = dao.insertBusinessProfile(profile)
 }
