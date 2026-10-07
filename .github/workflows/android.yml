@@ -35,15 +35,17 @@ jobs:
         mkdir -p ROYAL-PHARMACY/ROYAL-PHARMACY && cp debug.keystore ROYAL-PHARMACY/ROYAL-PHARMACY/
         mkdir -p ROYAL-PHARMACY/ROYAL-PHARMACY/app && cp debug.keystore ROYAL-PHARMACY/ROYAL-PHARMACY/app/
 
-    - name: Build Signed Release APK
-      env:
-        STORE_PASS: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
-      run: |
-        gradle assembleRelease \
-          -Pandroid.injected.signing.store.file=debug.keystore \
-          -Pandroid.injected.signing.store.password="$STORE_PASS" \
-          -Pandroid.injected.signing.key.alias=royalpharmacykey \
-          -Pandroid.injected.signing.key.password="$STORE_PASS"
+      - name: Build Signed Release APK
+    env:
+      STORE_PASS: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+      GRADLE_OPTS: -Djava.awt.headless=true
+    run: |
+      gradle assembleRelease \
+        -Pandroid.injected.signing.store.file=debug.keystore \
+        -Pandroid.injected.signing.store.password="$STORE_PASS" \
+        -Pandroid.injected.signing.key.alias=royalpharmacykey \
+        -Pandroid.injected.signing.key.password="$STORE_PASS"
+        
 
     - name: Upload Production Release APK
       uses: actions/upload-artifact@v4
