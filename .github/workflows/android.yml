@@ -19,11 +19,11 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Setup Gradle and Build
+    - name: Setup Gradle Environment
       uses: gradle/actions/setup-gradle@v4
       with:
-        arguments: assembleDebug
-        gradle-version: '8.7' # Forces the runner to safely supply its own clean Gradle environment
-        
-        
-        
+        gradle-version: '8.7' # Automatically sets up a pristine global Gradle environment
+
+    - name: Build Debug APK
+      run: gradle assembleDebug # Executes using the global clean environment we setup above
+      
