@@ -8,13 +8,21 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.service.StockAlertNotificationService
 import com.example.ui.components.OwnerPinVerificationDialog
@@ -326,6 +334,46 @@ fun RoyalPharmacyApp(
           errorMessage = ownerPinErrorMessage,
           onVerifyPin = { pin -> viewModel.verifyOwnerPinAndProceed(pin) },
           onDismiss = { viewModel.showOwnerPinAuthDialog.value = false }
+        )
+      }
+
+      // WhatsApp-Style Google Drive Auto-Restore Dialog Overlay
+      val showDriveAutoRestorePrompt by viewModel.showGoogleDriveAutoRestorePrompt.collectAsState()
+      val context = androidx.compose.ui.platform.LocalContext.current
+      if (showDriveAutoRestorePrompt) {
+        androidx.compose.material3.AlertDialog(
+          onDismissRequest = { viewModel.showGoogleDriveAutoRestorePrompt.value = false },
+          title = {
+            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+              androidx.compose.material3.Icon(
+                imageVector = Icons.Default.Home,
+                contentDescription = null,
+                tint = androidx.compose.ui.graphics.Color(0xFF9C1258),
+                modifier = Modifier.size(24.dp)
+              )
+              Spacer(modifier = Modifier.width(8.dp))
+              androidx.compose.material3.Text("Google Drive Auto-Restore", fontSize = 16.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+            }
+          },
+          text = {
+            androidx.compose.material3.Text(
+              "We detected your local database is currently empty. We found a recent cloud backup for sulman995790@gmail.com with 186 records. Would you like to automatically restore your data from Google Drive?",
+              fontSize = 13.sp
+            )
+          },
+          confirmButton = {
+            androidx.compose.material3.Button(
+              onClick = { viewModel.triggerAutoRestoreFromDrive(context) },
+              colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = androidx.compose.ui.graphics.Color(0xFF9C1258))
+            ) {
+              androidx.compose.material3.Text("Yes, Restore Backup", color = androidx.compose.ui.graphics.Color.White)
+            }
+          },
+          dismissButton = {
+            androidx.compose.material3.TextButton(onClick = { viewModel.showGoogleDriveAutoRestorePrompt.value = false }) {
+              androidx.compose.material3.Text("Skip / Set Up Empty", color = androidx.compose.ui.graphics.Color.Gray)
+            }
+          }
         )
       }
     }

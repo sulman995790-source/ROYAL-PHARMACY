@@ -51,6 +51,7 @@ import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Restore
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
@@ -269,7 +270,199 @@ fun HomeScreen(
         }
       }
 
-      // 3. Compact Alerts Row (Low Stock & Expiry Badges)
+      // 3. Low Stock Alert Interactive Dashboard Widget
+      if (criticalMedicines.isNotEmpty()) {
+        item {
+          Card(
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(
+              containerColor = if (isDarkMode) Color(0xFF1E1B2E) else Color(0xFFFEF2F2)
+            ),
+            border = androidx.compose.foundation.BorderStroke(
+              1.dp,
+              if (isDarkMode) Color(0xFF7F1D1D) else Color(0xFFFCA5A5)
+            ),
+            modifier = Modifier
+              .fillMaxWidth()
+              .padding(horizontal = 16.dp)
+              .testTag("widget_low_stock_dashboard")
+          ) {
+            Column(modifier = Modifier.padding(12.dp)) {
+              Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+              ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                  Box(
+                    modifier = Modifier
+                      .size(28.dp)
+                      .clip(CircleShape)
+                      .background(Color(0xFFDC2626)),
+                    contentAlignment = Alignment.Center
+                  ) {
+                    Icon(
+                      imageVector = Icons.Default.Warning,
+                      contentDescription = null,
+                      tint = Color.White,
+                      modifier = Modifier.size(16.dp)
+                    )
+                  }
+                  Spacer(modifier = Modifier.width(8.dp))
+                  Column {
+                    Text(
+                      text = "Low Stock Alert Widget",
+                      fontSize = 13.5.sp,
+                      fontWeight = FontWeight.Bold,
+                      color = if (isDarkMode) Color(0xFFFEE2E2) else Color(0xFF991B1B)
+                    )
+                    Text(
+                      text = "${criticalMedicines.size} items below reorder point",
+                      fontSize = 11.sp,
+                      color = if (isDarkMode) Color(0xFFFCA5A5) else Color(0xFFB91C1C)
+                    )
+                  }
+                }
+
+                // Batch One-Click Reorder Button
+                Button(
+                  onClick = { viewModel.reorderAllLowStockMedicines() },
+                  colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626)),
+                  contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                  shape = RoundedCornerShape(8.dp),
+                  modifier = Modifier.height(32.dp).testTag("btn_reorder_all_low_stock")
+                ) {
+                  Icon(
+                    imageVector = Icons.Default.ShoppingCart,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(13.dp)
+                  )
+                  Spacer(modifier = Modifier.width(4.dp))
+                  Text("Reorder All", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                }
+              }
+
+              Spacer(modifier = Modifier.height(10.dp))
+
+              // Horizontal Scrollable Cards of Low Stock Items with 1-Click PO addition
+              LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(vertical = 2.dp)
+              ) {
+                items(criticalMedicines.take(8)) { med ->
+                  Card(
+                    shape = RoundedCornerShape(10.dp),
+                    colors = CardDefaults.cardColors(
+                      containerColor = if (isDarkMode) Color(0xFF2D1B22) else Color.White
+                    ),
+                    border = androidx.compose.foundation.BorderStroke(
+                      1.dp,
+                      if (isDarkMode) Color(0xFF991B1B) else Color(0xFFFECACA)
+                    ),
+                    modifier = Modifier.width(170.dp)
+                  ) {
+                    Column(modifier = Modifier.padding(10.dp)) {
+                      Text(
+                        text = med.name,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        color = if (isDarkMode) Color.White else TextDark
+                      )
+                      Text(
+                        text = med.manufacturer.ifBlank { "Generic" },
+                        fontSize = 10.sp,
+                        color = TextMuted,
+                        maxLines = 1
+                      )
+
+                      Spacer(modifier = Modifier.height(6.dp))
+
+                      Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                      ) {
+                        Text(
+                          text = "Stock: ${med.stockPacks}",
+                          fontSize = 11.sp,
+                          fontWeight = FontWeight.ExtraBold,
+                          color = StatusRed
+                        )
+                        Box(
+                          modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(Color(0xFFFEF2F2))
+                            .padding(horizontal = 4.dp, vertical = 2.dp)
+                        ) {
+                          Text(
+                            text = "Min: ${med.minStockAlert}",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF991B1B)
+                          )
+                        }
+                      }
+
+                      Spacer(modifier = Modifier.height(6.dp))
+
+                      // Stock Meter
+                      val fillRatio = (med.stockPacks.toFloat() / med.minStockAlert.coerceAtLeast(1).toFloat()).coerceIn(0f, 1f)
+                      Box(
+                        modifier = Modifier
+                          .fillMaxWidth()
+                          .height(4.dp)
+                          .clip(RoundedCornerShape(2.dp))
+                          .background(Color(0xFFFCA5A5))
+                      ) {
+                        Box(
+                          modifier = Modifier
+                            .fillMaxWidth(fillRatio)
+                            .height(4.dp)
+                            .background(StatusRed)
+                        )
+                      }
+
+                      Spacer(modifier = Modifier.height(8.dp))
+
+                      // 1-Click Purchase Order Button
+                      Button(
+                        onClick = { viewModel.addMedicineToCart(med, qty = 20) },
+                        colors = ButtonDefaults.buttonColors(
+                          containerColor = if (isDarkMode) Color(0xFF9C1258) else RoyalMagenta
+                        ),
+                        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp),
+                        shape = RoundedCornerShape(6.dp),
+                        modifier = Modifier
+                          .fillMaxWidth()
+                          .height(28.dp)
+                          .testTag("btn_1click_add_po_${med.id}")
+                      ) {
+                        Icon(
+                          imageVector = Icons.Default.Add,
+                          contentDescription = null,
+                          tint = Color.White,
+                          modifier = Modifier.size(12.dp)
+                        )
+                        Spacer(modifier = Modifier.width(2.dp))
+                        Text(
+                          text = "1-Click + PO",
+                          fontSize = 10.sp,
+                          fontWeight = FontWeight.Bold,
+                          color = Color.White
+                        )
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // 3.5 Compact Expiry Alert Badge
       item {
         Row(
           modifier = Modifier
@@ -277,75 +470,42 @@ fun HomeScreen(
             .padding(horizontal = 16.dp),
           horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-          // Low Stock Alert Badge
-          Card(
-            onClick = { viewModel.navigateTo(Screen.CRITICAL_STOCK_ALERTS) },
-            shape = RoundedCornerShape(8.dp),
-            colors = CardDefaults.cardColors(
-              containerColor = if (criticalMedicines.isNotEmpty()) Color(0xFFFEF2F2) else Color(0xFFF8FAFC)
-            ),
-            border = androidx.compose.foundation.BorderStroke(
-              1.dp,
-              if (criticalMedicines.isNotEmpty()) Color(0xFFFCA5A5) else CardBorder
-            ),
-            modifier = Modifier.weight(1f).testTag("badge_home_low_stock")
-          ) {
-            Row(
-              modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-              verticalAlignment = Alignment.CenterVertically
-            ) {
-              Icon(
-                imageVector = Icons.Default.Warning,
-                contentDescription = null,
-                tint = if (criticalMedicines.isNotEmpty()) StatusRed else TextMuted,
-                modifier = Modifier.size(16.dp)
-              )
-              Spacer(modifier = Modifier.width(6.dp))
-              Column {
-                Text("Low Stock Alert", fontSize = 10.5.sp, color = TextMuted)
-                Text(
-                  text = if (criticalMedicines.isNotEmpty()) "${criticalMedicines.size} Items Critical" else "Stock Healthy",
-                  fontSize = 11.5.sp,
-                  fontWeight = FontWeight.Bold,
-                  color = if (criticalMedicines.isNotEmpty()) StatusRed else Color(0xFF15803D)
-                )
-              }
-            }
-          }
-
-          // Medicine Expiry Alert Badge
           Card(
             onClick = { viewModel.navigateTo(Screen.BATCH_EXPIRY_DASHBOARD) },
             shape = RoundedCornerShape(8.dp),
             colors = CardDefaults.cardColors(
-              containerColor = if (expiringCount > 0) Color(0xFFFFFBEB) else Color(0xFFF8FAFC)
+              containerColor = if (expiringCount > 0) (if (isDarkMode) Color(0xFF2A1F0D) else Color(0xFFFFFBEB)) else (if (isDarkMode) Color(0xFF1E293B) else Color(0xFFF8FAFC))
             ),
             border = androidx.compose.foundation.BorderStroke(
               1.dp,
-              if (expiringCount > 0) Color(0xFFFCD34D) else CardBorder
+              if (expiringCount > 0) Color(0xFFFCD34D) else (if (isDarkMode) Color(0xFF334155) else CardBorder)
             ),
-            modifier = Modifier.weight(1f).testTag("badge_home_expiry_alert")
+            modifier = Modifier.fillMaxWidth().testTag("badge_home_expiry_alert")
           ) {
             Row(
-              modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-              verticalAlignment = Alignment.CenterVertically
+              modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.SpaceBetween
             ) {
-              Icon(
-                imageVector = Icons.Default.EventBusy,
-                contentDescription = null,
-                tint = if (expiringCount > 0) Color(0xFFD97706) else TextMuted,
-                modifier = Modifier.size(16.dp)
-              )
-              Spacer(modifier = Modifier.width(6.dp))
-              Column {
-                Text("Expiry Alert", fontSize = 10.5.sp, color = TextMuted)
-                Text(
-                  text = if (expiringCount > 0) "$expiringCount Expiring Soon" else "All Safe",
-                  fontSize = 11.5.sp,
-                  fontWeight = FontWeight.Bold,
-                  color = if (expiringCount > 0) Color(0xFFD97706) else Color(0xFF15803D)
+              Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                  imageVector = Icons.Default.EventBusy,
+                  contentDescription = null,
+                  tint = if (expiringCount > 0) Color(0xFFD97706) else TextMuted,
+                  modifier = Modifier.size(16.dp)
                 )
+                Spacer(modifier = Modifier.width(8.dp))
+                Column {
+                  Text("Expiry Alert Status", fontSize = 10.5.sp, color = TextMuted)
+                  Text(
+                    text = if (expiringCount > 0) "$expiringCount Medicines Expiring Within 60 Days" else "All Batches Safe & Valid",
+                    fontSize = 11.5.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (expiringCount > 0) Color(0xFFD97706) else Color(0xFF15803D)
+                  )
+                }
               }
+              Icon(Icons.Default.ChevronRight, contentDescription = null, tint = TextMuted, modifier = Modifier.size(18.dp))
             }
           }
         }

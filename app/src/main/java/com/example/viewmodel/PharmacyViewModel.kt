@@ -36,6 +36,7 @@ import com.example.service.GoogleDriveSyncService
 import com.example.service.StorageUsageBreakdown
 import com.example.service.StockAlertBackgroundService
 import com.example.service.StockAlertNotificationService
+import com.example.util.MedicineQrPayload
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -310,6 +311,82 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
   val ownerPinErrorMessage = MutableStateFlow<String?>(null)
   val pendingRestrictedActionName = MutableStateFlow<String?>(null)
   private var pendingRestrictedCallback: (() -> Unit)? = null
+
+  // Simulated OTP Verification flow states
+  val isVerifyingOtp = MutableStateFlow(false)
+  val otpCodeValue = MutableStateFlow("")
+  val otpTargetAddress = MutableStateFlow("")
+  val otpUserRole = MutableStateFlow(UserRole.STAFF)
+  val otpUserName = MutableStateFlow("")
+  val otpAuthType = MutableStateFlow(AuthLoginType.PHONE)
+
+  // WhatsApp-Style Automatic Restores & Drive Backups
+  val showGoogleDriveAutoRestorePrompt = MutableStateFlow(false)
+
+  // Reactive Staff Members Management
+  val staffMembers = MutableStateFlow<List<StaffMember>>(
+    listOf(
+      StaffMember("s-1", "Nijamuddin Khan", "khannijamuddin87275@gmail.com", "+91 94350 78210", "Today at 02:15 PM", "GMAIL"),
+      StaffMember("s-2", "Rahul Sharma", "rahul.sharma@royal.com", "+91 98765 43210", "Yesterday at 11:30 AM", "PHONE"),
+      StaffMember("s-3", "Priya Das", "priya.das@royal.com", "+91 88123 45678", "05-Oct-2026 06:12 PM", "GMAIL")
+    )
+  )
+
+  fun addStaffMember(name: String, email: String, phone: String, loginType: String) {
+    val newList = staffMembers.value.toMutableList()
+    val simpleTime = SimpleDateFormat("dd-MMM-yyyy hh:mm a", Locale.getDefault()).format(Date())
+    newList.add(
+      StaffMember(
+        id = "s-${System.currentTimeMillis()}",
+        name = name,
+        email = email,
+        phone = phone,
+        lastLoginTime = "Registered on $simpleTime",
+        loginType = loginType
+      )
+    )
+    staffMembers.value = newList
+    scanFeedbackMessage.value = "Successfully registered new staff: $name"
+  }
+
+  fun removeStaffMember(id: String) {
+    val memberName = staffMembers.value.firstOrNull { it.id == id }?.name ?: "Staff"
+    staffMembers.value = staffMembers.value.filter { it.id != id }
+    scanFeedbackMessage.value = "Removed staff access: $memberName"
+  }
+
+  fun sendOtpCode(target: String, name: String, role: UserRole, type: AuthLoginType) {
+    otpTargetAddress.value = target
+    otpUserName.value = name
+    otpUserRole.value = role
+    otpAuthType.value = type
+    isVerifyingOtp.value = true
+    otpCodeValue.value = "123456" // Standard 6 digit OTP for simulated verification
+    scanFeedbackMessage.value = "OTP Code (123456) dispatched to $target!"
+  }
+
+  fun verifyOtpCode(enteredCode: String): Boolean {
+    if (enteredCode == "123456" || enteredCode == otpCodeValue.value) {
+      isVerifyingOtp.value = false
+      if (otpAuthType.value == AuthLoginType.GMAIL) {
+        loginWithGmail(otpTargetAddress.value, otpUserName.value, otpUserRole.value)
+      } else {
+        loginWithPhone(otpTargetAddress.value, otpUserName.value, otpUserRole.value)
+      }
+      return true
+    }
+    return false
+  }
+
+  fun triggerAutoRestoreFromDrive(context: Context) {
+    viewModelScope.launch {
+      val latestSnapshot = GoogleDriveSyncService.driveSnapshots.value.firstOrNull()
+      if (latestSnapshot != null) {
+        restoreFromGoogleDrive(context, latestSnapshot)
+        showGoogleDriveAutoRestorePrompt.value = false
+      }
+    }
+  }
 
   // Visual Sync Status State
   val visualSyncState = MutableStateFlow(VisualSyncState.SYNCED)
@@ -1487,15 +1564,48 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
   // QuickScan handlers
   fun handleScannedBarcode(barcode: String) {
     val trimmedBarcode = barcode.trim()
+    val qrPayload = MedicineQrPayload.fromJsonString(trimmedBarcode)
+    if (qrPayload != null) {
+      addBatchQrToBillingCart(qrPayload)
+      return
+    }
     viewModelScope.launch {
       val matched = repository.findMedicineByBarcode(trimmedBarcode)
       if (matched != null) {
         addMedicineToCart(matched, 1)
-        scanFeedbackMessage.value = "Scanned: ${matched.name} (₹${matched.saleRate})"
+        scanFeedbackMessage.value = "POS Scanned: ${matched.name} (Batch: ${matched.batchNumber})"
       } else {
-        scanFeedbackMessage.value = "Barcode $trimmedBarcode: Not found"
+        scanFeedbackMessage.value = "Barcode/QR $trimmedBarcode not found in catalog"
       }
     }
+  }
+
+  fun addBatchQrToBillingCart(payload: MedicineQrPayload) {
+    val matchedMed = allMedicines.value.firstOrNull { it.id == payload.id || (it.barcode.isNotBlank() && it.barcode == payload.barcode) || it.name.equals(payload.name, ignoreCase = true) }
+    val billItem = BillItem(
+      medicineId = matchedMed?.id ?: payload.id,
+      medicineName = payload.name,
+      batchNumber = payload.batch.ifBlank { matchedMed?.batchNumber ?: "B-101" },
+      expiryDate = payload.exp.ifBlank { matchedMed?.expiryDate ?: "12/28" },
+      packQty = 1,
+      mrp = if (payload.mrp > 0) payload.mrp else (matchedMed?.mrp ?: 100.0),
+      rate = if (payload.saleRate > 0) payload.saleRate else (matchedMed?.saleRate ?: matchedMed?.mrp ?: 100.0),
+      purchaseRate = matchedMed?.purchaseRate ?: (payload.mrp * 0.75),
+      gstPercent = matchedMed?.gstPercent ?: 12.0,
+      total = if (payload.saleRate > 0) payload.saleRate else (matchedMed?.mrp ?: 100.0)
+    )
+    val currentCart = billingCartItems.value.toMutableList()
+    val existingIdx = currentCart.indexOfFirst { it.medicineName.equals(billItem.medicineName, ignoreCase = true) && it.batchNumber == billItem.batchNumber }
+    if (existingIdx >= 0) {
+      val existing = currentCart[existingIdx]
+      val newQty = existing.packQty + 1
+      val newTotal = newQty * existing.rate * (1 - existing.discountPercent / 100.0)
+      currentCart[existingIdx] = existing.copy(packQty = newQty, total = newTotal)
+    } else {
+      currentCart.add(0, billItem)
+    }
+    billingCartItems.value = currentCart
+    scanFeedbackMessage.value = "POS Batch Scanned: Added ${payload.name} (Batch ${payload.batch}) to Billing Counter!"
   }
 
   fun handleParsedLabelOcr(name: String, batch: String, expiry: String, mrp: Double, manufacturer: String) {
@@ -1744,6 +1854,19 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
     )
   }
 
+  fun reorderAllLowStockMedicines() {
+    val lowStockList = criticalLowStockMedicines.value
+    if (lowStockList.isEmpty()) {
+      scanFeedbackMessage.value = "All stock levels healthy! No reorder needed."
+      return
+    }
+    lowStockList.forEach { med ->
+      val reorderQty = if (med.minStockAlert > med.stockPacks) (med.minStockAlert * 2 - med.stockPacks).coerceAtLeast(10) else 20
+      addMedicineToCart(med, qty = reorderQty, isReturn = false)
+    }
+    scanFeedbackMessage.value = "Added ${lowStockList.size} low stock medicines to Purchase List!"
+  }
+
   fun removeFromCart(itemId: String) {
     distributorCart.value = distributorCart.value.filter { it.id != itemId }
     scanFeedbackMessage.value = "Removed from Cart"
@@ -1989,3 +2112,13 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
     scanFeedbackMessage.value = if (next) "Dark Mode Activated 🌙" else "Light Mode Activated ☀️"
   }
 }
+
+data class StaffMember(
+  val id: String,
+  val name: String,
+  val email: String = "",
+  val phone: String = "",
+  val lastLoginTime: String,
+  val loginType: String,
+  val status: String = "ACTIVE"
+)

@@ -17,10 +17,10 @@ android {
     minSdk = 26
     targetSdk = 36
 
-    // Dynamically checks the GitHub environment counter to auto-increment version code
+    // Dynamically checks the GitHub environment counter to auto-increment version code with elevated base
     val githubBuildNumber = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1
-    versionCode = githubBuildNumber
-    versionName = "1.0.$githubBuildNumber"
+    versionCode = 2000 + githubBuildNumber
+    versionName = "2.0.$githubBuildNumber"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
@@ -30,25 +30,19 @@ android {
     val releaseStoreFile = file(releaseKeystorePath)
     val hasReleaseSecret = !System.getenv("STORE_PASSWORD").isNullOrEmpty()
 
-    create("release") {
+    create("unifiedConfig") {
       if (releaseStoreFile.exists() && hasReleaseSecret) {
         storeFile = releaseStoreFile
         storePassword = System.getenv("STORE_PASSWORD")
         keyAlias = System.getenv("KEY_ALIAS") ?: "upload"
         keyPassword = System.getenv("KEY_PASSWORD") ?: System.getenv("STORE_PASSWORD")
       } else {
-        // Automatically fallback to debug.keystore so APK downloads from GitHub Actions are consistently signed
+        // Automatically fallback to root debug.keystore so ALL APK downloads (debug & release) match signatures
         storeFile = file("${rootDir}/debug.keystore")
         storePassword = "android"
         keyAlias = "androiddebugkey"
         keyPassword = "android"
       }
-    }
-    create("debugConfig") {
-      storeFile = file("${rootDir}/debug.keystore")
-      storePassword = "android"
-      keyAlias = "androiddebugkey"
-      keyPassword = "android"
     }
   }
 
@@ -57,9 +51,11 @@ android {
       isCrunchPngs = false
       isMinifyEnabled = false
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-      signingConfig = signingConfigs.getByName("release")
+      signingConfig = signingConfigs.getByName("unifiedConfig")
     }
-    debug { signingConfig = signingConfigs.getByName("debugConfig") }
+    debug {
+      signingConfig = signingConfigs.getByName("unifiedConfig")
+    }
   }
   compileOptions {
     sourceCompatibility = JavaVersion.VERSION_11

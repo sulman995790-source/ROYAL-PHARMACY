@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -30,8 +31,10 @@ fun RoleManagementScreen(
 ) {
   val currentUserRole by viewModel.currentUserRole.collectAsState()
   val ownerPin by viewModel.ownerPin.collectAsState()
+  val staffMembers by viewModel.staffMembers.collectAsState()
   
   var showChangePinDialog by remember { mutableStateOf(false) }
+  var showAddStaffDialog by remember { mutableStateOf(false) }
 
   Column(
     modifier = modifier
@@ -178,7 +181,170 @@ fun RoleManagementScreen(
           }
         }
       }
+
+      // Owner-Only Staff Management & Login Logs
+      if (currentUserRole == UserRole.OWNER) {
+        item {
+          Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            Text("Active Staff & Logins", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextDark)
+            Button(
+              onClick = { showAddStaffDialog = true },
+              colors = ButtonDefaults.buttonColors(containerColor = RoyalMagenta),
+              shape = RoundedCornerShape(8.dp),
+              contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+              modifier = Modifier.height(30.dp)
+            ) {
+              Icon(Icons.Default.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+              Spacer(modifier = Modifier.width(4.dp))
+              Text("Add Staff", fontSize = 11.sp, color = Color.White)
+            }
+          }
+
+          Card(
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            border = CardDefaults.outlinedCardBorder()
+          ) {
+            if (staffMembers.isEmpty()) {
+              Box(
+                modifier = Modifier.fillMaxWidth().padding(24.dp),
+                contentAlignment = Alignment.Center
+              ) {
+                Text("No staff registered yet. Add staff above.", fontSize = 12.sp, color = TextMuted)
+              }
+            } else {
+              Column {
+                staffMembers.forEachIndexed { index, staff ->
+                  Row(
+                    modifier = Modifier
+                      .fillMaxWidth()
+                      .padding(14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                  ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                      Box(
+                        modifier = Modifier
+                          .size(36.dp)
+                          .clip(CircleShape)
+                          .background(Color(0xFFEFF6FF)),
+                        contentAlignment = Alignment.Center
+                      ) {
+                        Text(staff.name.take(2).uppercase(), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2563EB))
+                      }
+                      Spacer(modifier = Modifier.width(10.dp))
+                      Column {
+                        Text(staff.name, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextDark)
+                        Text(
+                          text = if (staff.phone.isNotBlank()) staff.phone else staff.email,
+                          fontSize = 11.sp,
+                          color = TextMuted
+                        )
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
+                          Box(
+                            modifier = Modifier
+                              .clip(RoundedCornerShape(4.dp))
+                              .background(if (staff.loginType == "GMAIL") Color(0xFFFBE4EE) else Color(0xFFEFF6FF))
+                              .padding(horizontal = 4.dp, vertical = 1.dp)
+                          ) {
+                            Text(
+                              text = staff.loginType,
+                              fontSize = 8.sp,
+                              fontWeight = FontWeight.Bold,
+                              color = if (staff.loginType == "GMAIL") RoyalMagenta else Color(0xFF2563EB)
+                            )
+                          }
+                          Spacer(modifier = Modifier.width(6.dp))
+                          Text("Logged: ${staff.lastLoginTime}", fontSize = 9.5.sp, color = TextLight)
+                        }
+                      }
+                    }
+
+                    IconButton(onClick = { viewModel.removeStaffMember(staff.id) }) {
+                      Icon(Icons.Default.Delete, contentDescription = "Delete", tint = StatusRed, modifier = Modifier.size(18.dp))
+                    }
+                  }
+                  if (index < staffMembers.size - 1) {
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 14.dp), color = Color(0xFFF1F5F9))
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
+  }
+
+  if (showAddStaffDialog) {
+    var name by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
+    var loginType by remember { mutableStateOf("PHONE") } // PHONE or GMAIL
+
+    AlertDialog(
+      onDismissRequest = { showAddStaffDialog = false },
+      title = { Text("Register Staff Member") },
+      text = {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+          OutlinedTextField(
+            value = name,
+            onValueChange = { name = it },
+            label = { Text("Staff Full Name") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+          )
+
+          Row(verticalAlignment = Alignment.CenterVertically) {
+            RadioButton(selected = loginType == "GMAIL", onClick = { loginType = "GMAIL" })
+            Text("Gmail", fontSize = 13.sp, modifier = Modifier.clickable { loginType = "GMAIL" })
+            Spacer(modifier = Modifier.width(16.dp))
+            RadioButton(selected = loginType == "PHONE", onClick = { loginType = "PHONE" })
+            Text("Phone", fontSize = 13.sp, modifier = Modifier.clickable { loginType = "PHONE" })
+          }
+
+          if (loginType == "GMAIL") {
+            OutlinedTextField(
+              value = email,
+              onValueChange = { email = it },
+              label = { Text("Gmail Address") },
+              singleLine = true,
+              modifier = Modifier.fillMaxWidth()
+            )
+          } else {
+            OutlinedTextField(
+              value = phone,
+              onValueChange = { phone = it },
+              label = { Text("Mobile Phone Number") },
+              singleLine = true,
+              modifier = Modifier.fillMaxWidth()
+            )
+          }
+        }
+      },
+      confirmButton = {
+        Button(
+          onClick = {
+            if (name.isNotBlank()) {
+              viewModel.addStaffMember(name, email, phone, loginType)
+              showAddStaffDialog = false
+            }
+          },
+          colors = ButtonDefaults.buttonColors(containerColor = RoyalMagenta)
+        ) {
+          Text("Add Staff Access")
+        }
+      },
+      dismissButton = {
+        TextButton(onClick = { showAddStaffDialog = false }) {
+          Text("Cancel")
+        }
+      }
+    )
   }
 
   if (showChangePinDialog) {

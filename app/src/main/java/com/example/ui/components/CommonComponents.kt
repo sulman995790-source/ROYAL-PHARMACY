@@ -717,137 +717,221 @@ fun UserRoleAuthDialog(
   var pinInput by remember { mutableStateOf("") }
   var errorMessage by remember { mutableStateOf<String?>(null) }
 
-  AlertDialog(
-    onDismissRequest = onDismiss,
-    title = {
-      Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(
-          imageVector = Icons.Default.AdminPanelSettings,
-          contentDescription = null,
-          tint = RoyalMagenta,
-          modifier = Modifier.size(26.dp)
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text("User Roles & Login Options", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-      }
-    },
-    text = {
-      Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text("Select User Role:", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextDark)
+  var isOtpStepActive by remember { mutableStateOf(false) }
+  var otpCodeInput by remember { mutableStateOf("") }
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-          Card(
-            onClick = { selectedRole = UserRole.OWNER },
-            colors = CardDefaults.cardColors(
-              containerColor = if (selectedRole == UserRole.OWNER) RoyalMagentaLight else Color(0xFFF8FAFC)
-            ),
-            border = if (selectedRole == UserRole.OWNER) BorderStroke(1.5.dp, RoyalMagenta) else BorderStroke(1.dp, CardBorder),
-            modifier = Modifier.weight(1f)
-          ) {
-            Column(modifier = Modifier.padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-              Text("👑 OWNER", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = RoyalMagenta)
-              Text("Full Access - Edit All", fontSize = 10.sp, color = TextMuted)
-            }
-          }
-
-          Card(
-            onClick = { selectedRole = UserRole.STAFF },
-            colors = CardDefaults.cardColors(
-              containerColor = if (selectedRole == UserRole.STAFF) Color(0xFFEFF6FF) else Color(0xFFF8FAFC)
-            ),
-            border = if (selectedRole == UserRole.STAFF) BorderStroke(1.5.dp, Color(0xFF2563EB)) else BorderStroke(1.dp, CardBorder),
-            modifier = Modifier.weight(1f)
-          ) {
-            Column(modifier = Modifier.padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-              Text("💼 STAFF", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2563EB))
-              Text("General Work & Billing", fontSize = 10.sp, color = TextMuted)
-            }
-          }
-        }
-
-        if (selectedRole == UserRole.OWNER && currentRole != UserRole.OWNER) {
-          OutlinedTextField(
-            value = pinInput,
-            onValueChange = { pinInput = it },
-            label = { Text("Enter Owner PIN (Default: 1234)") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth()
-          )
-        }
-
-        HorizontalDivider(color = Color(0xFFE2E8F0))
-
-        Text("Login Options:", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextDark)
-
+  if (isOtpStepActive) {
+    AlertDialog(
+      onDismissRequest = onDismiss,
+      title = {
         Row(verticalAlignment = Alignment.CenterVertically) {
-          RadioButton(selected = loginMode == AuthLoginType.GMAIL, onClick = { loginMode = AuthLoginType.GMAIL })
-          Text("Gmail Account", fontSize = 13.sp, modifier = Modifier.clickable { loginMode = AuthLoginType.GMAIL })
-          Spacer(modifier = Modifier.width(16.dp))
-          RadioButton(selected = loginMode == AuthLoginType.PHONE, onClick = { loginMode = AuthLoginType.PHONE })
-          Text("Phone Number", fontSize = 13.sp, modifier = Modifier.clickable { loginMode = AuthLoginType.PHONE })
+          Icon(
+            imageVector = Icons.Default.CheckCircle,
+            contentDescription = null,
+            tint = Color(0xFF059669),
+            modifier = Modifier.size(26.dp)
+          )
+          Spacer(modifier = Modifier.width(8.dp))
+          Text("2-Step Verification", fontSize = 18.sp, fontWeight = FontWeight.Bold)
         }
+      },
+      text = {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+          Text(
+            text = "Enter the 6-digit OTP code sent to your active ${if (loginMode == AuthLoginType.GMAIL) "Gmail ($emailInput)" else "mobile ($phoneInput)"} account.",
+            fontSize = 13.sp,
+            color = TextDark
+          )
 
-        OutlinedTextField(
-          value = nameInput,
-          onValueChange = { nameInput = it },
-          label = { Text("User Name") },
-          singleLine = true,
-          modifier = Modifier.fillMaxWidth()
-        )
-
-        if (loginMode == AuthLoginType.GMAIL) {
           OutlinedTextField(
-            value = emailInput,
-            onValueChange = { emailInput = it },
-            label = { Text("Gmail Address") },
+            value = otpCodeInput,
+            onValueChange = { if (it.length <= 6) otpCodeInput = it },
+            label = { Text("Verification OTP Code") },
+            placeholder = { Text("123456") },
             singleLine = true,
-            leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = RoyalMagenta) },
+            leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = Color(0xFF059669)) },
             modifier = Modifier.fillMaxWidth()
           )
-        } else {
-          OutlinedTextField(
-            value = phoneInput,
-            onValueChange = { phoneInput = it },
-            label = { Text("Mobile Phone Number") },
-            singleLine = true,
-            leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = Color(0xFF2563EB)) },
-            modifier = Modifier.fillMaxWidth()
-          )
-        }
 
-        errorMessage?.let { msg ->
-          Text(msg, fontSize = 11.5.sp, color = Color(0xFFDC2626), fontWeight = FontWeight.Medium)
+          Text(
+            text = "ℹ️ Note: For simulated testing, use standard code '123456'.",
+            fontSize = 11.sp,
+            color = TextMuted,
+            fontWeight = FontWeight.Medium
+          )
+
+          errorMessage?.let { msg ->
+            Text(msg, fontSize = 11.5.sp, color = Color(0xFFDC2626), fontWeight = FontWeight.Medium)
+          }
+        }
+      },
+      confirmButton = {
+        Button(
+          onClick = {
+            if (otpCodeInput == "123456") {
+              if (loginMode == AuthLoginType.GMAIL) {
+                onLoginGmail(emailInput, nameInput, selectedRole)
+              } else {
+                onLoginPhone(phoneInput, nameInput, selectedRole)
+              }
+              onDismiss()
+            } else {
+              errorMessage = "Incorrect OTP verification code! Enter standard code '123456' to proceed."
+            }
+          },
+          colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF059669))
+        ) {
+          Text("Verify & Complete Sign In")
+        }
+      },
+      dismissButton = {
+        TextButton(onClick = { 
+          isOtpStepActive = false 
+          otpCodeInput = ""
+          errorMessage = null
+        }) {
+          Text("Back")
         }
       }
-    },
-    confirmButton = {
-      Button(
-        onClick = {
-          if (selectedRole != currentRole) {
-            val success = onRoleSwitched(selectedRole, pinInput)
-            if (!success) {
-              errorMessage = "Incorrect Owner PIN! Enter default PIN '1234'."
+    )
+  } else {
+    AlertDialog(
+      onDismissRequest = onDismiss,
+      title = {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Icon(
+            imageVector = Icons.Default.AdminPanelSettings,
+            contentDescription = null,
+            tint = RoyalMagenta,
+            modifier = Modifier.size(26.dp)
+          )
+          Spacer(modifier = Modifier.width(8.dp))
+          Text("User Roles & Login Options", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        }
+      },
+      text = {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+          Text("Select User Role:", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextDark)
+
+          Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Card(
+              onClick = { selectedRole = UserRole.OWNER },
+              colors = CardDefaults.cardColors(
+                containerColor = if (selectedRole == UserRole.OWNER) RoyalMagentaLight else Color(0xFFF8FAFC)
+              ),
+              border = if (selectedRole == UserRole.OWNER) BorderStroke(1.5.dp, RoyalMagenta) else BorderStroke(1.dp, CardBorder),
+              modifier = Modifier.weight(1f)
+            ) {
+              Column(modifier = Modifier.padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("👑 OWNER", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = RoyalMagenta)
+                Text("Full Access - Edit All", fontSize = 10.sp, color = TextMuted)
+              }
+            }
+
+            Card(
+              onClick = { selectedRole = UserRole.STAFF },
+              colors = CardDefaults.cardColors(
+                containerColor = if (selectedRole == UserRole.STAFF) Color(0xFFEFF6FF) else Color(0xFFF8FAFC)
+              ),
+              border = if (selectedRole == UserRole.STAFF) BorderStroke(1.5.dp, Color(0xFF2563EB)) else BorderStroke(1.dp, CardBorder),
+              modifier = Modifier.weight(1f)
+            ) {
+              Column(modifier = Modifier.padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("💼 STAFF", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2563EB))
+                Text("General Work & Billing", fontSize = 10.sp, color = TextMuted)
+              }
+            }
+          }
+
+          if (selectedRole == UserRole.OWNER && currentRole != UserRole.OWNER) {
+            OutlinedTextField(
+              value = pinInput,
+              onValueChange = { pinInput = it },
+              label = { Text("Enter Owner PIN (Default: 1234)") },
+              singleLine = true,
+              modifier = Modifier.fillMaxWidth()
+            )
+          }
+
+          HorizontalDivider(color = Color(0xFFE2E8F0))
+
+          Text("Login Options:", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextDark)
+
+          Row(verticalAlignment = Alignment.CenterVertically) {
+            RadioButton(selected = loginMode == AuthLoginType.GMAIL, onClick = { loginMode = AuthLoginType.GMAIL })
+            Text("Gmail Account", fontSize = 13.sp, modifier = Modifier.clickable { loginMode = AuthLoginType.GMAIL })
+            Spacer(modifier = Modifier.width(16.dp))
+            RadioButton(selected = loginMode == AuthLoginType.PHONE, onClick = { loginMode = AuthLoginType.PHONE })
+            Text("Phone Number", fontSize = 13.sp, modifier = Modifier.clickable { loginMode = AuthLoginType.PHONE })
+          }
+
+          OutlinedTextField(
+            value = nameInput,
+            onValueChange = { nameInput = it },
+            label = { Text("User Name") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+          )
+
+          if (loginMode == AuthLoginType.GMAIL) {
+            OutlinedTextField(
+              value = emailInput,
+              onValueChange = { emailInput = it },
+              label = { Text("Gmail Address") },
+              singleLine = true,
+              leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = RoyalMagenta) },
+              modifier = Modifier.fillMaxWidth()
+            )
+          } else {
+            OutlinedTextField(
+              value = phoneInput,
+              onValueChange = { phoneInput = it },
+              label = { Text("Mobile Phone Number") },
+              singleLine = true,
+              leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = Color(0xFF2563EB)) },
+              modifier = Modifier.fillMaxWidth()
+            )
+          }
+
+          errorMessage?.let { msg ->
+            Text(msg, fontSize = 11.5.sp, color = Color(0xFFDC2626), fontWeight = FontWeight.Medium)
+          }
+        }
+      },
+      confirmButton = {
+        Button(
+          onClick = {
+            if (selectedRole != currentRole) {
+              val success = onRoleSwitched(selectedRole, pinInput)
+              if (!success) {
+                errorMessage = "Incorrect Owner PIN! Enter default PIN '1234'."
+                return@Button
+              }
+            }
+            if (loginMode == AuthLoginType.GMAIL && emailInput.isBlank()) {
+              errorMessage = "Gmail address cannot be empty!"
               return@Button
             }
-          }
-          if (loginMode == AuthLoginType.GMAIL) {
-            onLoginGmail(emailInput, nameInput, selectedRole)
-          } else {
-            onLoginPhone(phoneInput, nameInput, selectedRole)
-          }
-          onDismiss()
-        },
-        colors = ButtonDefaults.buttonColors(containerColor = RoyalMagenta)
-      ) {
-        Text("Save & Sign In")
+            if (loginMode == AuthLoginType.PHONE && phoneInput.isBlank()) {
+              errorMessage = "Phone number cannot be empty!"
+              return@Button
+            }
+            // Transition to OTP Code Verification step
+            errorMessage = null
+            isOtpStepActive = true
+          },
+          colors = ButtonDefaults.buttonColors(containerColor = RoyalMagenta)
+        ) {
+          Text("Get OTP Code")
+        }
+      },
+      dismissButton = {
+        TextButton(onClick = onDismiss) {
+          Text("Cancel")
+        }
       }
-    },
-    dismissButton = {
-      TextButton(onClick = onDismiss) {
-        Text("Cancel")
-      }
-    }
-  )
+    )
+  }
 }
 
 @Composable

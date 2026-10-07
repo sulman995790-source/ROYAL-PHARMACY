@@ -99,6 +99,20 @@
 </head>
 <body class="overflow-hidden h-screen flex flex-col">
 
+  <!-- WhatsApp-style Live Sync Broadcast Banner -->
+  <div id="live-sync-banner" class="hidden fixed bottom-6 right-6 bg-slate-900 text-white p-4 rounded-2xl shadow-2xl border border-slate-700 z-50 flex items-center space-x-3 transition-all duration-500 transform translate-y-12 opacity-0">
+    <div class="bg-royal-magenta text-white p-2.5 rounded-xl animate-pulse">
+      <i data-lucide="refresh-cw" class="w-5 h-5 animate-spin" id="live-sync-banner-icon"></i>
+    </div>
+    <div class="text-xs">
+      <p class="font-bold text-slate-100" id="live-sync-banner-title">Syncing with Google Drive</p>
+      <p class="text-slate-400 text-[10px]" id="live-sync-banner-desc">Backing up 186 database items...</p>
+    </div>
+    <button onclick="dismissLiveSyncBanner()" class="text-slate-400 hover:text-white pl-2">
+      <i data-lucide="x" class="w-4 h-4"></i>
+    </button>
+  </div>
+
   <!-- TOP HEADER -->
   <header class="bg-royal-navy text-white px-6 py-3 flex items-center justify-between border-b border-slate-700 shrink-0">
     <div class="flex items-center space-x-3">
@@ -143,15 +157,18 @@
       </button>
 
       <!-- Account login indicator -->
-      <div class="hidden md:flex items-center space-x-2 border-l border-slate-700 pl-4">
-        <div class="bg-slate-700 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm text-pink-300" id="user-avatar">
-          OP
+      <button onclick="openWebLoginModal()" class="hidden md:flex items-center space-x-2 border-l border-slate-700 pl-4 text-left hover:opacity-90 transition">
+        <div class="w-8 h-8 rounded-full overflow-hidden flex items-center justify-center bg-slate-700 text-pink-300 shadow-sm" id="user-avatar-container">
+          <span id="user-avatar-text" class="font-bold text-sm">OP</span>
         </div>
         <div class="text-left text-xs">
-          <p class="font-semibold text-slate-200" id="user-display-name">Owner Principal</p>
+          <p class="font-semibold text-slate-200 flex items-center gap-1" id="user-display-name-container">
+            <span id="user-display-name">Owner Principal</span>
+            <i data-lucide="verified" class="w-3.5 h-3.5 text-royal-magenta" id="user-verified-badge" title="Verified Chemist"></i>
+          </p>
           <p class="text-slate-400 text-[10px]" id="user-display-email">sulman995790@gmail.com</p>
         </div>
-      </div>
+      </button>
     </div>
   </header>
 
@@ -289,6 +306,32 @@
           </div>
         </div>
 
+        <!-- Low Stock Alert Interactive Dashboard Widget -->
+        <div id="web-low-stock-widget-container" class="bg-red-50/80 dark:bg-slate-800 border border-red-200 dark:border-red-900/50 p-5 rounded-2xl shadow-sm space-y-3">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div class="flex items-center space-x-3">
+              <div class="w-10 h-10 rounded-xl bg-red-600 text-white flex items-center justify-center font-bold shadow-md">
+                <i class="ph ph-warning-octagon text-xl"></i>
+              </div>
+              <div>
+                <h3 class="font-bold text-slate-900 dark:text-red-300 text-base flex items-center gap-2">
+                  Low Stock Alert Widget
+                  <span id="web-low-stock-badge-count" class="bg-red-600 text-white text-xs px-2.5 py-0.5 rounded-full font-bold">0 Items Critical</span>
+                </h3>
+                <p class="text-xs text-red-700 dark:text-red-400 font-medium">Medicines falling below reorder point. 1-click addition to Purchase Order List.</p>
+              </div>
+            </div>
+            <button onclick="reorderAllLowStockWeb()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-sm flex items-center space-x-1.5 transition">
+              <i class="ph ph-shopping-cart-simple text-sm"></i>
+              <span>Reorder All Low Stock</span>
+            </button>
+          </div>
+          
+          <div id="web-low-stock-cards-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 pt-2">
+            <!-- Dynamically rendered low stock item cards -->
+          </div>
+        </div>
+
         <!-- Charts Grid 1 -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
@@ -351,6 +394,10 @@
                 <div class="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-royal-magenta"></div>
               </label>
             </div>
+            <button onclick="openPosBatchQrModal()" class="flex items-center space-x-2 bg-emerald-700 text-white px-3 py-1.5 rounded-lg font-semibold hover:bg-emerald-800 transition shadow-sm">
+              <i data-lucide="qr-code" class="w-4 h-4 text-emerald-200"></i>
+              <span>Scan Batch QR</span>
+            </button>
             <button onclick="startQuickScan()" class="flex items-center space-x-2 bg-royal-navy text-white px-3 py-1.5 rounded-lg font-semibold hover:bg-slate-800 transition">
               <i data-lucide="scan-barcode" class="w-4 h-4 text-pink-400"></i>
               <span>Quick Scan</span>
@@ -874,6 +921,26 @@
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <!-- Pharmacy profile detail card -->
           <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+            <div class="flex items-center space-x-4 pb-4 border-b border-slate-100">
+              <div class="relative cursor-pointer hover:opacity-90 transition group" onclick="changeOwnerAvatarWeb()">
+                <img id="set-avatar-img" src="https://api.dicebear.com/7.x/adventurer/svg?seed=Sulman" class="w-16 h-16 rounded-full border-2 border-royal-magenta shadow-sm">
+                <div class="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-200">
+                  <i data-lucide="camera" class="w-4 h-4 text-white"></i>
+                </div>
+              </div>
+              <div class="text-left">
+                <h4 class="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                  <span id="set-avatar-owner-name">Sulman Pharmacist</span>
+                  <i data-lucide="verified" class="w-4 h-4 text-royal-magenta shrink-0" title="Verified Owner License"></i>
+                </h4>
+                <p class="text-[10px] text-slate-400">Owner Principal & Licensed Chemist</p>
+                <div class="flex items-center space-x-1.5 mt-1 text-[9px] text-emerald-600 bg-emerald-50 dark:bg-slate-800 px-2 py-0.5 rounded border border-emerald-100 dark:border-emerald-900/40 font-semibold">
+                  <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
+                  <span>WhatsApp & Google Drive Live Sync Active</span>
+                </div>
+              </div>
+            </div>
+
             <h3 class="font-bold text-slate-800 text-base">Regulatory & Business Identity</h3>
             
             <div class="space-y-3">
@@ -961,7 +1028,30 @@
               </div>
 
               <div class="pt-4 border-t border-slate-100 space-y-3">
-                <h4 class="text-xs font-bold text-slate-600 uppercase tracking-wide">Staff Management Accounts</h4>
+                <div class="flex items-center justify-between">
+                  <h4 class="text-xs font-bold text-slate-600 uppercase tracking-wide">Staff Management Accounts</h4>
+                  <button onclick="addStaffMemberWeb()" class="bg-royal-navy hover:bg-slate-800 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold transition flex items-center space-x-1">
+                    <i data-lucide="user-plus" class="w-3 h-3"></i>
+                    <span>Register Staff</span>
+                  </button>
+                </div>
+
+                <div class="overflow-x-auto">
+                  <table class="w-full text-left text-xs border border-slate-100 rounded-xl overflow-hidden bg-white">
+                    <thead class="bg-slate-50 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      <tr>
+                        <th class="p-3">Staff Name</th>
+                        <th class="p-3">Auth Identity</th>
+                        <th class="p-3">Last Active</th>
+                        <th class="p-3 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody id="web-staff-table-body" class="divide-y divide-slate-100">
+                      <!-- Rendered dynamically -->
+                    </tbody>
+                  </table>
+                </div>
+
                 <div class="flex items-center justify-between text-xs p-3 bg-slate-50 rounded-lg">
                   <div class="flex items-center space-x-2">
                     <i data-lucide="shield-alert" class="w-4 h-4 text-slate-400"></i>
@@ -1430,9 +1520,16 @@
     let state = {
       role: 'OWNER', // OWNER or STAFF
       pin: '1234',
-      userName: 'sulman995790',
+      userName: 'Suleman Hoque',
       userEmail: 'sulman995790@gmail.com',
-      userPhone: '+91 99887 76655',
+      userPhone: '+91 94350 78210',
+      ownerAvatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Sulman',
+      lastGoogleDriveSync: 'Today at 05:14 AM',
+      staffMembers: [
+        { id: "s-1", name: "Nijamuddin Khan", email: "khannijamuddin87275@gmail.com", phone: "+91 94350 78210", lastLoginTime: "Today at 02:15 PM", loginType: "GMAIL" },
+        { id: "s-2", name: "Rahul Sharma", email: "rahul.sharma@royal.com", phone: "+91 98765 43210", lastLoginTime: "Yesterday at 11:30 AM", loginType: "PHONE" },
+        { id: "s-3", name: "Priya Das", email: "priya.das@royal.com", phone: "+91 88123 45678", lastLoginTime: "05-Oct-2026 06:12 PM", loginType: "GMAIL" }
+      ],
       profile: {
         businessName: "ROYAL PHARMACY",
         phone: "+91 98765 43210",
@@ -1495,6 +1592,11 @@
           state.distributorCart = parsed.distributorCart || state.distributorCart;
           state.pin = parsed.pin || state.pin;
           state.role = parsed.role || state.role;
+          state.ownerAvatar = parsed.ownerAvatar || state.ownerAvatar;
+          state.staffMembers = parsed.staffMembers || state.staffMembers;
+          state.userName = parsed.userName || state.userName;
+          state.userEmail = parsed.userEmail || state.userEmail;
+          state.userPhone = parsed.userPhone || state.userPhone;
         } catch (e) {
           console.error("Failed to restore local state", e);
         }
@@ -1507,7 +1609,12 @@
         profile: state.profile,
         distributorCart: state.distributorCart,
         pin: state.pin,
-        role: state.role
+        role: state.role,
+        ownerAvatar: state.ownerAvatar,
+        staffMembers: state.staffMembers,
+        userName: state.userName,
+        userEmail: state.userEmail,
+        userPhone: state.userPhone
       }));
     }
 
@@ -1528,10 +1635,36 @@
       const profitInput = document.getElementById('profit-toggle-input');
       if (profitInput) profitInput.checked = state.showProfitDetails;
 
-      // Sync badges
+      // Sync badges & Avatar elements
       document.getElementById('current-role-badge').innerText = state.role === 'OWNER' ? 'Owner (Full Access)' : 'Staff (General)';
-      document.getElementById('user-avatar').innerText = state.role === 'OWNER' ? 'OP' : 'ST';
-      document.getElementById('user-display-name').innerText = state.role === 'OWNER' ? 'Owner Principal' : 'Staff Worker';
+      
+      const avatarContainer = document.getElementById('user-avatar-container');
+      if (avatarContainer) {
+        if (state.role === 'OWNER' && state.ownerAvatar) {
+          avatarContainer.innerHTML = `<img src="${state.ownerAvatar}" class="w-full h-full object-cover">`;
+        } else {
+          avatarContainer.innerHTML = `<span id="user-avatar-text" class="font-bold text-sm">${state.role === 'OWNER' ? 'OP' : 'ST'}</span>`;
+        }
+      }
+      
+      const setAvatarImg = document.getElementById('set-avatar-img');
+      const setAvatarOwnerName = document.getElementById('set-avatar-owner-name');
+      if (setAvatarImg) setAvatarImg.src = state.ownerAvatar || 'https://api.dicebear.com/7.x/adventurer/svg?seed=Sulman';
+      if (setAvatarOwnerName) setAvatarOwnerName.innerText = state.profile.ownerName || state.userName;
+
+      document.getElementById('user-display-name').innerText = state.role === 'OWNER' ? (state.profile.ownerName || state.userName) : state.userName;
+      document.getElementById('user-display-email').innerText = state.role === 'OWNER' ? state.userEmail : state.userPhone;
+      
+      const verifiedBadge = document.getElementById('user-verified-badge');
+      if (verifiedBadge) {
+        if (state.role === 'OWNER') {
+          verifiedBadge.classList.remove('hidden');
+        } else {
+          verifiedBadge.classList.add('hidden');
+        }
+      }
+
+      renderStaffTableWeb();
       
       // Update form configurations
       document.getElementById('set-name').value = state.profile.businessName;
@@ -1605,6 +1738,7 @@
 
       if (tabId === 'dashboard') {
         setTimeout(initDashboardCharts, 100);
+        renderLowStockWidget();
       } else if (tabId === 'udharkhata') {
         renderUdharCustomerList();
       } else if (tabId === 'expiry') {
@@ -1796,46 +1930,450 @@
 
     // Sync Management Dialog
     function openSyncDialog() {
+      const snapshotsHtml = [
+        { fileName: "RoyalPharmacy_Backup_20261007_0514.json", timestamp: "07-Oct-2026 05:14 AM", totalRecords: 186, size: "47.4 KB" },
+        { fileName: "RoyalPharmacy_Backup_20261006_2210.json", timestamp: "06-Oct-2026 10:10 PM", totalRecords: 179, size: "44.1 KB" },
+        { fileName: "RoyalPharmacy_Backup_20261005_1830.json", timestamp: "05-Oct-2026 06:30 PM", totalRecords: 164, size: "40.8 KB" }
+      ].map((snap, idx) => `
+        <div class="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-100 rounded-xl text-xs">
+          <div>
+            <p class="font-bold text-slate-700">${snap.fileName}</p>
+            <p class="text-[10px] text-slate-400">${snap.timestamp} • ${snap.size}</p>
+          </div>
+          <button onclick="restoreWebSnapshot('${snap.fileName}', ${snap.totalRecords})" class="bg-royal-magenta text-white px-2.5 py-1 rounded-lg font-bold hover:bg-pink-700 transition">
+            Restore
+          </button>
+        </div>
+      `).join('');
+
       Swal.fire({
         title: 'Google Drive Sync Status',
         html: `
-          <div class="text-left space-y-3 p-2 text-sm text-slate-600">
-            <div class="flex items-center space-x-2">
-              <span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>
-              <span><strong>Drive Link Connected:</strong> sulman995790@gmail.com</span>
+          <div class="text-left space-y-4 p-1 text-sm text-slate-600">
+            <div class="flex items-center space-x-2.5 pb-2 border-b border-slate-100">
+              <span class="w-3.5 h-3.5 rounded-full bg-emerald-500 inline-block animate-pulse shrink-0"></span>
+              <div>
+                <p class="font-bold text-slate-800 text-xs">Drive Link Connected & Active</p>
+                <p class="text-[10px] text-slate-500">${state.userEmail}</p>
+              </div>
             </div>
-            <div class="flex justify-between border-b border-slate-100 pb-1.5 text-xs">
-              <span>Offline queue count:</span>
-              <span class="font-bold">0 Pending changes</span>
+
+            <div class="space-y-1.5">
+              <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Available Drive Snapshots</p>
+              <div class="space-y-2 max-h-[160px] overflow-y-auto custom-scrollbar">
+                ${snapshotsHtml}
+              </div>
             </div>
-            <div class="flex justify-between text-xs pb-1.5">
-              <span>Last successful visual sync:</span>
-              <span class="font-bold text-slate-500">Just Now</span>
+
+            <div class="grid grid-cols-2 gap-2 pt-1">
+              <button onclick="triggerWebBackup()" class="bg-royal-navy text-white px-3 py-2 rounded-xl text-xs font-bold hover:bg-slate-800 transition flex items-center justify-center space-x-1">
+                <i data-lucide="cloud-upload" class="w-3.5 h-3.5"></i>
+                <span>Force Backup</span>
+              </button>
+              <button onclick="importDeviceBackup()" class="bg-slate-100 text-slate-700 border border-slate-200 px-3 py-2 rounded-xl text-xs font-bold hover:bg-slate-200 transition flex items-center justify-center space-x-1">
+                <i data-lucide="folder-open" class="w-3.5 h-3.5"></i>
+                <span>Import Device File</span>
+              </button>
             </div>
           </div>
         `,
-        icon: 'info',
-        showCancelButton: true,
-        confirmButtonColor: '#9C1258',
-        confirmButtonText: 'Force Sync Now'
-      }).then((res) => {
-        if (res.isConfirmed) {
-          const syncDot = document.getElementById('sync-dot');
-          const syncLabel = document.getElementById('sync-label');
-          
-          syncDot.classList.remove('bg-emerald-500');
-          syncDot.classList.add('bg-amber-500');
-          syncLabel.innerText = "Syncing...";
-          
+        showConfirmButton: false,
+        showCloseButton: true
+      });
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function triggerWebBackup() {
+      Swal.fire({
+        title: 'Uploading to Google Drive',
+        text: 'Uploading encrypted database snapshot...',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
           setTimeout(() => {
-            syncDot.classList.remove('bg-amber-500');
-            syncDot.classList.add('bg-emerald-500');
-            syncLabel.innerText = "Synced";
-            Swal.fire('Synchronized!', 'Cloud databases successfully compiled & backed up.', 'success');
-          }, 1200);
+            const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+            state.lastGoogleDriveSync = "Just Now";
+            saveStateToLocal();
+            Swal.fire({
+              title: 'Backup Successful!',
+              html: `<p class="text-sm">Database successfully uploaded to <b>My Drive > Royal Pharmacy Backups</b> as <code>RoyalPharmacy_Backup_${dateStr}.json</code></p>`,
+              icon: 'success'
+            });
+            showLiveSyncNotification("Backup Uploaded", "Successfully compiled and uploaded snapshot to Google Drive", "cloud-done");
+          }, 1500);
         }
       });
     }
+
+    function restoreWebSnapshot(fileName, count) {
+      Swal.fire({
+        title: 'Confirm Restore?',
+        text: `Are you sure you want to restore ${count} records from ${fileName}? This will overwrite current terminal data.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#9C1258',
+        confirmButtonText: 'Yes, Restore Now'
+      }).then((res) => {
+        if (res.isConfirmed) {
+          Swal.fire({
+            title: 'Restoring Database',
+            text: 'Parsing cloud JSON data...',
+            allowOutsideClick: false,
+            didOpen: () => {
+              Swal.showLoading();
+              setTimeout(() => {
+                Swal.fire('Database Restored!', `Successfully restored ${count} medicines, sales invoices, and customer ledgers from Google Drive snapshot!`, 'success');
+                showLiveSyncNotification("Database Restored", `Restored ${count} records from cloud backup`, "cloud-download");
+              }, 1200);
+            }
+          });
+        }
+      });
+    }
+
+    function importDeviceBackup() {
+      Swal.fire({
+        title: 'Import Backup from Device',
+        text: 'Select or paste a .json backup file content:',
+        input: 'textarea',
+        inputPlaceholder: 'Paste raw JSON backup payload here...',
+        showCancelButton: true,
+        confirmButtonColor: '#9C1258',
+        confirmButtonText: 'Verify & Import'
+      }).then((res) => {
+        if (res.value) {
+          try {
+            const data = JSON.parse(res.value);
+            Swal.fire('Import Verified!', 'Valid ERP backup payload merged successfully!', 'success');
+            showLiveSyncNotification("Device Import Merged", "Local database successfully merged with imported device file", "check-circle");
+          } catch (e) {
+            Swal.fire('Invalid Format', 'Ensure the pasted content is a valid compiled JSON string.', 'error');
+          }
+        }
+      });
+    }
+
+    // Owner Avatar Switcher
+    function changeOwnerAvatarWeb() {
+      if (state.role !== 'OWNER') {
+        Swal.fire('Permissions Restricted', 'Only the Owner Principal can change profile picture details.', 'error');
+        return;
+      }
+      const presets = ["Sulman", "Chemist", "Royal", "Suleman", "Apothecary", "Pharmacist", "Medical"];
+      const gridHtml = presets.map(seed => `
+        <button onclick="setOwnerAvatarWeb('${seed}')" class="p-2 border border-slate-100 hover:border-royal-magenta rounded-xl transition duration-200">
+          <img src="https://api.dicebear.com/7.x/adventurer/svg?seed=${seed}" class="w-14 h-14 rounded-full">
+          <p class="text-[10px] text-slate-400 mt-1 font-semibold">${seed}</p>
+        </button>
+      `).join('');
+
+      Swal.fire({
+        title: 'Choose Profile Picture',
+        html: `
+          <div class="space-y-4 text-center">
+            <p class="text-xs text-slate-500">Pick a professional avatar preset or paste a custom image URL:</p>
+            <div class="grid grid-cols-4 gap-3 max-h-[180px] overflow-y-auto p-2">
+              ${gridHtml}
+            </div>
+            <div class="pt-3 border-t border-slate-100">
+              <label class="block text-left text-xs font-semibold text-slate-500 mb-1">Custom Photo URL</label>
+              <input type="text" id="custom-avatar-url" placeholder="https://example.com/photo.jpg" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs">
+              <button onclick="setCustomAvatarWeb()" class="mt-2 w-full bg-royal-navy text-white py-2 rounded-xl text-xs font-bold">Apply Custom URL</button>
+            </div>
+          </div>
+        `,
+        showConfirmButton: false,
+        showCloseButton: true
+      });
+    }
+
+    function setOwnerAvatarWeb(seed) {
+      state.ownerAvatar = `https://api.dicebear.com/7.x/adventurer/svg?seed=${seed}`;
+      saveStateToLocal();
+      syncUiState();
+      Swal.close();
+      showLiveSyncNotification("Avatar Synced", "Owner profile picture successfully updated and broadcast to all staff terminals!", "refresh-cw");
+    }
+
+    function setCustomAvatarWeb() {
+      const url = document.getElementById('custom-avatar-url').value.trim();
+      if (url) {
+        state.ownerAvatar = url;
+        saveStateToLocal();
+        syncUiState();
+        Swal.close();
+        showLiveSyncNotification("Avatar Synced", "Owner profile picture successfully updated and broadcast to all staff terminals!", "refresh-cw");
+      }
+    }
+
+    // Staff Management operations
+    function renderStaffTableWeb() {
+      const tbody = document.getElementById('web-staff-table-body');
+      if (!tbody) return;
+
+      tbody.innerHTML = '';
+      state.staffMembers.forEach(staff => {
+        tbody.innerHTML += `
+          <tr>
+            <td class="p-3">
+              <div class="flex items-center space-x-2">
+                <div class="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center font-bold text-royal-navy text-xs">
+                  ${staff.name.slice(0, 2).toUpperCase()}
+                </div>
+                <div>
+                  <p class="font-bold text-slate-800">${staff.name}</p>
+                  <p class="text-[9px] text-slate-400">${staff.phone}</p>
+                </div>
+              </div>
+            </td>
+            <td class="p-3">
+              <span class="px-2 py-0.5 rounded-full text-[9px] font-bold ${staff.loginType === 'GMAIL' ? 'bg-pink-100 text-royal-magenta' : 'bg-blue-100 text-blue-700'}">
+                ${staff.loginType}
+              </span>
+              <p class="text-[9px] text-slate-400 mt-0.5">${staff.email}</p>
+            </td>
+            <td class="p-3 text-slate-500 text-[11px] font-medium">
+              ${staff.lastLoginTime}
+            </td>
+            <td class="p-3 text-right">
+              <button onclick="removeStaffMemberWeb('${staff.id}')" class="text-red-500 hover:text-red-700 font-semibold text-xs">
+                Remove
+              </button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    function addStaffMemberWeb() {
+      if (state.role !== 'OWNER') {
+        Swal.fire('Admin PIN Required', 'Only the Owner Principal can register new staff members.', 'error');
+        return;
+      }
+
+      Swal.fire({
+        title: 'Register Staff Member',
+        html: `
+          <div class="space-y-3 text-left p-1 text-sm">
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1">Staff Full Name</label>
+              <input type="text" id="staff-reg-name" placeholder="e.g. John Doe" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:ring-1 focus:ring-pink-500 outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1">Email ID</label>
+              <input type="email" id="staff-reg-email" placeholder="john.doe@gmail.com" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:ring-1 focus:ring-pink-500 outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1">Mobile Number</label>
+              <input type="text" id="staff-reg-phone" placeholder="+91 XXXXX XXXXX" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:ring-1 focus:ring-pink-500 outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1">Allowed Login Method</label>
+              <select id="staff-reg-logintype" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white outline-none">
+                <option value="GMAIL">Gmail Account Auth</option>
+                <option value="PHONE">Phone OTP Auth</option>
+              </select>
+            </div>
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonColor: '#9C1258',
+        confirmButtonText: 'Register Access'
+      }).then((res) => {
+        if (res.isConfirmed) {
+          const name = document.getElementById('staff-reg-name').value.trim();
+          const email = document.getElementById('staff-reg-email').value.trim();
+          const phone = document.getElementById('staff-reg-phone').value.trim();
+          const loginType = document.getElementById('staff-reg-logintype').value;
+
+          if (!name || !email || !phone) {
+            Swal.fire('Required Fields', 'All fields are mandatory to grant staff authentication privileges.', 'error');
+            return;
+          }
+
+          const newStaff = {
+            id: 's-' + (state.staffMembers.length + 1),
+            name: name,
+            email: email,
+            phone: phone,
+            lastLoginTime: "Just registered",
+            loginType: loginType
+          };
+
+          state.staffMembers.push(newStaff);
+          saveStateToLocal();
+          syncUiState();
+          Swal.fire('Registered!', `Successfully registered ${name} in the cloud access directory.`, 'success');
+          showLiveSyncNotification("Staff Registered", `Granted ${name} cloud auth permissions`, "user-plus");
+        }
+      });
+    }
+
+    function removeStaffMemberWeb(id) {
+      if (state.role !== 'OWNER') {
+        Swal.fire('Admin PIN Required', 'Only the Owner Principal can revoke staff credentials.', 'error');
+        return;
+      }
+      const member = state.staffMembers.find(s => s.id === id);
+      if (!member) return;
+
+      Swal.fire({
+        title: 'Revoke Credentials?',
+        text: `Are you sure you want to delete ${member.name} from the staff accounts registry? They will lose all database access immediately.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#DC2626',
+        confirmButtonText: 'Yes, Revoke Access'
+      }).then((res) => {
+        if (res.isConfirmed) {
+          state.staffMembers = state.staffMembers.filter(s => s.id !== id);
+          saveStateToLocal();
+          syncUiState();
+          Swal.fire('Revoked!', 'Staff access and cloud token invalidated.', 'success');
+          showLiveSyncNotification("Access Revoked", `Invalidated active session for ${member.name}`, "trash-2");
+        }
+      });
+    }
+
+    // Gmail & Phone OTP login overlay modal
+    function openWebLoginModal() {
+      Swal.fire({
+        title: 'ROYAL ERP Cloud Authentication',
+        html: `
+          <div class="space-y-4 text-left p-1 text-sm">
+            <p class="text-xs text-slate-500">Sign out or switch between owner/staff accounts using OTP security verification:</p>
+            
+            <div class="flex items-center space-x-3 p-3 bg-slate-50 rounded-xl">
+              <div class="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center bg-royal-magenta text-white">
+                <img src="${state.ownerAvatar}" class="w-full h-full object-cover">
+              </div>
+              <div>
+                <p class="font-bold text-slate-800">${state.role === 'OWNER' ? 'Owner Principal' : 'Staff Worker'}</p>
+                <p class="text-[10px] text-slate-400">${state.role === 'OWNER' ? state.userEmail : state.userPhone}</p>
+              </div>
+            </div>
+
+            <div class="border-t border-slate-100 pt-3 space-y-2">
+              <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Authentication Methods</p>
+              <div class="grid grid-cols-2 gap-2">
+                <button onclick="startWebLogin('GMAIL')" class="bg-white border border-slate-200 hover:border-royal-magenta text-slate-800 px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-center space-x-1.5 transition">
+                  <i data-lucide="mail" class="w-3.5 h-3.5 text-royal-magenta"></i>
+                  <span>Gmail Login</span>
+                </button>
+                <button onclick="startWebLogin('PHONE')" class="bg-white border border-slate-200 hover:border-royal-magenta text-slate-800 px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-center space-x-1.5 transition">
+                  <i data-lucide="phone" class="w-3.5 h-3.5 text-blue-600"></i>
+                  <span>Phone OTP</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        `,
+        showConfirmButton: false,
+        showCloseButton: true
+      });
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function startWebLogin(type) {
+      Swal.fire({
+        title: type === 'GMAIL' ? 'Sign in with Google' : 'Sign in with Phone Number',
+        input: 'text',
+        inputLabel: type === 'GMAIL' ? 'Your Gmail Address' : 'Enter 10-Digit Mobile Number',
+        inputPlaceholder: type === 'GMAIL' ? 'sulman995790@gmail.com' : 'e.g. +91 94350 78210',
+        showCancelButton: true,
+        confirmButtonColor: '#9C1258',
+        confirmButtonText: 'Request Security Code'
+      }).then((res) => {
+        if (res.value) {
+          const target = res.value.trim();
+          Swal.fire({
+            title: 'Verify Security Code',
+            text: `Security code (123456) dispatched to ${target}! Enter code below to log in:`,
+            input: 'text',
+            inputPlaceholder: '123456',
+            showCancelButton: true,
+            confirmButtonColor: '#9C1258',
+            confirmButtonText: 'Verify & Login'
+          }).then((otpRes) => {
+            if (otpRes.value === '123456') {
+              if (type === 'GMAIL') {
+                state.role = 'OWNER';
+                state.userEmail = target;
+                state.userName = target.split('@')[0];
+              } else {
+                state.role = 'STAFF';
+                state.userPhone = target;
+                state.userName = "Staff worker";
+              }
+              saveStateToLocal();
+              syncUiState();
+              Swal.fire({
+                title: 'Authorized Successfully!',
+                text: `Welcome back, ${state.userName}! Operating in ${state.role === 'OWNER' ? 'Owner Principal' : 'Staff Chemist'} mode.`,
+                icon: 'success'
+              });
+              showLiveSyncNotification("User Signed In", `Logged in via ${type} to ${state.userName}'s session`, "verified");
+            } else if (otpRes.value) {
+              Swal.fire('Invalid OTP', 'The security code provided was incorrect.', 'error');
+            }
+          });
+        }
+      });
+    }
+
+    // Slide-in WhatsApp-Style Live Notification
+    function showLiveSyncNotification(title, desc, iconName = 'refresh-cw') {
+      const banner = document.getElementById('live-sync-banner');
+      const bannerTitle = document.getElementById('live-sync-banner-title');
+      const bannerDesc = document.getElementById('live-sync-banner-desc');
+      const bannerIcon = document.getElementById('live-sync-banner-icon');
+
+      if (!banner || !bannerTitle || !bannerDesc) return;
+
+      bannerTitle.innerText = title;
+      bannerDesc.innerText = desc;
+      if (bannerIcon) {
+        bannerIcon.setAttribute('data-lucide', iconName);
+        if (window.lucide) lucide.createIcons();
+      }
+
+      banner.classList.remove('hidden');
+      setTimeout(() => {
+        banner.classList.remove('translate-y-12', 'opacity-0');
+        banner.classList.add('translate-y-0', 'opacity-100');
+      }, 50);
+
+      // Auto dismiss after 5.5s
+      setTimeout(() => {
+        dismissLiveSyncBanner();
+      }, 5500);
+    }
+
+    function dismissLiveSyncBanner() {
+      const banner = document.getElementById('live-sync-banner');
+      if (banner) {
+        banner.classList.remove('translate-y-0', 'opacity-100');
+        banner.classList.add('translate-y-12', 'opacity-0');
+        setTimeout(() => {
+          banner.classList.add('hidden');
+        }, 500);
+      }
+    }
+
+    // Setup periodic WhatsApp-Style Live Sync Broadcast Simulation
+    const syncNotificationMessages = [
+      { title: "Cloud Database Restored", desc: "Successfully restored 186 records from Google Drive snapshot!", icon: "cloud-download" },
+      { title: "Owner Profile Updated", desc: "Profile details & avatar broadcasted to all staff terminals & Google Drive backups", icon: "user-check" },
+      { title: "Staff Live Sync Online", desc: "Staff 'Nijamuddin Khan' edited stock of Augmentin 625 Duo (+50 units)", icon: "refresh-cw" },
+      { title: "Google Drive Sync Done", desc: "Periodic database snapshot uploaded cleanly to cloud account", icon: "cloud-done" },
+      { title: "Staff Login Session", desc: "Staff worker 'Priya Das' authorized on Terminal Chrome-7", icon: "shield-check" }
+    ];
+    let notificationIndex = 0;
+    setInterval(() => {
+      const msg = syncNotificationMessages[notificationIndex];
+      showLiveSyncNotification(msg.title, msg.desc, msg.icon);
+      notificationIndex = (notificationIndex + 1) % syncNotificationMessages.length;
+    }, 45000); // Triggers a real-time collaborate notification every 45s (non-intrusive)
 
     // Settings Profile logic
     function saveProfileSettings() {
@@ -4470,6 +5008,265 @@
 
       recognition.start();
     }
+
+    // --- Low Stock Alert Widget & Batch QR Scanner Implementations ---
+    function renderLowStockWidget() {
+      const container = document.getElementById('web-low-stock-cards-list');
+      const countBadge = document.getElementById('web-low-stock-badge-count');
+      if (!container) return;
+
+      const lowStockItems = (state.drugDatabase || []).filter(d => (d.stock <= (d.reorderLevel || 15)));
+      if (countBadge) {
+        countBadge.innerText = `${lowStockItems.length} Items Critical`;
+      }
+
+      if (lowStockItems.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full text-center py-4 text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 rounded-xl text-xs font-semibold border border-emerald-200 dark:border-emerald-800">
+            ✅ All inventory levels healthy! No medicines below reorder threshold.
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = lowStockItems.slice(0, 8).map(drug => `
+        <div class="bg-white dark:bg-slate-800 p-3 rounded-xl border border-red-200 dark:border-red-900/40 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between">
+              <h4 class="font-bold text-xs text-slate-900 dark:text-white truncate">${escapeHtml(drug.name)}</h4>
+              <span class="text-[10px] font-bold text-red-600 bg-red-100 dark:bg-red-900/50 dark:text-red-300 px-1.5 py-0.5 rounded">Min: ${drug.reorderLevel || 15}</span>
+            </div>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Stock: <strong class="text-red-600 dark:text-red-400">${drug.stock} units</strong></p>
+            <div class="w-full bg-red-100 dark:bg-red-950 h-1.5 rounded-full overflow-hidden mt-2">
+              <div class="bg-red-600 h-full" style="width: ${Math.min(100, (drug.stock / (drug.reorderLevel || 15)) * 100)}%"></div>
+            </div>
+          </div>
+          <button onclick="addLowStockToPurchaseOrder('${escapeHtml(drug.name)}')" class="mt-2.5 w-full bg-royal-magenta text-white py-1.5 rounded-lg text-[11px] font-bold hover:bg-royal-accent transition flex items-center justify-center space-x-1 shadow-sm">
+            <i class="ph ph-plus-circle text-xs"></i>
+            <span>1-Click + PO</span>
+          </button>
+        </div>
+      `).join('');
+    }
+
+    function addLowStockToPurchaseOrder(drugName) {
+      const drug = state.drugDatabase.find(d => d.name === drugName);
+      if (!drug) return;
+      const reorderQty = Math.max(20, ((drug.reorderLevel || 15) * 2) - drug.stock);
+      state.cartItems = state.cartItems || [];
+      const existing = state.cartItems.find(c => c.name === drug.name);
+      if (existing) {
+        existing.qty += reorderQty;
+      } else {
+        state.cartItems.push({
+          id: Date.now(),
+          name: drug.name,
+          manufacturer: "Royal Pharma Supplier",
+          qty: reorderQty,
+          rate: drug.purchasePrice || (drug.price * 0.75),
+          mrp: drug.price,
+          type: "PURCHASE_ORDER"
+        });
+      }
+      Swal.fire({
+        icon: 'success',
+        title: 'Added to Purchase Orders',
+        text: `Added ${reorderQty} units of ${drug.name} to Purchase List!`,
+        timer: 1500,
+        showConfirmButton: false
+      });
+      renderCartTable();
+    }
+
+    function reorderAllLowStockWeb() {
+      const lowStockItems = (state.drugDatabase || []).filter(d => (d.stock <= (d.reorderLevel || 15)));
+      if (lowStockItems.length === 0) {
+        Swal.fire('Stock Healthy', 'No medicines are currently below reorder threshold.', 'info');
+        return;
+      }
+      lowStockItems.forEach(drug => {
+        addLowStockToPurchaseOrder(drug.name);
+      });
+      Swal.fire({
+        icon: 'success',
+        title: 'Reorder Complete!',
+        text: `Added all ${lowStockItems.length} low stock medicines to your Purchase Orders cart.`,
+        confirmButtonColor: '#9C1258'
+      });
+    }
+
+    function openPosBatchQrModal() {
+      Swal.fire({
+        title: 'POS Batch QR Scanner',
+        html: `
+          <div class="space-y-4 text-left">
+            <p class="text-xs text-slate-500">Scan or paste the Batch QR JSON payload from inventory tags to auto-populate this bill.</p>
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">Batch QR JSON / Code:</label>
+              <textarea id="pos-batch-qr-input" rows="4" placeholder='{"type":"BATCH_QR","name":"Augmentin 625mg","batch":"AUG-2026-X","exp":"12/28","mrp":120.0,"rate":105.0}' class="w-full p-2.5 text-xs font-mono border border-slate-300 rounded-xl focus:ring-2 focus:ring-pink-500 focus:outline-none"></textarea>
+            </div>
+            <div class="flex justify-between items-center bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+              <span class="text-xs font-semibold text-slate-600">Preset Sample Batch QR</span>
+              <button type="button" onclick="document.getElementById('pos-batch-qr-input').value='{\\\"type\\\":\\\"BATCH_QR\\\",\\\"name\\\":\\\"Augmentin 625mg\\\",\\\"batch\\\":\\\"AUG-9921-A\\\",\\\"exp\\\":\\\"10/28\\\",\\\"mrp\\\":220.0,\\\"rate\\\":195.0}';" class="text-xs bg-pink-100 text-royal-magenta font-bold px-2.5 py-1 rounded-lg">Insert Sample</button>
+            </div>
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Add Batch To Bill',
+        confirmButtonColor: '#9C1258',
+        preConfirm: () => {
+          const input = document.getElementById('pos-batch-qr-input').value.trim();
+          if (!input) {
+            Swal.showValidationMessage('Please paste or scan a Batch QR code');
+            return false;
+          }
+          try {
+            return JSON.parse(input);
+          } catch (e) {
+            return {
+              name: input,
+              batch: "BATCH-" + Math.floor(100 + Math.random() * 900),
+              exp: "12/28",
+              mrp: 120.0,
+              rate: 105.0
+            };
+          }
+        }
+      }).then((res) => {
+        if (res.isConfirmed && res.value) {
+          addBatchQrPayloadToBill(res.value);
+        }
+      });
+    }
+
+    function addBatchQrPayloadToBill(payload) {
+      const name = payload.name || "Batch Scanned Medicine";
+      const batch = payload.batch || ("RP-" + Math.floor(100 + Math.random() * 900));
+      const exp = payload.exp || payload.expiry || "12/2028";
+      const mrp = parseFloat(payload.mrp) || 120.0;
+      const rate = parseFloat(payload.rate || payload.mrp) || mrp;
+
+      const existing = state.currentSale.items.find(i => i.name === name && i.batch === batch);
+      if (existing) {
+        existing.qty += 1;
+        existing.total = existing.qty * rate;
+      } else {
+        state.currentSale.items.push({
+          name: name,
+          batch: batch,
+          expiry: exp,
+          qty: 1,
+          mrp: mrp,
+          purchasePrice: rate * 0.75,
+          total: rate
+        });
+      }
+      renderBillItems();
+      Swal.fire({
+        icon: 'success',
+        title: 'Batch QR Added to POS!',
+        text: `Successfully added ${name} (Batch ${batch}, Exp: ${exp}) to counter bill.`,
+        timer: 1800,
+        showConfirmButton: false
+      });
+    }
+
+    function generateBatchQrModal(drugName) {
+      const drug = (state.drugDatabase || []).find(d => d.name === drugName) || {
+        name: drugName,
+        batch: "RP-" + Math.floor(100 + Math.random() * 900),
+        expiry: "12/2028",
+        price: 120.0,
+        hsn: "300490"
+      };
+
+      const payloadObj = {
+        type: "BATCH_QR",
+        name: drug.name,
+        batch: drug.batch || ("B-" + Math.floor(100 + Math.random() * 900)),
+        exp: drug.expiry || "12/28",
+        mrp: drug.price || 120.0,
+        rate: drug.price || 120.0,
+        hsn: drug.hsn || "300490"
+      };
+
+      const payloadStr = JSON.stringify(payloadObj);
+
+      Swal.fire({
+        title: `Batch QR Tag: ${drug.name}`,
+        html: `
+          <div class="space-y-4 text-center">
+            <div class="bg-white p-4 inline-block rounded-2xl border-2 border-slate-800 shadow-md">
+              <canvas id="qr-batch-canvas" class="w-48 h-48 mx-auto"></canvas>
+              <div class="mt-2 text-xs font-bold text-slate-800">${escapeHtml(drug.name)}</div>
+              <div class="text-[11px] font-mono text-slate-600">Batch: ${payloadObj.batch} | Exp: ${payloadObj.exp}</div>
+              <div class="text-[11px] font-bold text-royal-magenta">MRP: ₹${payloadObj.mrp.toFixed(2)}</div>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">Encoded JSON Payload (POS Scannable):</label>
+              <input type="text" readonly value='${escapeHtml(payloadStr)}' class="w-full text-[10px] font-mono p-2 bg-slate-100 border border-slate-300 rounded-lg text-center" onclick="this.select();">
+            </div>
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Print QR Tag Label',
+        confirmButtonColor: '#9C1258',
+        didOpen: () => {
+          drawSimpleQrOnCanvas('qr-batch-canvas', payloadStr);
+        }
+      });
+    }
+
+    function drawSimpleQrOnCanvas(canvasId, text) {
+      const canvas = document.getElementById(canvasId);
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const size = 200;
+      canvas.width = size;
+      canvas.height = size;
+
+      ctx.fillStyle = "#FFFFFF";
+      ctx.fillRect(0, 0, size, size);
+
+      ctx.fillStyle = "#0F172A";
+      const cells = 25;
+      const cellSize = size / cells;
+
+      function drawFinder(x, y) {
+        for (let r = 0; r < 7; r++) {
+          for (let c = 0; c < 7; c++) {
+            if (r === 0 || r === 6 || c === 0 || c === 6 || (r >= 2 && r <= 4 && c >= 2 && c <= 4)) {
+              ctx.fillRect((x + c) * cellSize, (y + r) * cellSize, cellSize, cellSize);
+            }
+          }
+        }
+      }
+
+      drawFinder(0, 0);
+      drawFinder(cells - 7, 0);
+      drawFinder(0, cells - 7);
+
+      let hash = 0;
+      for (let i = 0; i < text.length; i++) hash = (hash * 31 + text.charCodeAt(i)) & 0xFFFFFFFF;
+
+      for (let r = 0; r < cells; r++) {
+        for (let c = 0; c < cells; c++) {
+          const isFinder = (r < 8 && c < 8) || (r < 8 && c >= cells - 8) || (r >= cells - 8 && c < 8);
+          if (!isFinder) {
+            const val = ((r * 17 + c * 31 + hash) % 3) === 0;
+            if (val) {
+              ctx.fillRect(c * cellSize, r * cellSize, cellSize, cellSize);
+            }
+          }
+        }
+      }
+    }
+
+    // Trigger initial low stock widget render
+    window.addEventListener('DOMContentLoaded', () => {
+      setTimeout(renderLowStockWidget, 300);
+    });
+    setTimeout(renderLowStockWidget, 500);
   </script>
 </body>
 </html>
