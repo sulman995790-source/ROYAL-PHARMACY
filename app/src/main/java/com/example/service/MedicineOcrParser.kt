@@ -274,56 +274,55 @@ object MedicineOcrParser {
       }
     }
 
-    if (doctorName.isBlank()) doctorName = "Dr. A. K. Sharma, MD (Medicine)"
-    if (patientName.isBlank()) patientName = "Rahim Ali (Age: 38)"
+    if (doctorName.isBlank()) {
+      val candidateDoc = lines.firstOrNull { it.contains("Dr", ignoreCase = true) || it.contains("Clinic", ignoreCase = true) || it.contains("Hospital", ignoreCase = true) }
+      doctorName = candidateDoc ?: "Prescribing Physician"
+    }
+    if (patientName.isBlank()) {
+      val candidatePatient = lines.firstOrNull { it.contains("Pt", ignoreCase = true) || it.contains("Patient", ignoreCase = true) || it.contains("Age", ignoreCase = true) }
+      patientName = candidatePatient?.substringAfter(":")?.trim()?.ifBlank { null } ?: "Walk-in Patient"
+    }
 
-    // Fallback if no specific lines parsed
+    // Fallback: If no strict Rx formatted lines were parsed, check remaining lines for medicine candidate terms
     if (prescribedList.isEmpty()) {
-      prescribedList.add(
-        PrescriptionLineItem(
-          name = "Dolo 650",
-          dosage = "1-0-1",
-          duration = "3 Days",
-          instruction = "After Food (SOS for fever)",
-          matchedInventoryItem = inventory.firstOrNull { it.name.contains("Dolo", ignoreCase = true) },
-          inStock = true
+      for (line in lines) {
+        val lower = line.lowercase(Locale.getDefault())
+        if (line == doctorName || line == patientName || line.length < 3) continue
+        if (lower.contains("hospital") || lower.contains("clinic") || lower.contains("date") || lower.contains("address") || lower.contains("reg") || lower.contains("phone") || lower.contains("mrp")) continue
+        
+        // Match against inventory
+        val matched = inventory.firstOrNull {
+          it.name.contains(line, ignoreCase = true) || line.contains(it.name, ignoreCase = true) ||
+          (it.composition.isNotBlank() && line.contains(it.composition, ignoreCase = true))
+        }
+
+        val medTitle = matched?.name ?: line
+        prescribedList.add(
+          PrescriptionLineItem(
+            name = medTitle,
+            dosage = "1-0-1",
+            duration = "5 Days",
+            instruction = "As directed by physician",
+            matchedInventoryItem = matched,
+            inStock = matched != null && matched.stockPacks > 0
+          )
         )
-      )
-      prescribedList.add(
-        PrescriptionLineItem(
-          name = "Augmentin 625 Duo",
-          dosage = "1-0-1",
-          duration = "5 Days",
-          instruction = "Complete full antibiotic course",
-          matchedInventoryItem = inventory.firstOrNull { it.name.contains("Augmentin", ignoreCase = true) },
-          inStock = true
-        )
-      )
-      prescribedList.add(
-        PrescriptionLineItem(
-          name = "Pan 40 Tablet",
-          dosage = "1-0-0",
-          duration = "5 Days",
-          instruction = "Empty stomach 30 mins before breakfast",
-          matchedInventoryItem = inventory.firstOrNull { it.name.contains("Pan 40", ignoreCase = true) },
-          inStock = true
-        )
-      )
+      }
     }
 
     val primaryMed = prescribedList.firstOrNull()?.matchedInventoryItem
 
     return ParsedMedicineOcrResult(
       rawText = rawText,
-      medicineName = primaryMed?.name ?: prescribedList.firstOrNull()?.name ?: "Prescription Bundle",
-      saltComposition = primaryMed?.composition ?: "Multi-drug Rx regimen",
-      batchNumber = primaryMed?.batchNumber ?: "RX-PRESCRIPTION",
-      expiryDate = primaryMed?.expiryDate ?: "12/27",
-      mrp = primaryMed?.mrp ?: 320.0,
-      manufacturer = primaryMed?.manufacturer ?: "Multiple Manufacturers",
+      medicineName = primaryMed?.name ?: prescribedList.firstOrNull()?.name ?: "Prescription Medications",
+      saltComposition = primaryMed?.composition ?: "",
+      batchNumber = primaryMed?.batchNumber ?: "",
+      expiryDate = primaryMed?.expiryDate ?: "",
+      mrp = primaryMed?.mrp ?: 0.0,
+      manufacturer = primaryMed?.manufacturer ?: "",
       category = primaryMed?.category ?: "Tablet",
-      confidenceScore = 95,
-      isVerified = true,
+      confidenceScore = if (prescribedList.isNotEmpty()) 90 else 50,
+      isVerified = prescribedList.isNotEmpty(),
       prescribedItems = prescribedList,
       doctorName = doctorName,
       patientName = patientName

@@ -7,6 +7,11 @@ import android.net.Uri
 import android.util.Base64
 import com.example.BuildConfig
 import com.example.data.model.MedicineItem
+import com.example.service.MedicineOcrParser
+import com.google.android.gms.tasks.Tasks
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.text.TextRecognition
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -59,6 +64,10 @@ object GeminiPrescriptionService {
     .writeTimeout(60, TimeUnit.SECONDS)
     .build()
 
+  private val textRecognizer by lazy {
+    TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+  }
+
   private fun Bitmap.toBase64(): String {
     val maxDimension = 1200
     val scaledBitmap = if (width > maxDimension || height > maxDimension) {
@@ -84,6 +93,16 @@ object GeminiPrescriptionService {
       k.length >= 20
   }
 
+  suspend fun extractTextFromBitmap(bitmap: Bitmap): String = withContext(Dispatchers.IO) {
+    try {
+      val image = InputImage.fromBitmap(bitmap, 0)
+      val visionText = Tasks.await(textRecognizer.process(image), 5000, TimeUnit.MILLISECONDS)
+      visionText.text
+    } catch (_: Exception) {
+      ""
+    }
+  }
+
   suspend fun analyzePrescription(
     context: Context,
     imageUri: Uri?,
@@ -97,7 +116,7 @@ object GeminiPrescriptionService {
       System.getenv("GEMINI_API_KEY") ?: ""
     }
 
-    // If sample preset provided and no custom image, generate rich preset
+    // If sample preset provided explicitly and no custom image, generate rich preset
     if (bitmap == null && imageUri == null && !samplePreset.isNullOrBlank()) {
       return@withContext generatePresetResult(samplePreset, availableInventory)
     }
@@ -117,117 +136,182 @@ object GeminiPrescriptionService {
       return@withContext generatePresetResult("General Physician Rx", availableInventory)
     }
 
-    if (!isApiKeyValid(apiKey)) {
-      // Return clinical offline OCR fallback
-      return@withContext generateOfflineOcrAnalysis(samplePreset ?: "Dr. A. K. Sharma Rx", availableInventory)
+    // Step 1: Perform real On-Device ML Kit OCR extraction on the actual user image
+    val extractedOcrText = extractTextFromBitmap(resolvedBitmap)
+
+    // Step 2: If Gemini API Key is available, perform Multimodal AI Vision inference
+    if (isApiKeyValid(apiKey)) {
+      try {
+        val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=$apiKey"
+
+        val prompt = """
+          You are an expert AI clinical pharmacist assistant for ROYAL PHARMACY.
+          Analyze this medical prescription image thoroughly.
+          OCR extracted text hints from image:
+          $extractedOcrText
+
+          Instructions:
+          1. Extract Doctor Name, Speciality, Clinic/Hospital Name, Date.
+          2. Extract Patient Name, Age, Gender, and Provisional Diagnosis.
+          3. Extract all prescribed medicines:
+             - Exact Brand name or Formulation
+             - Generic Chemical Salt / Active Composition
+             - Dosage strength
+             - Frequency instructions (e.g. 1-0-1 after food, once daily, TDS)
+             - Duration in days
+             - Approximate quantity to dispense
+          4. Identify potential drug-drug interactions or contraindications.
+          5. Suggest cost-saving generic substitutes for expensive branded drugs.
+          6. Provide a concise Google Search grounding query for each medicine.
+
+          Return ONLY a valid JSON object matching this structure:
+          {
+            "doctorName": "string",
+            "doctorSpeciality": "string",
+            "clinicOrHospital": "string",
+            "patientName": "string",
+            "patientAgeGender": "string",
+            "diagnosis": "string",
+            "prescriptionDate": "string",
+            "medicines": [
+              {
+                "medicineName": "string",
+                "genericSalt": "string",
+                "dosage": "string",
+                "frequency": "string",
+                "duration": "string",
+                "packQty": 1,
+                "estPrice": 120.0,
+                "genericSubstituteSuggestion": "string",
+                "substitutePriceSavings": "string",
+                "googleSearchQuery": "string",
+                "safetyWarning": "string"
+              }
+            ],
+            "doctorAdvice": "string",
+            "drugInteractionAlert": "string",
+            "googleSearchGroundingQuery": "string"
+          }
+        """.trimIndent()
+
+        val base64Image = resolvedBitmap.toBase64()
+
+        val partsArray = JSONArray().apply {
+          put(JSONObject().apply { put("text", prompt) })
+          put(JSONObject().apply {
+            put("inlineData", JSONObject().apply {
+              put("mimeType", "image/jpeg")
+              put("data", base64Image)
+            })
+          })
+        }
+
+        val contentsArray = JSONArray().apply {
+          put(JSONObject().apply {
+            put("role", "user")
+            put("parts", partsArray)
+          })
+        }
+
+        val rootJson = JSONObject().apply {
+          put("systemInstruction", JSONObject().apply {
+            put("parts", JSONArray().apply {
+              put(JSONObject().apply { put("text", "You are an expert AI clinical pharmacist assistant. Analyze prescription photos accurately and return valid JSON.") })
+            })
+          })
+          put("contents", contentsArray)
+          put("generationConfig", JSONObject().apply {
+            put("responseMimeType", "application/json")
+            put("temperature", 0.2)
+          })
+        }
+
+        val requestBody = rootJson.toString().toRequestBody("application/json".toMediaType())
+        val request = Request.Builder()
+          .url(url)
+          .post(requestBody)
+          .build()
+
+        val response = client.newCall(request).execute()
+        val responseBody = response.body?.string() ?: ""
+
+        if (response.isSuccessful) {
+          val json = JSONObject(responseBody)
+          val candidate = json.optJSONArray("candidates")?.optJSONObject(0)
+          val text = candidate?.optJSONObject("content")?.optJSONArray("parts")?.optJSONObject(0)?.optString("text")
+
+          if (!text.isNullOrBlank()) {
+            val parsed = parseJsonResponse(text, availableInventory)
+            if (parsed != null && parsed.medicines.isNotEmpty()) return@withContext parsed
+          }
+        }
+      } catch (_: Exception) {}
     }
 
-    try {
-      val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=$apiKey"
+    // Step 3: Build real scan result from on-device ML Kit OCR extracted text
+    return@withContext buildResultFromOcrText(extractedOcrText, availableInventory)
+  }
 
-      val prompt = """
-        You are an expert AI clinical pharmacist assistant for ROYAL PHARMACY.
-        Analyze this medical prescription image thoroughly:
-        1. Extract Doctor Name, Speciality, Clinic/Hospital Name, Date.
-        2. Extract Patient Name, Age, Gender, and Provisional Diagnosis.
-        3. Extract all prescribed medicines:
-           - Exact Brand name or Formulation
-           - Generic Chemical Salt / Active Composition
-           - Dosage strength
-           - Frequency instructions (e.g. 1-0-1 after food, once daily, TDS)
-           - Duration in days
-           - Approximate quantity to dispense
-        4. Identify potential drug-drug interactions or contraindications.
-        5. Suggest cost-saving generic substitutes for expensive branded drugs.
-        6. Provide a concise Google Search grounding query for each medicine to check official monograph & CDSCO approval.
-
-        Return ONLY a valid JSON object matching this structure:
-        {
-          "doctorName": "string",
-          "doctorSpeciality": "string",
-          "clinicOrHospital": "string",
-          "patientName": "string",
-          "patientAgeGender": "string",
-          "diagnosis": "string",
-          "prescriptionDate": "string",
-          "medicines": [
-            {
-              "medicineName": "string",
-              "genericSalt": "string",
-              "dosage": "string",
-              "frequency": "string",
-              "duration": "string",
-              "packQty": 1,
-              "estPrice": 120.0,
-              "genericSubstituteSuggestion": "string",
-              "substitutePriceSavings": "string",
-              "googleSearchQuery": "string",
-              "safetyWarning": "string"
-            }
-          ],
-          "doctorAdvice": "string",
-          "drugInteractionAlert": "string",
-          "googleSearchGroundingQuery": "string"
-        }
-      """.trimIndent()
-
-      val base64Image = resolvedBitmap.toBase64()
-
-      val partsArray = JSONArray().apply {
-        put(JSONObject().apply { put("text", prompt) })
-        put(JSONObject().apply {
-          put("inlineData", JSONObject().apply {
-            put("mimeType", "image/jpeg")
-            put("data", base64Image)
-          })
-        })
-      }
-
-      val contentsArray = JSONArray().apply {
-        put(JSONObject().apply {
-          put("role", "user")
-          put("parts", partsArray)
-        })
-      }
-
-      val rootJson = JSONObject().apply {
-        put("systemInstruction", JSONObject().apply {
-          put("parts", JSONArray().apply {
-            put(JSONObject().apply { put("text", "You are an expert AI clinical pharmacist assistant for ROYAL PHARMACY. Analyze prescription images accurately and return valid JSON.") })
-          })
-        })
-        put("contents", contentsArray)
-        put("generationConfig", JSONObject().apply {
-          put("responseMimeType", "application/json")
-          put("temperature", 0.2)
-        })
-      }
-
-      val requestBody = rootJson.toString().toRequestBody("application/json".toMediaType())
-      val request = Request.Builder()
-        .url(url)
-        .post(requestBody)
-        .build()
-
-      val response = client.newCall(request).execute()
-      val responseBody = response.body?.string() ?: ""
-
-      if (response.isSuccessful) {
-        val json = JSONObject(responseBody)
-        val candidate = json.optJSONArray("candidates")?.optJSONObject(0)
-        val text = candidate?.optJSONObject("content")?.optJSONArray("parts")?.optJSONObject(0)?.optString("text")
-
-        if (!text.isNullOrBlank()) {
-          val parsed = parseJsonResponse(text, availableInventory)
-          if (parsed != null) return@withContext parsed
-        }
-      }
-
-      // Fallback
-      generateOfflineOcrAnalysis(samplePreset ?: "Dr. A. K. Sharma Rx", availableInventory)
-    } catch (_: Exception) {
-      generateOfflineOcrAnalysis(samplePreset ?: "Dr. A. K. Sharma Rx", availableInventory)
+  private fun buildResultFromOcrText(ocrText: String, inventory: List<MedicineItem>): PrescriptionScanResult {
+    if (ocrText.isBlank()) {
+      return PrescriptionScanResult(
+        doctorName = "Prescription OCR",
+        doctorSpeciality = "General Practice",
+        clinicOrHospital = "Medical Clinic",
+        patientName = "Patient Details",
+        patientAgeGender = "Adult",
+        diagnosis = "Prescription Scan",
+        prescriptionDate = "Today",
+        medicines = emptyList(),
+        doctorAdvice = "No text detected from image. Please ensure good lighting and clear camera focus.",
+        drugInteractionAlert = null,
+        googleSearchGroundingQuery = "",
+        rawGeminiOutput = "No text detected on image frame",
+        isAiPowered = false
+      )
     }
+
+    val parsed = MedicineOcrParser.parseDoctorPrescriptionText(ocrText, inventory)
+    val prescribedDrugs = parsed.prescribedItems.map { item ->
+      val matched = item.matchedInventoryItem ?: inventory.firstOrNull {
+        it.name.contains(item.name, ignoreCase = true) || item.name.contains(it.name, ignoreCase = true)
+      }
+      val price = matched?.let { if (it.saleRate > 0) it.saleRate else it.mrp } ?: 100.0
+      val searchQuery = "${item.name} uses dosage indications"
+
+      PrescribedDrug(
+        medicineName = item.name,
+        genericSalt = matched?.composition ?: matched?.saltMolecule ?: "Standard Active Formulation",
+        dosage = item.dosage,
+        frequency = item.dosage,
+        duration = item.duration,
+        packQty = 1,
+        estPrice = price,
+        isAvailableInStock = matched != null && matched.stockPacks > 0,
+        matchedStockItem = matched,
+        genericSubstituteSuggestion = null,
+        substitutePriceSavings = null,
+        googleSearchQuery = searchQuery,
+        googleSearchUrl = "https://www.google.com/search?q=" + java.net.URLEncoder.encode(searchQuery, "UTF-8"),
+        safetyWarning = if (item.name.contains("Augmentin", ignoreCase = true)) "Check for Penicillin allergy" else null
+      )
+    }
+
+    return PrescriptionScanResult(
+      doctorName = parsed.doctorName.ifBlank { "Prescribing Doctor" },
+      doctorSpeciality = "Physician",
+      clinicOrHospital = "Clinic / Hospital",
+      patientName = parsed.patientName.ifBlank { "Patient Walk-in" },
+      patientAgeGender = "Walk-in",
+      diagnosis = "Prescription Analysis (On-device OCR)",
+      prescriptionDate = "Today",
+      medicines = prescribedDrugs,
+      doctorAdvice = "Take medicines exactly as instructed by physician.",
+      drugInteractionAlert = if (prescribedDrugs.size > 1) "Review drug schedule before dispensing." else null,
+      googleSearchGroundingQuery = prescribedDrugs.firstOrNull()?.googleSearchQuery ?: "",
+      rawGeminiOutput = ocrText,
+      isAiPowered = false
+    )
   }
 
   private fun parseJsonResponse(jsonStr: String, availableInventory: List<MedicineItem>): PrescriptionScanResult? {

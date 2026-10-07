@@ -3,6 +3,8 @@ package com.example.ui.screens
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.hardware.camera2.CameraManager
 import android.net.Uri
 import android.os.Build
@@ -14,6 +16,9 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.Camera
 import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.ImageCapture
+import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
@@ -160,7 +165,6 @@ fun QuickScanScreen(
   }
 
   var scanMode by remember { mutableIntStateOf(0) } // 0: Barcode Scanner, 1: Blister/Strip OCR, 2: Doctor Prescription (Rx) OCR
-  var isContinuousScan by remember { mutableStateOf(true) }
   var lastScannedBarcode by remember { mutableStateOf("") }
   var scanCount by remember { mutableIntStateOf(0) }
   
@@ -170,6 +174,8 @@ fun QuickScanScreen(
 
   // Camera & Flashlight Torch state
   var cameraInstance by remember { mutableStateOf<Camera?>(null) }
+  var previewViewRef by remember { mutableStateOf<PreviewView?>(null) }
+  var imageCaptureInstance by remember { mutableStateOf<ImageCapture?>(null) }
   var isTorchOn by remember { mutableStateOf(false) }
 
   DisposableEffect(Unit) {
@@ -200,16 +206,6 @@ fun QuickScanScreen(
     }
   }
 
-  fun runOcrOnText(text: String) {
-    triggerVibration()
-    val parsed = if (scanMode == 2) {
-      MedicineOcrParser.parseDoctorPrescriptionText(text, allMedicines)
-    } else {
-      MedicineOcrParser.parseMedicinePackageText(text, allMedicines)
-    }
-    activeParsedOcrResult = parsed
-  }
-
   // ML Kit Instances
   val barcodeScanner = remember {
     BarcodeScanning.getClient(
@@ -223,48 +219,121 @@ fun QuickScanScreen(
   }
   val analysisExecutor = remember { Executors.newSingleThreadExecutor() }
 
-  // Photo Picker Launcher
+  fun runOcrOnText(text: String) {
+    triggerVibration()
+    val parsed = if (scanMode == 2) {
+      MedicineOcrParser.parseDoctorPrescriptionText(text, allMedicines)
+    } else {
+      MedicineOcrParser.parseMedicinePackageText(text, allMedicines)
+    }
+    activeParsedOcrResult = parsed
+  }
+
+  // Real Image Processing via ML Kit on the user's actual photo
+  fun processBitmapThroughRecognition(bitmap: Bitmap) {
+    triggerVibration()
+    isAnalyzingFrame = true
+
+    val image = InputImage.fromBitmap(bitmap, 0)
+
+    if (scanMode == 0) {
+      // Barcode mode: first try decoding barcode formats
+      barcodeScanner.process(image)
+        .addOnSuccessListener { barcodes ->
+          if (barcodes.isNotEmpty()) {
+            val barcode = barcodes.first().rawValue ?: ""
+            if (barcode.isNotBlank()) {
+              lastScannedBarcode = barcode
+              scanCount++
+              viewModel.handleScannedBarcode(barcode)
+              Toast.makeText(context, "Barcode Decoded: $barcode", Toast.LENGTH_SHORT).show()
+              isAnalyzingFrame = false
+              return@addOnSuccessListener
+            }
+          }
+          // Fallback: If no barcode pattern detected on photo, run OCR to detect drug name on box/label
+          textRecognizer.process(image)
+            .addOnSuccessListener { visionText ->
+              val text = visionText.text
+              if (text.isNotBlank()) {
+                val parsed = MedicineOcrParser.parseMedicinePackageText(text, allMedicines)
+                activeParsedOcrResult = parsed
+              } else {
+                Toast.makeText(context, "No barcode detected. Try aligning barcode inside reticle.", Toast.LENGTH_LONG).show()
+              }
+            }
+            .addOnCompleteListener { isAnalyzingFrame = false }
+        }
+        .addOnFailureListener {
+          isAnalyzingFrame = false
+          Toast.makeText(context, "Scan error: ${it.localizedMessage}", Toast.LENGTH_SHORT).show()
+        }
+    } else if (scanMode == 1) {
+      // Strip / Blister / Box OCR
+      textRecognizer.process(image)
+        .addOnSuccessListener { visionText ->
+          val text = visionText.text
+          if (text.isNotBlank()) {
+            val parsed = MedicineOcrParser.parseMedicinePackageText(text, allMedicines)
+            activeParsedOcrResult = parsed
+          } else {
+            Toast.makeText(context, "No text detected on packaging. Ensure good lighting and clear focus.", Toast.LENGTH_LONG).show()
+          }
+        }
+        .addOnFailureListener {
+          Toast.makeText(context, "OCR error: ${it.localizedMessage}", Toast.LENGTH_SHORT).show()
+        }
+        .addOnCompleteListener { isAnalyzingFrame = false }
+    } else {
+      // Doctor Prescription Rx OCR
+      textRecognizer.process(image)
+        .addOnSuccessListener { visionText ->
+          val text = visionText.text
+          if (text.isNotBlank()) {
+            val parsed = MedicineOcrParser.parseDoctorPrescriptionText(text, allMedicines)
+            activeParsedOcrResult = parsed
+          } else {
+            Toast.makeText(context, "No text detected on prescription slip. Ensure clear camera focus.", Toast.LENGTH_LONG).show()
+          }
+        }
+        .addOnFailureListener {
+          Toast.makeText(context, "Prescription OCR error: ${it.localizedMessage}", Toast.LENGTH_SHORT).show()
+        }
+        .addOnCompleteListener { isAnalyzingFrame = false }
+    }
+  }
+
+  // Camera Capture Launcher (Direct photo snapping)
+  val cameraCaptureLauncher = rememberLauncherForActivityResult(
+    contract = ActivityResultContracts.TakePicturePreview()
+  ) { bitmap: Bitmap? ->
+    if (bitmap != null) {
+      processBitmapThroughRecognition(bitmap)
+    }
+  }
+
+  // Photo Picker Launcher (Gallery selection)
   val photoPickerLauncher = rememberLauncherForActivityResult(
     contract = ActivityResultContracts.PickVisualMedia()
   ) { uri: Uri? ->
     if (uri != null) {
-      isAnalyzingFrame = true
-      // Simulate on-device OCR inference from captured/selected image
-      val sampleText = if (scanMode == 2) {
-        """
-        CIVIL HOSPITAL CLINIC
-        Dr. A. K. Sharma, MD
-        Pt: Rahim Ali (38M)
-        Rx:
-        Tab Augmentin 625 Duo 1-0-1 x 5 days
-        Tab Dolo 650 1-0-1 x 3 days
-        Tab Pan 40 1-0-0 x 5 days
-        """.trimIndent()
-      } else {
-        """
-        GLAXOSMITHKLINE PHARMACEUTICALS
-        AUGMENTIN 625 DUO
-        Amoxicillin & Potassium Clavulanate Tablets IP
-        B.No. AG2410
-        EXP: 05/27
-        MFG: 06/25
-        M.R.P. Rs. 201.70
-        SCHEDULE H1 PRESCRIPTION DRUG
-        """.trimIndent()
+      try {
+        val bitmap = context.contentResolver.openInputStream(uri)?.use { stream ->
+          BitmapFactory.decodeStream(stream)
+        }
+        if (bitmap != null) {
+          processBitmapThroughRecognition(bitmap)
+        } else {
+          Toast.makeText(context, "Failed to load selected image", Toast.LENGTH_SHORT).show()
+        }
+      } catch (e: Exception) {
+        Toast.makeText(context, "Image error: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
       }
-
-      val parsed = if (scanMode == 2) {
-        MedicineOcrParser.parseDoctorPrescriptionText(sampleText, allMedicines)
-      } else {
-        MedicineOcrParser.parseMedicinePackageText(sampleText, allMedicines)
-      }
-      activeParsedOcrResult = parsed
-      isAnalyzingFrame = false
     }
   }
 
-  // --- Real Camera Frame Processing Logic ---
-  fun processImageProxy(imageProxy: androidx.camera.core.ImageProxy) {
+  // --- Real Camera Frame Live Processing Logic ---
+  fun processImageProxy(imageProxy: ImageProxy) {
     if (isAnalyzingFrame || activeParsedOcrResult != null) {
       imageProxy.close()
       return
@@ -290,7 +359,6 @@ fun QuickScanScreen(
           }
           .addOnCompleteListener { imageProxy.close() }
       } else {
-        // OCR Modes (only triggered by shutter for performance)
         imageProxy.close()
       }
     } else {
@@ -307,7 +375,7 @@ fun QuickScanScreen(
     }
   }
 
-  // Sample Presets for Quick Testing & Realistic Simulation
+  // Sample Presets for Quick Testing
   val samplePresets = listOf(
     ScanSamplePreset(
       title = "Augmentin 625",
@@ -399,6 +467,7 @@ fun QuickScanScreen(
       AndroidView(
         factory = { ctx ->
           val previewView = PreviewView(ctx)
+          previewViewRef = previewView
           val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
           cameraProviderFuture.addListener({
             try {
@@ -406,8 +475,13 @@ fun QuickScanScreen(
               val preview = Preview.Builder().build().also {
                 it.surfaceProvider = previewView.surfaceProvider
               }
-              val imageAnalysis = androidx.camera.core.ImageAnalysis.Builder()
-                .setBackpressureStrategy(androidx.camera.core.ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+              val imageCapture = ImageCapture.Builder()
+                .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+                .build()
+              imageCaptureInstance = imageCapture
+
+              val imageAnalysis = ImageAnalysis.Builder()
+                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .build()
                 .also {
                   it.setAnalyzer(analysisExecutor) { imageProxy ->
@@ -417,10 +491,10 @@ fun QuickScanScreen(
 
               val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
               cameraProvider.unbindAll()
-              val cam = cameraProvider.bindToLifecycle(lifecycleOwner, cameraSelector, preview, imageAnalysis)
+              val cam = cameraProvider.bindToLifecycle(lifecycleOwner, cameraSelector, preview, imageCapture, imageAnalysis)
               cameraInstance = cam
             } catch (e: Exception) {
-              // Gracefully handle emulator camera setup
+              // Gracefully handle camera lifecycle
             }
           }, ContextCompat.getMainExecutor(ctx))
           previewView
@@ -466,7 +540,7 @@ fun QuickScanScreen(
       drawLine(Color.White, Offset(left + reticleWidth, top + reticleHeight - cornerLength), Offset(left + reticleWidth, top + reticleHeight + 2), strokeW)
     }
 
-    // High-visibility Flashlight Screen Illumination (active on hardware & emulator)
+    // High-visibility Flashlight Screen Illumination
     if (isTorchOn) {
       Box(
         modifier = Modifier
@@ -513,7 +587,7 @@ fun QuickScanScreen(
               )
               Spacer(modifier = Modifier.width(6.dp))
               Text(
-                text = if (scanMode == 0) "Scanner Active ($scanCount items)" else "AI Vision Ready",
+                text = if (scanMode == 0) "Scanner Active ($scanCount items)" else "Camera & AI OCR Ready",
                 fontSize = 10.sp,
                 color = Color.LightGray
               )
@@ -534,12 +608,21 @@ fun QuickScanScreen(
             Spacer(modifier = Modifier.width(4.dp))
           }
 
+          // Camera Capture Button (Opens system camera if needed)
+          IconButton(onClick = {
+            cameraCaptureLauncher.launch(null)
+          }) {
+            Icon(Icons.Default.CameraAlt, contentDescription = "Take Photo with Camera", tint = Color.White)
+          }
+
+          // Gallery Photo Picker Button
           IconButton(onClick = {
             photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
           }) {
             Icon(Icons.Default.Image, contentDescription = "Pick Image from Gallery", tint = Color.White)
           }
 
+          // Torch Flashlight Toggle
           IconButton(
             onClick = {
               val nextState = !isTorchOn
@@ -635,6 +718,26 @@ fun QuickScanScreen(
           }
         }
       }
+
+      // In-flight analyzing indicator
+      if (isAnalyzingFrame) {
+        Card(
+          shape = RoundedCornerShape(8.dp),
+          colors = CardDefaults.cardColors(containerColor = Color(0xFF6D28D9)),
+          modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+        ) {
+          Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color(0xFFFFD54F), modifier = Modifier.size(16.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Analyzing photo text & details via On-Device ML OCR...", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+          }
+        }
+      }
     }
 
     // 3. Shutter Capture Button in center bottom
@@ -645,23 +748,23 @@ fun QuickScanScreen(
     ) {
       Box(
         modifier = Modifier
-          .size(64.dp)
+          .size(68.dp)
           .clip(CircleShape)
           .background(Color.White.copy(alpha = 0.25f))
           .clickable {
             triggerVibration()
-            isAnalyzingFrame = true
-            // In a real device, we would capture the high-res image here.
-            // For the emulator preview, we trigger the AI OCR parsing logic with a sample to demonstrate functionality.
-            val preset = samplePresets.firstOrNull { it.title.contains("Augmentin") } ?: samplePresets.first()
-            runOcrOnText(preset.rawOcrText)
-            isAnalyzingFrame = false
+            val currentPreviewBitmap = previewViewRef?.bitmap
+            if (currentPreviewBitmap != null) {
+              processBitmapThroughRecognition(currentPreviewBitmap)
+            } else {
+              cameraCaptureLauncher.launch(null)
+            }
           },
         contentAlignment = Alignment.Center
       ) {
         Box(
           modifier = Modifier
-            .size(52.dp)
+            .size(54.dp)
             .clip(CircleShape)
             .background(Color.White),
           contentAlignment = Alignment.Center
@@ -670,7 +773,7 @@ fun QuickScanScreen(
             imageVector = Icons.Default.CameraAlt,
             contentDescription = "Capture Frame for OCR",
             tint = Color.Black,
-            modifier = Modifier.size(26.dp)
+            modifier = Modifier.size(28.dp)
           )
         }
       }
@@ -690,8 +793,8 @@ fun QuickScanScreen(
         verticalAlignment = Alignment.CenterVertically
       ) {
         Text(
-          text = if (scanMode == 0) "Tap preset barcode or align package inside reticle"
-                 else "Tap sample foil/slip or shutter to analyze via AI OCR",
+          text = if (scanMode == 0) "Point at barcode or snap photo above"
+                 else "Snap photo or pick image to parse details",
           fontSize = 11.sp,
           color = Color.LightGray
         )
@@ -714,7 +817,7 @@ fun QuickScanScreen(
 
       Spacer(modifier = Modifier.height(8.dp))
 
-      // Presets Horizontal Carousel
+      // Presets Horizontal Carousel for instant demo testing
       LazyRow(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         contentPadding = PaddingValues(vertical = 4.dp)
@@ -788,7 +891,7 @@ fun QuickScanScreen(
       var editName by remember { mutableStateOf(ocr.medicineName) }
       var editBatch by remember { mutableStateOf(ocr.batchNumber) }
       var editExpiry by remember { mutableStateOf(ocr.expiryDate) }
-      var editMrp by remember { mutableStateOf(ocr.mrp.toString()) }
+      var editMrp by remember { mutableStateOf(if (ocr.mrp > 0) ocr.mrp.toString() else "100.0") }
 
       AlertDialog(
         onDismissRequest = { activeParsedOcrResult = null },
@@ -801,7 +904,7 @@ fun QuickScanScreen(
             Row(verticalAlignment = Alignment.CenterVertically) {
               Icon(Icons.Default.Verified, contentDescription = null, tint = StatusGreen, modifier = Modifier.size(20.dp))
               Spacer(modifier = Modifier.width(6.dp))
-              Text("OCR Parsed (${ocr.confidenceScore}%)", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+              Text("OCR Detected (${ocr.confidenceScore}%)", fontSize = 16.sp, fontWeight = FontWeight.Bold)
             }
             IconButton(onClick = { activeParsedOcrResult = null }) {
               Icon(Icons.Default.Close, contentDescription = "Close")
@@ -812,7 +915,7 @@ fun QuickScanScreen(
           Column(modifier = Modifier.fillMaxWidth()) {
             Text(
               text = if (ocr.prescribedItems.size > 1) "Doctor: ${ocr.doctorName} • Patient: ${ocr.patientName}"
-                     else "Extracted from packaging. Review and confirm below:",
+                     else "Details extracted from photo. Edit or confirm below:",
               fontSize = 11.5.sp,
               color = TextMuted
             )
@@ -858,7 +961,7 @@ fun QuickScanScreen(
               OutlinedTextField(
                 value = editName,
                 onValueChange = { editName = it },
-                label = { Text("Medicine Name") },
+                label = { Text("Medicine / Brand Name") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().height(54.dp)
               )
@@ -918,7 +1021,7 @@ fun QuickScanScreen(
                   batch = editBatch,
                   expiry = editExpiry,
                   mrp = editMrp.toDoubleOrNull() ?: ocr.mrp,
-                  manufacturer = ocr.manufacturer
+                  manufacturer = ocr.manufacturer.ifBlank { "Standard Pharmaceutical Ltd" }
                 )
               }
               Toast.makeText(context, "Added to Bill Cart!", Toast.LENGTH_SHORT).show()
