@@ -28,24 +28,22 @@ jobs:
       env:
         STORE_PASS: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
       run: |
-        # Using the exact same password variable for both parameters ensures matching padding blocks
         keytool -genkey -v -keystore debug.keystore -storepass "$STORE_PASS" -alias royalpharmacykey -keypass "$STORE_PASS" -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Royal Pharmacy,O=Production,C=US"
         mkdir -p app && cp debug.keystore app/
         mkdir -p ROYAL-PHARMACY && cp debug.keystore ROYAL-PHARMACY/
         mkdir -p ROYAL-PHARMACY/ROYAL-PHARMACY && cp debug.keystore ROYAL-PHARMACY/ROYAL-PHARMACY/
         mkdir -p ROYAL-PHARMACY/ROYAL-PHARMACY/app && cp debug.keystore ROYAL-PHARMACY/ROYAL-PHARMACY/app/
 
-      - name: Build Signed Release APK
-    env:
-      STORE_PASS: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
-      GRADLE_OPTS: -Djava.awt.headless=true
-    run: |
-      gradle assembleRelease \
-        -Pandroid.injected.signing.store.file=debug.keystore \
-        -Pandroid.injected.signing.store.password="$STORE_PASS" \
-        -Pandroid.injected.signing.key.alias=royalpharmacykey \
-        -Pandroid.injected.signing.key.password="$STORE_PASS"
-        
+    - name: Build Signed Release APK
+      env:
+        STORE_PASS: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+        GRADLE_OPTS: -Djava.awt.headless=true
+      run: |
+        gradle assembleRelease \
+          -Pandroid.injected.signing.store.file=debug.keystore \
+          -Pandroid.injected.signing.store.password="$STORE_PASS" \
+          -Pandroid.injected.signing.key.alias=royalpharmacykey \
+          -Pandroid.injected.signing.key.password="$STORE_PASS"
 
     - name: Upload Production Release APK
       uses: actions/upload-artifact@v4
