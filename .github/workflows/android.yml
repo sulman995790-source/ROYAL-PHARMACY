@@ -25,10 +25,10 @@ jobs:
         gradle-version: '9.3.1'
 
     - name: Generate Dummy Debug Keystore
-      # This targets the double-nested project subfolder perfectly
+      # This places the keystore exactly where the runner base directory expects it
       run: |
-        mkdir -p ROYAL-PHARMACY/ROYAL-PHARMACY/app
-        keytool -genkey -v -keystore ROYAL-PHARMACY/ROYAL-PHARMACY/app/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+        mkdir -p app
+        keytool -genkey -v -keystore app/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
 
     - name: Build Debug APK
       run: gradle assembleDebug
