@@ -20,8 +20,10 @@ jobs:
         distribution: 'temurin'
 
     - name: Setup Gradle and Build
-      uses: gradle/actions/setup-gradle@v3
+      uses: gradle/actions/setup-gradle@v4
       with:
         arguments: assembleDebug
+        gradle-version: '8.7' # Forces the runner to safely supply its own clean Gradle environment
+        
         
         
