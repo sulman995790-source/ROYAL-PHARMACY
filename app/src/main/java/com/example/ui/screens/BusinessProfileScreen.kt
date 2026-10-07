@@ -101,7 +101,7 @@ fun BusinessProfileScreen(
   val profile by viewModel.businessProfile.collectAsState()
 
   var selectedTabIndex by remember { mutableIntStateOf(0) }
-  val tabs = listOf("BASIC", "LICENSE", "TAXATION", "LOCATION", "TIMINGS")
+  val tabs = listOf("BASIC", "LICENSE", "TAXATION", "LOCATION", "TIMINGS", "DATA IMPORT")
 
   // Editable Form states initialized from persistent profile
   var businessName by remember(profile) { mutableStateOf(profile.businessName) }
@@ -548,6 +548,84 @@ fun BusinessProfileScreen(
 
                 Spacer(modifier = Modifier.height(10.dp))
                 SaveButton(onClick = { saveProfile() })
+              }
+            }
+          }
+
+          5 -> {
+            // TAB 5: DATA IMPORT
+            item {
+              Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text(
+                  "Bulk Update Inventory",
+                  fontSize = 14.sp,
+                  fontWeight = FontWeight.Bold,
+                  color = TextDark
+                )
+                Text(
+                  "Import an Excel file (.xlsx) to bulk update medicine prices and purchase costs. Matching is done by medicine name (case-insensitive).",
+                  fontSize = 12.sp,
+                  color = TextMuted
+                )
+
+                val context = LocalContext.current
+                val excelPickerLauncher = rememberLauncherForActivityResult(
+                  contract = ActivityResultContracts.OpenDocument(),
+                  onResult = { uri ->
+                    uri?.let { viewModel.importMedicinesFromExcel(context, it) }
+                  }
+                )
+
+                Button(
+                  onClick = {
+                    excelPickerLauncher.launch(
+                      arrayOf("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                    )
+                  },
+                  shape = RoundedCornerShape(8.dp),
+                  colors = ButtonDefaults.buttonColors(containerColor = RoyalNavy),
+                  modifier = Modifier.fillMaxWidth().height(48.dp).testTag("btn_import_excel")
+                ) {
+                  Icon(
+                    Icons.Default.FileUpload,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(18.dp)
+                  )
+                  Spacer(modifier = Modifier.width(8.dp))
+                  Text(
+                    "Select Excel File (.xlsx)",
+                    fontSize = 13.sp,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                  )
+                }
+
+                Card(
+                  shape = RoundedCornerShape(10.dp),
+                  colors = CardDefaults.cardColors(containerColor = GrayBackground),
+                  modifier = Modifier.fillMaxWidth()
+                ) {
+                  Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                      "Excel Format Requirements:",
+                      fontSize = 11.sp,
+                      fontWeight = FontWeight.Bold,
+                      color = TextDark
+                    )
+                    Text("• Column A: Medicine Name (Exact match)", fontSize = 10.sp, color = TextMuted)
+                    Text("• Column B: MRP (Numeric)", fontSize = 10.sp, color = TextMuted)
+                    Text("• Column C: Purchase Rate (Numeric)", fontSize = 10.sp, color = TextMuted)
+                    Text("• Column D: Sale Rate (Numeric)", fontSize = 10.sp, color = TextMuted)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                      "Note: Ensure your Excel file has a header row. Data should start from Row 2.",
+                      fontSize = 9.sp,
+                      color = RoyalMagenta,
+                      fontWeight = FontWeight.SemiBold
+                    )
+                  }
+                }
               }
             }
           }

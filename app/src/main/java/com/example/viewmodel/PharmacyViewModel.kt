@@ -28,6 +28,7 @@ import com.example.data.repository.PharmacyRepository
 import com.example.data.sync.FirebaseSyncManager
 import com.example.data.sync.NetworkMonitor
 import android.content.Context
+import android.net.Uri
 import com.example.service.BackupFrequency
 import com.example.service.DistributorExportService
 import com.example.service.DriveBackupSnapshot
@@ -835,6 +836,7 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
           packQty = qty,
           mrp = medicine.mrp,
           rate = rate,
+          purchaseRate = medicine.purchaseRate,
           discountPercent = 0.0,
           gstPercent = medicine.gstPercent,
           total = total
@@ -1484,13 +1486,14 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
 
   // QuickScan handlers
   fun handleScannedBarcode(barcode: String) {
+    val trimmedBarcode = barcode.trim()
     viewModelScope.launch {
-      val matched = repository.findMedicineByBarcode(barcode)
+      val matched = repository.findMedicineByBarcode(trimmedBarcode)
       if (matched != null) {
         addMedicineToCart(matched, 1)
         scanFeedbackMessage.value = "Scanned: ${matched.name} (₹${matched.saleRate})"
       } else {
-        scanFeedbackMessage.value = "Barcode $barcode: Not found"
+        scanFeedbackMessage.value = "Barcode $trimmedBarcode: Not found"
       }
     }
   }
@@ -1554,6 +1557,36 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
 
   fun saveBusinessProfile(profile: BusinessProfile) {
     viewModelScope.launch { repository.updateBusinessProfile(profile) }
+  }
+
+  fun importMedicinesFromExcel(context: Context, uri: Uri) {
+    viewModelScope.launch(Dispatchers.IO) {
+      try {
+        val updates = com.example.util.ExcelImportUtil.parseMedicineExcel(context, uri)
+        val currentMedicines = repository.allMedicines.first()
+        var updateCount = 0
+
+        updates.forEach { update ->
+          val med = currentMedicines.find { it.name.equals(update.name, ignoreCase = true) }
+          if (med != null) {
+            val updatedMed = med.copy(
+              mrp = update.mrp ?: med.mrp,
+              purchaseRate = update.purchaseRate ?: med.purchaseRate,
+              saleRate = update.saleRate ?: med.saleRate
+            )
+            repository.updateMedicine(updatedMed)
+            updateCount++
+          }
+        }
+        kotlinx.coroutines.withContext(Dispatchers.Main) {
+          scanFeedbackMessage.value = "Excel Import: Updated $updateCount medicines successfully!"
+        }
+      } catch (e: Exception) {
+        kotlinx.coroutines.withContext(Dispatchers.Main) {
+          scanFeedbackMessage.value = "Excel Import Error: ${e.message}"
+        }
+      }
+    }
   }
 
   fun addRecentSearch(query: String) {

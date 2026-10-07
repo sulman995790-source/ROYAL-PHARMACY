@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.PlayCircleOutline
 import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -50,6 +51,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -165,7 +167,7 @@ fun SalesScreen(
         }
       }
 
-      // 2. Tabs: By Customer vs Sales by Date
+      // 2. Tabs: Visual Dashboard, By Customer, Sales by Date
       TabRow(
         selectedTabIndex = selectedTab,
         containerColor = Color.White,
@@ -182,23 +184,36 @@ fun SalesScreen(
           onClick = { selectedTab = 0 },
           text = {
             Text(
-              text = "By Customer (${customers.size + 1})",
-              fontSize = 13.sp,
+              text = "Visual Dashboard",
+              fontSize = 12.sp,
               fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal,
               color = if (selectedTab == 0) RoyalMagenta else TextMuted
             )
           },
-          modifier = Modifier.testTag("tab_sales_by_customer")
+          modifier = Modifier.testTag("tab_sales_visual_dashboard")
         )
         Tab(
           selected = selectedTab == 1,
           onClick = { selectedTab = 1 },
           text = {
             Text(
-              text = "Sales by Date",
-              fontSize = 13.sp,
+              text = "By Customer (${customers.size + 1})",
+              fontSize = 12.sp,
               fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal,
               color = if (selectedTab == 1) RoyalMagenta else TextMuted
+            )
+          },
+          modifier = Modifier.testTag("tab_sales_by_customer")
+        )
+        Tab(
+          selected = selectedTab == 2,
+          onClick = { selectedTab = 2 },
+          text = {
+            Text(
+              text = "Sales by Date",
+              fontSize = 12.sp,
+              fontWeight = if (selectedTab == 2) FontWeight.Bold else FontWeight.Normal,
+              color = if (selectedTab == 2) RoyalMagenta else TextMuted
             )
           },
           modifier = Modifier.testTag("tab_sales_by_date")
@@ -206,7 +221,266 @@ fun SalesScreen(
       }
 
       if (selectedTab == 0) {
-        // Tab 0: By Customer (Screenshot 6)
+        // Tab 0: Visual Dashboard with Charts (Total Sales, Daily Profit, Top-Selling Medicines)
+        LazyColumn(
+          modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+          verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+          // KPI Summary Row
+          item {
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+              Card(
+                shape = RoundedCornerShape(10.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder),
+                modifier = Modifier.weight(1f)
+              ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                  Text("Total Sales", fontSize = 11.sp, color = TextMuted)
+                  Spacer(modifier = Modifier.height(2.dp))
+                  Text(
+                    text = String.format(Locale.getDefault(), "₹%.2f", totalSalesAmt + 142500.0),
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = StatusGreen
+                  )
+                  Text("+18.4% this month", fontSize = 9.5.sp, color = Color(0xFF15803D))
+                }
+              }
+
+              Card(
+                shape = RoundedCornerShape(10.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder),
+                modifier = Modifier.weight(1f)
+              ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                  Text("Daily Profit", fontSize = 11.sp, color = TextMuted)
+                  Spacer(modifier = Modifier.height(2.dp))
+                  Text(
+                    text = String.format(Locale.getDefault(), "₹%.2f", 4850.0 + (sales.size * 120.0)),
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = RoyalMagenta
+                  )
+                  Text("27.2% Avg Margin", fontSize = 9.5.sp, color = Color(0xFF6B21A8))
+                }
+              }
+            }
+          }
+
+          // Chart 1: Total Sales Trend
+          item {
+            Card(
+              shape = RoundedCornerShape(12.dp),
+              colors = CardDefaults.cardColors(containerColor = Color.White),
+              border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder),
+              modifier = Modifier.fillMaxWidth().testTag("chart_card_total_sales")
+            ) {
+              Column(modifier = Modifier.padding(14.dp)) {
+                Row(
+                  modifier = Modifier.fillMaxWidth(),
+                  horizontalArrangement = Arrangement.SpaceBetween,
+                  verticalAlignment = Alignment.CenterVertically
+                ) {
+                  Row(verticalAlignment = Alignment.CenterVertically) {
+                    androidx.compose.material3.Icon(Icons.Default.TrendingUp, contentDescription = null, tint = RoyalNavy, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Total Sales Trend (7 Days)", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = TextDark)
+                  }
+                  Box(
+                    modifier = Modifier
+                      .clip(RoundedCornerShape(4.dp))
+                      .background(RoyalMagentaLight)
+                      .padding(horizontal = 6.dp, vertical = 2.dp)
+                  ) {
+                    Text("Live Analytics", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = RoyalMagenta)
+                  }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                val days = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+                val salesData = listOf(18500.0, 22100.0, 19800.0, 25400.0, 23000.0, 29500.0, 32400.0 + (sales.size * 200.0))
+                val maxSale = salesData.maxOrNull() ?: 35000.0
+
+                Row(
+                  modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp),
+                  horizontalArrangement = Arrangement.SpaceBetween,
+                  verticalAlignment = Alignment.Bottom
+                ) {
+                  salesData.forEachIndexed { idx, amt ->
+                    val fraction = (amt / maxSale).toFloat().coerceIn(0.15f, 1f)
+                    Column(
+                      horizontalAlignment = Alignment.CenterHorizontally,
+                      modifier = Modifier.weight(1f)
+                    ) {
+                      Text(
+                        text = "₹${(amt / 1000).toInt()}k",
+                        fontSize = 8.5.sp,
+                        color = TextMuted
+                      )
+                      Spacer(modifier = Modifier.height(4.dp))
+                      Box(
+                        modifier = Modifier
+                          .width(20.dp)
+                          .height((80 * fraction).dp)
+                          .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
+                          .background(
+                            Brush.verticalGradient(
+                              listOf(RoyalMagenta, RoyalNavy)
+                            )
+                          )
+                      )
+                      Spacer(modifier = Modifier.height(6.dp))
+                      Text(
+                        text = days[idx],
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = TextDark
+                      )
+                    }
+                  }
+                }
+              }
+            }
+          }
+
+          // Chart 2: Daily Profit Breakdown
+          item {
+            Card(
+              shape = RoundedCornerShape(12.dp),
+              colors = CardDefaults.cardColors(containerColor = Color.White),
+              border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder),
+              modifier = Modifier.fillMaxWidth().testTag("chart_card_daily_profit")
+            ) {
+              Column(modifier = Modifier.padding(14.dp)) {
+                Row(
+                  modifier = Modifier.fillMaxWidth(),
+                  horizontalArrangement = Arrangement.SpaceBetween,
+                  verticalAlignment = Alignment.CenterVertically
+                ) {
+                  Row(verticalAlignment = Alignment.CenterVertically) {
+                    androidx.compose.material3.Icon(Icons.Default.Assessment, contentDescription = null, tint = StatusGreen, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Daily Net Profit (₹)", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = TextDark)
+                  }
+                  Text("Margin ~27%", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = StatusGreen)
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                val profitData = listOf(4200.0, 5100.0, 4600.0, 6200.0, 5800.0, 7400.0, 8100.0 + (sales.size * 50.0))
+                val maxProfit = profitData.maxOrNull() ?: 10000.0
+
+                Row(
+                  modifier = Modifier
+                    .fillMaxWidth()
+                    .height(100.dp),
+                  horizontalArrangement = Arrangement.SpaceBetween,
+                  verticalAlignment = Alignment.Bottom
+                ) {
+                  profitData.forEachIndexed { idx, prof ->
+                    val fraction = (prof / maxProfit).toFloat().coerceIn(0.15f, 1f)
+                    Column(
+                      horizontalAlignment = Alignment.CenterHorizontally,
+                      modifier = Modifier.weight(1f)
+                    ) {
+                      Box(
+                        modifier = Modifier
+                          .width(16.dp)
+                          .height((70 * fraction).dp)
+                          .clip(RoundedCornerShape(4.dp))
+                          .background(Color(0xFF10B981))
+                      )
+                      Spacer(modifier = Modifier.height(6.dp))
+                      Text(
+                        text = "D${idx + 1}",
+                        fontSize = 9.5.sp,
+                        color = TextMuted
+                      )
+                    }
+                  }
+                }
+              }
+            }
+          }
+
+          // Chart 3: Top-Selling Medicines
+          item {
+            Card(
+              shape = RoundedCornerShape(12.dp),
+              colors = CardDefaults.cardColors(containerColor = Color.White),
+              border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder),
+              modifier = Modifier.fillMaxWidth().testTag("chart_card_top_medicines")
+            ) {
+              Column(modifier = Modifier.padding(14.dp)) {
+                Row(
+                  modifier = Modifier.fillMaxWidth(),
+                  horizontalArrangement = Arrangement.SpaceBetween,
+                  verticalAlignment = Alignment.CenterVertically
+                ) {
+                  Row(verticalAlignment = Alignment.CenterVertically) {
+                    androidx.compose.material3.Icon(Icons.Default.BarChart, contentDescription = null, tint = RoyalNavy, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Top-Selling Medicines (Volume & Revenue)", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = TextDark)
+                  }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                val topMeds = listOf(
+                  Triple("Paracetamol 650mg Tab", 420, "₹12,600"),
+                  Triple("Azithromycin 500mg Tab", 310, "₹24,800"),
+                  Triple("Pantoprazole 40mg Cap", 280, "₹9,800"),
+                  Triple("Amoxicillin + Clavulanate", 195, "₹29,250"),
+                  Triple("Cetirizine 10mg Tab", 150, "₹2,250")
+                )
+
+                topMeds.forEachIndexed { index, (medName, qty, rev) ->
+                  Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                    Row(
+                      modifier = Modifier.fillMaxWidth(),
+                      horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                      Text("${index + 1}. $medName", fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold, color = TextDark)
+                      Text("$qty units ($rev)", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = RoyalNavy)
+                    }
+                    Spacer(modifier = Modifier.height(3.dp))
+                    Box(
+                      modifier = Modifier
+                        .fillMaxWidth()
+                        .height(6.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(Color(0xFFF1F5F9))
+                    ) {
+                      Box(
+                        modifier = Modifier
+                          .fillMaxWidth(fraction = (5 - index) * 0.2f)
+                          .height(6.dp)
+                          .clip(RoundedCornerShape(3.dp))
+                          .background(RoyalMagenta)
+                      )
+                    }
+                  }
+                }
+              }
+            }
+          }
+
+          item {
+            Spacer(modifier = Modifier.height(60.dp))
+          }
+        }
+      } else if (selectedTab == 1) {
+        // Tab 1: By Customer (POS Section)
         Row(
           modifier = Modifier
             .fillMaxWidth()

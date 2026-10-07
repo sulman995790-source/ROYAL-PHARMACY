@@ -166,6 +166,13 @@
             <p class="text-sm text-slate-500">Generate fast, GST-compliant chemist cash memos.</p>
           </div>
           <div class="flex items-center space-x-2">
+            <div id="profit-toggle-container" class="hidden items-center space-x-2 bg-pink-100 px-3 py-1.5 rounded-lg mr-2">
+              <span class="text-[10px] font-bold text-royal-magenta uppercase">Profit View</span>
+              <label class="relative inline-flex items-center cursor-pointer scale-75">
+                <input type="checkbox" id="profit-toggle-input" onchange="toggleProfitDetails()" class="sr-only peer">
+                <div class="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-royal-magenta"></div>
+              </label>
+            </div>
             <button onclick="startQuickScan()" class="flex items-center space-x-2 bg-royal-navy text-white px-3 py-1.5 rounded-lg font-semibold hover:bg-slate-800 transition">
               <i data-lucide="scan-barcode" class="w-4 h-4 text-pink-400"></i>
               <span>Quick Scan</span>
@@ -717,6 +724,34 @@
             </div>
           </div>
 
+          <!-- Bulk Data Operations Card -->
+          <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+            <h3 class="font-bold text-slate-800 text-base">Bulk Data Operations</h3>
+            <p class="text-[11px] text-slate-500 leading-relaxed">Import inventory price updates directly from an Excel (.xlsx) file. Matching is done by medicine name (case-insensitive).</p>
+            
+            <div class="p-4 bg-pink-50 rounded-xl border border-pink-100">
+               <div class="flex items-center space-x-3 mb-3">
+                  <div class="bg-royal-magenta text-white p-2 rounded-lg">
+                    <i data-lucide="file-spreadsheet" class="w-5 h-5"></i>
+                  </div>
+                  <div>
+                    <h4 class="text-xs font-bold text-slate-800">Inventory Price Update</h4>
+                    <p class="text-[10px] text-slate-500">Columns: Name, MRP, Purchase, Sale</p>
+                  </div>
+               </div>
+               
+               <input type="file" id="excel-import-input" accept=".xlsx" class="hidden" onchange="handleExcelImport(this)">
+               <button onclick="document.getElementById('excel-import-input').click()" class="w-full bg-white border-2 border-royal-magenta text-royal-magenta hover:bg-royal-magenta hover:text-white px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-2">
+                  <i data-lucide="upload-cloud" class="w-4 h-4"></i>
+                  <span>Upload Excel (.xlsx)</span>
+               </button>
+               
+               <div class="mt-3 pt-3 border-t border-pink-100">
+                  <p class="text-[9px] text-slate-400 font-medium">Sample format: Row 1 = Headers, Row 2+ = Data. Only Column A (Name) is required for matching.</p>
+               </div>
+            </div>
+          </div>
+
           <!-- Security and Role options card -->
           <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
             <h3 class="font-bold text-slate-800 text-base">Security & Authentication Privileges</h3>
@@ -809,12 +844,13 @@
       },
       distributorCart: [],
       syncQueue: [],
+      showProfitDetails: false,
       drugDatabase: [
-        { name: "Paracetamol 650mg (Dolo)", generic: "Paracetamol", hsn: "300490", stock: 1240, price: 30.0, category: "Analgesic", safety: "A (Very Safe)", indication: "High Fever, Mild Pain, Migraines" },
-        { name: "Amoxicillin 500mg Capsule", generic: "Amoxicillin", hsn: "300410", stock: 850, price: 72.0, category: "Antibiotic", safety: "B (Caution Required)", indication: "Bacterial Throat Infection, Sinusitis" },
-        { name: "Cetirizine 10mg Syrup", generic: "Cetirizine Hydrochloride", hsn: "300490", stock: 340, price: 45.0, category: "Antihistamine", safety: "A (Mild Drowsy)", indication: "Allergy Sneezing, Cold Congestion" },
-        { name: "Ceftriaxone 1g Injectable", generic: "Ceftriaxone Sodium", hsn: "300420", stock: 120, price: 110.0, category: "Injectable", safety: "C (Prescription only)", indication: "Severe Systemic Bacterial Sepsis" },
-        { name: "Pantocid 40mg Tablet", generic: "Pantoprazole", hsn: "300490", stock: 1500, price: 95.0, category: "Antiacid", safety: "A (Extremely Safe)", indication: "Hyperacidity, Heartburn, Acid Reflux" }
+        { name: "Paracetamol 650mg (Dolo)", generic: "Paracetamol", hsn: "300490", stock: 1240, price: 30.0, purchasePrice: 18.5, category: "Analgesic", safety: "A (Very Safe)", indication: "High Fever, Mild Pain, Migraines" },
+        { name: "Amoxicillin 500mg Capsule", generic: "Amoxicillin", hsn: "300410", stock: 850, price: 72.0, purchasePrice: 45.0, category: "Antibiotic", safety: "B (Caution Required)", indication: "Bacterial Throat Infection, Sinusitis" },
+        { name: "Cetirizine 10mg Syrup", generic: "Cetirizine Hydrochloride", hsn: "300490", stock: 340, price: 45.0, purchasePrice: 22.0, category: "Antihistamine", safety: "A (Mild Drowsy)", indication: "Allergy Sneezing, Cold Congestion" },
+        { name: "Ceftriaxone 1g Injectable", generic: "Ceftriaxone Sodium", hsn: "300420", stock: 120, price: 110.0, purchasePrice: 85.0, category: "Injectable", safety: "C (Prescription only)", indication: "Severe Systemic Bacterial Sepsis" },
+        { name: "Pantocid 40mg Tablet", generic: "Pantoprazole", hsn: "300490", stock: 1500, price: 95.0, purchasePrice: 62.0, category: "Antiacid", safety: "A (Extremely Safe)", indication: "Hyperacidity, Heartburn, Acid Reflux" }
       ]
     };
 
@@ -846,6 +882,21 @@
 
     // UI State Sync
     function syncUiState() {
+      // Show profit toggle if Owner
+      const profitToggle = document.getElementById('profit-toggle-container');
+      if (profitToggle) {
+        if (state.role === 'OWNER') {
+          profitToggle.classList.remove('hidden');
+          profitToggle.classList.add('flex');
+        } else {
+          profitToggle.classList.add('hidden');
+          profitToggle.classList.remove('flex');
+          state.showProfitDetails = false;
+        }
+      }
+      const profitInput = document.getElementById('profit-toggle-input');
+      if (profitInput) profitInput.checked = state.showProfitDetails;
+
       // Sync badges
       document.getElementById('current-role-badge').innerText = state.role === 'OWNER' ? 'Owner (Full Access)' : 'Staff (General)';
       document.getElementById('user-avatar').innerText = state.role === 'OWNER' ? 'OP' : 'ST';
@@ -869,6 +920,11 @@
       renderBillItems();
       renderCartTable();
       renderInvoicePreview();
+    }
+
+    function toggleProfitDetails() {
+      state.showProfitDetails = document.getElementById('profit-toggle-input').checked;
+      renderBillItems();
     }
 
     // Tab Switching Controller
@@ -1047,6 +1103,9 @@
       }
 
       // Add to sales list
+      const drug = state.drugDatabase.find(d => d.name === selectName);
+      const purchasePrice = drug ? drug.purchasePrice : 0.0;
+
       const existing = state.currentSale.items.find(i => i.name === selectName);
       if (existing) {
         existing.qty += qty;
@@ -1058,6 +1117,7 @@
           expiry: "12/2027",
           qty: qty,
           mrp: mrp,
+          purchasePrice: purchasePrice,
           total: qty * mrp
         });
       }
@@ -1094,11 +1154,20 @@
       }
 
       let subtotal = 0.0;
+      let totalPurchaseCost = 0.0;
+
       state.currentSale.items.forEach((item, index) => {
         subtotal += item.total;
+        totalPurchaseCost += (item.purchasePrice || 0) * item.qty;
+
+        const profit = item.total - ((item.purchasePrice || 0) * item.qty);
+        
         tbody.innerHTML += `
           <tr class="hover:bg-slate-50 border-b border-slate-100">
-            <td class="px-6 py-4 font-semibold text-slate-900">${item.name}</td>
+            <td class="px-6 py-4">
+              <div class="font-semibold text-slate-900">${item.name}</div>
+              ${state.showProfitDetails ? `<div class="text-[10px] text-emerald-600 font-bold">Cost: ₹${(item.purchasePrice || 0).toFixed(2)} | Profit: ₹${profit.toFixed(2)}</div>` : ''}
+            </td>
             <td class="px-6 py-4 text-center text-xs text-slate-500">${item.batch} (${item.expiry})</td>
             <td class="px-6 py-4 text-center font-bold">${item.qty}</td>
             <td class="px-6 py-4 text-right">₹${item.mrp.toFixed(2)}</td>
@@ -1114,10 +1183,28 @@
 
       // Update calculations (GST 12% is included in the MRP pricing scheme)
       const gst = subtotal * 0.12;
+      const totalProfit = subtotal - totalPurchaseCost;
+
       document.getElementById('bill-subtotal').innerText = `₹${subtotal.toFixed(2)}`;
       document.getElementById('bill-gst').innerText = `₹${gst.toFixed(2)}`;
       document.getElementById('bill-net').innerText = `₹${subtotal.toFixed(2)}`;
       
+      const profitRow = document.getElementById('bill-profit-row');
+      if (state.showProfitDetails) {
+        if (!profitRow) {
+          const row = document.createElement('div');
+          row.id = 'bill-profit-row';
+          row.className = 'flex justify-between text-xs font-bold text-emerald-600 bg-emerald-50 p-2 rounded mt-1';
+          row.innerHTML = `<span>Estimated Sale Profit:</span> <span id="bill-profit-val">₹${totalProfit.toFixed(2)}</span>`;
+          document.getElementById('bill-net').parentElement.insertAdjacentElement('beforebegin', row);
+        } else {
+          document.getElementById('bill-profit-val').innerText = `₹${totalProfit.toFixed(2)}`;
+          profitRow.classList.remove('hidden');
+        }
+      } else if (profitRow) {
+        profitRow.classList.add('hidden');
+      }
+
       // Update Lucide icons
       lucide.createIcons();
     }
@@ -1126,9 +1213,9 @@
       state.currentSale.customerName = "Mr. Amit Kumar Sharma";
       state.currentSale.doctorName = "Dr. S. K. Sen, MBBS, MD";
       state.currentSale.items = [
-        { name: "Paracetamol 650mg (Dolo)", batch: "DLO-9921", expiry: "10/2027", qty: 2, mrp: 30.0, total: 60.0 },
-        { name: "Amoxicillin 500mg Capsule", batch: "AMX-1122", expiry: "05/2028", qty: 1, mrp: 72.0, total: 72.0 },
-        { name: "Pantocid 40mg Tablet", batch: "PAN-8812", expiry: "12/2027", qty: 3, mrp: 95.0, total: 285.0 }
+        { name: "Paracetamol 650mg (Dolo)", batch: "DLO-9921", expiry: "10/2027", qty: 2, mrp: 30.0, purchasePrice: 18.5, total: 60.0 },
+        { name: "Amoxicillin 500mg Capsule", batch: "AMX-1122", expiry: "05/2028", qty: 1, mrp: 72.0, purchasePrice: 45.0, total: 72.0 },
+        { name: "Pantocid 40mg Tablet", batch: "PAN-8812", expiry: "12/2027", qty: 3, mrp: 95.0, purchasePrice: 62.0, total: 285.0 }
       ];
       document.getElementById('bill-customer').value = state.currentSale.customerName;
       document.getElementById('bill-doctor').value = state.currentSale.doctorName;
@@ -1784,8 +1871,15 @@
     }
 
     function handleWebBarcodeScanned(barcode) {
-      // Find item in database by barcode
-      const item = state.drugDatabase.find(d => d.hsn === barcode || d.name.toLowerCase().includes(barcode.toLowerCase()));
+      if (!barcode) return;
+      barcode = barcode.trim();
+      console.log("Processing Scanned Barcode:", barcode);
+
+      // Find item in database by barcode (HSN) or name match
+      const item = state.drugDatabase.find(d => 
+        (d.hsn && d.hsn === barcode) || 
+        d.name.toLowerCase().includes(barcode.toLowerCase())
+      );
       
       if (item) {
         state.currentSale.items.push({
@@ -1794,6 +1888,7 @@
           expiry: "12/27",
           qty: 1,
           mrp: item.price,
+          purchasePrice: item.purchasePrice || 0,
           total: item.price
         });
         saveStateToLocal();
@@ -1830,6 +1925,55 @@
           }
         });
       }
+    }
+
+    async function handleExcelImport(input) {
+      if (!input.files || !input.files[0]) return;
+      const file = input.files[0];
+      
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+          
+          if (rows.length < 2) {
+            Swal.fire('Empty File', 'The Excel file must have a header and at least one data row.', 'warning');
+            return;
+          }
+          
+          let updateCount = 0;
+          for (let i = 1; i < rows.length; i++) {
+            const row = rows[i];
+            const name = row[0];
+            const mrp = row[1];
+            const purchase = row[2];
+            const sale = row[3];
+            
+            if (!name) continue;
+            
+            const index = state.drugDatabase.findIndex(d => d.name.toLowerCase() === name.toString().toLowerCase());
+            if (index !== -1) {
+              if (mrp !== undefined && mrp !== null) state.drugDatabase[index].mrp = parseFloat(mrp);
+              if (purchase !== undefined && purchase !== null) state.drugDatabase[index].purchasePrice = parseFloat(purchase);
+              if (sale !== undefined && sale !== null) state.drugDatabase[index].price = parseFloat(sale);
+              updateCount++;
+            }
+          }
+          
+          Swal.fire('Success', `Updated ${updateCount} medicines from Excel successfully.`, 'success');
+          if (typeof searchDrugs === 'function') searchDrugs();
+          saveStateToLocal();
+          input.value = '';
+          if (window.lucide) lucide.createIcons();
+        } catch (err) {
+          console.error(err);
+          Swal.fire('Error', 'Failed to parse Excel file. Ensure it is a valid .xlsx file.', 'error');
+        }
+      };
+      reader.readAsArrayBuffer(file);
     }
   </script>
 </body>

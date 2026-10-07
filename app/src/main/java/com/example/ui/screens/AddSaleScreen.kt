@@ -60,6 +60,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -117,7 +118,11 @@ fun AddSaleScreen(
   var showItemSearchSheet by remember { mutableStateOf(false) }
   var paymentMode by remember { mutableStateOf("Cash") }
 
+  val userRole by viewModel.currentUserRole.collectAsState()
+  var showProfitDetails by remember { mutableStateOf(false) }
+
   val subtotal = cartItems.sumOf { it.packQty * it.rate }
+  val totalCost = cartItems.sumOf { it.packQty * it.purchaseRate }
   val itemDiscount = cartItems.sumOf { (it.packQty * it.rate) * (it.discountPercent / 100.0) }
   val taxableBeforeLoyalty = subtotal - itemDiscount
   val loyaltyDiscount = if (redeemLoyalty) loyaltyPointsToRedeem.toDouble().coerceAtMost(taxableBeforeLoyalty) else 0.0
@@ -125,6 +130,7 @@ fun AddSaleScreen(
   val gst = taxable * 0.12 // 12% standard medicine GST
   val grandTotal = taxable + gst
   val pointsToEarn = (taxable / 100.0).toInt().coerceAtLeast(0)
+  val totalProfit = (taxable - totalCost).coerceAtLeast(0.0)
 
   Box(
     modifier = modifier
@@ -512,6 +518,7 @@ fun AddSaleScreen(
           itemsIndexed(cartItems) { index, item ->
             CartItemRow(
               item = item,
+              showCostPrice = showProfitDetails && userRole == com.example.viewmodel.UserRole.OWNER,
               onQtyChange = { newQty -> viewModel.updateCartItemQty(index, newQty) },
               onRemove = { viewModel.removeCartItem(index) }
             )
@@ -644,6 +651,36 @@ fun AddSaleScreen(
                   )
                 }
 
+                if (userRole == com.example.viewmodel.UserRole.OWNER) {
+                  Spacer(modifier = Modifier.height(8.dp))
+                  Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                  ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                      Text("Show Profit & Cost", fontSize = 12.sp, color = TextMuted)
+                      Spacer(modifier = Modifier.width(4.dp))
+                      Switch(
+                        checked = showProfitDetails,
+                        onCheckedChange = { showProfitDetails = it },
+                        modifier = Modifier.scale(0.7f).testTag("switch_show_profit")
+                      )
+                    }
+                    if (showProfitDetails) {
+                      Column(horizontalAlignment = Alignment.End) {
+                        Text("Total Profit Margin", fontSize = 11.sp, color = StatusGreen, fontWeight = FontWeight.Bold)
+                        Text(
+                          String.format(Locale.getDefault(), "₹%.2f", totalProfit),
+                          fontSize = 13.sp,
+                          fontWeight = FontWeight.Bold,
+                          color = StatusGreen
+                        )
+                      }
+                    }
+                  }
+                }
+
                 Spacer(modifier = Modifier.height(6.dp))
 
                 // Loyalty Points Earn Indicator
@@ -747,6 +784,7 @@ fun AddSaleScreen(
       ) {
         SearchItemForBillingContent(
           medicines = medicines,
+          showCostPrice = showProfitDetails && userRole == com.example.viewmodel.UserRole.OWNER,
           onItemSelect = { med ->
             viewModel.addMedicineToCart(med, 1)
             showItemSearchSheet = false
@@ -764,6 +802,7 @@ fun AddSaleScreen(
 @Composable
 fun CartItemRow(
   item: BillItem,
+  showCostPrice: Boolean = false,
   onQtyChange: (Int) -> Unit,
   onRemove: () -> Unit
 ) {
@@ -843,6 +882,20 @@ fun CartItemRow(
         }
 
         Column(horizontalAlignment = Alignment.End) {
+          if (showCostPrice) {
+            Text(
+              text = String.format(Locale.getDefault(), "Cost: ₹%.2f", item.purchaseRate),
+              fontSize = 10.sp,
+              color = TextMuted,
+              fontWeight = FontWeight.Medium
+            )
+            Text(
+              text = String.format(Locale.getDefault(), "Profit: ₹%.2f", (item.rate - item.purchaseRate) * item.packQty),
+              fontSize = 10.sp,
+              color = StatusGreen,
+              fontWeight = FontWeight.Bold
+            )
+          }
           Text(
             text = String.format(Locale.getDefault(), "₹%.2f", item.total),
             fontSize = 14.sp,
@@ -863,6 +916,7 @@ fun CartItemRow(
 @Composable
 fun SearchItemForBillingContent(
   medicines: List<MedicineItem>,
+  showCostPrice: Boolean = false,
   onItemSelect: (MedicineItem) -> Unit,
   onScanClick: () -> Unit
 ) {
@@ -975,6 +1029,14 @@ fun SearchItemForBillingContent(
             }
 
             Column(horizontalAlignment = Alignment.End) {
+              if (showCostPrice) {
+                Text(
+                  text = "Cost: ₹${med.purchaseRate}",
+                  fontSize = 11.sp,
+                  color = TextMuted,
+                  fontWeight = FontWeight.Medium
+                )
+              }
               Text(
                 text = "₹${med.saleRate}",
                 fontSize = 14.sp,

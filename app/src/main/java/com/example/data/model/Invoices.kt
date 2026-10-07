@@ -12,6 +12,7 @@ data class BillItem(
   val packQty: Int = 1,
   val mrp: Double = 0.0,
   val rate: Double = 0.0,
+  val purchaseRate: Double = 0.0,
   val discountPercent: Double = 0.0,
   val gstPercent: Double = 12.0,
   val total: Double = 0.0
