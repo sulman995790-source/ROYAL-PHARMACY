@@ -48,10 +48,14 @@ fun LoginScreen(
   var nameInput by remember { mutableStateOf("") }
   var emailInput by remember { mutableStateOf("") }
   var otpInput by remember { mutableStateOf("") }
+  var selectedLoginRole by remember { mutableStateOf(UserRole.OWNER) }
+  var ownerPasswordInput by remember { mutableStateOf("") }
 
   var showGoogleChooser by remember { mutableStateOf(false) }
   var showOtpField by remember { mutableStateOf(false) }
   var isAuthenticating by remember { mutableStateOf(false) }
+
+  val ownerSecretPassword by viewModel.ownerSecretPassword.collectAsState()
 
   val bgThemeColor = if (isDarkMode) Color(0xFF0F172A) else Color.White
   val textThemeColor = if (isDarkMode) Color.White else TextDark
@@ -180,6 +184,40 @@ fun LoginScreen(
               color = textThemeColor
             )
 
+            // Role Selector (Owner vs Staff)
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+              OutlinedButton(
+                onClick = { selectedLoginRole = UserRole.OWNER },
+                colors = ButtonDefaults.outlinedButtonColors(containerColor = if (selectedLoginRole == UserRole.OWNER) RoyalMagenta.copy(alpha = 0.1f) else Color.Transparent),
+                modifier = Modifier.weight(1f)
+              ) {
+                Text("👑 Owner Mode", color = if (selectedLoginRole == UserRole.OWNER) RoyalMagenta else TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+              }
+              OutlinedButton(
+                onClick = { selectedLoginRole = UserRole.STAFF },
+                colors = ButtonDefaults.outlinedButtonColors(containerColor = if (selectedLoginRole == UserRole.STAFF) RoyalNavy.copy(alpha = 0.1f) else Color.Transparent),
+                modifier = Modifier.weight(1f)
+              ) {
+                Text("💼 Staff Mode", color = if (selectedLoginRole == UserRole.STAFF) RoyalNavy else TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+              }
+            }
+
+            if (selectedLoginRole == UserRole.OWNER) {
+              OutlinedTextField(
+                value = ownerPasswordInput,
+                onValueChange = { ownerPasswordInput = it },
+                label = { Text("Owner Secret Password*") },
+                leadingIcon = { Icon(Icons.Default.VpnKey, contentDescription = null, tint = RoyalMagenta) },
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().testTag("owner_secret_password_input")
+              )
+            }
+
             if (isSignUpMode) {
               // Sign Up - Name Field
               OutlinedTextField(
@@ -195,7 +233,7 @@ fun LoginScreen(
               OutlinedTextField(
                 value = emailInput,
                 onValueChange = { emailInput = it },
-                label = { Text("Business Email Address") },
+                label = { Text("Business Email Address (Optional if phone used)") },
                 leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = TextMuted) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().testTag("signup_email_field")
@@ -234,7 +272,9 @@ fun LoginScreen(
             // Actions Button
             Button(
               onClick = {
-                if (isSignUpMode && (nameInput.isBlank() || emailInput.isBlank() || phoneInput.length != 10)) {
+                if (selectedLoginRole == UserRole.OWNER && ownerPasswordInput != ownerSecretPassword) {
+                  Toast.makeText(context, "Incorrect Owner Secret Password!", Toast.LENGTH_LONG).show()
+                } else if (isSignUpMode && (nameInput.isBlank() || phoneInput.length != 10)) {
                   Toast.makeText(context, "Please fulfill all Sign Up parameters correctly.", Toast.LENGTH_SHORT).show()
                 } else if (!isSignUpMode && phoneInput.length != 10) {
                   Toast.makeText(context, "Please enter a valid 10-digit phone number.", Toast.LENGTH_SHORT).show()
@@ -247,9 +287,9 @@ fun LoginScreen(
                     viewModel.loginWithPhone(
                       phone = "+91 $phoneInput",
                       userName = if (isSignUpMode) nameInput else "Suleman Hoque",
-                      role = UserRole.OWNER
+                      role = selectedLoginRole
                     )
-                    Toast.makeText(context, "Sign In Successful!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Sign In Successful as ${selectedLoginRole.label}!", Toast.LENGTH_SHORT).show()
                   } else {
                     Toast.makeText(context, "Invalid Security Code! Please enter '123456'", Toast.LENGTH_SHORT).show()
                   }

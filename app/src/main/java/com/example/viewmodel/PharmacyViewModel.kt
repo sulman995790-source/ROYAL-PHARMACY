@@ -306,6 +306,12 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
   val authLoginType = MutableStateFlow(AuthLoginType.GMAIL)
   val isLoggedIn = MutableStateFlow(false)
   val ownerPin = MutableStateFlow("1234")
+  val ownerSecretPassword = MutableStateFlow("@arifa1234SS")
+
+  fun updateOwnerSecretPassword(newPassword: String) {
+    ownerSecretPassword.value = newPassword
+    scanFeedbackMessage.value = "Owner secret password updated successfully!"
+  }
   val showUserRoleAuthDialog = MutableStateFlow(false)
   val showOwnerPinAuthDialog = MutableStateFlow(false)
   val ownerPinErrorMessage = MutableStateFlow<String?>(null)

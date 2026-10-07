@@ -48,6 +48,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -187,6 +188,21 @@ fun EditProfileScreen(
         modifier = Modifier.fillMaxWidth().testTag("edit_profile_email")
       )
 
+      val currentUserRole by viewModel.currentUserRole.collectAsState()
+      val ownerSecretPassword by viewModel.ownerSecretPassword.collectAsState()
+      var secretPassword by remember(ownerSecretPassword) { mutableStateOf(ownerSecretPassword) }
+
+      if (currentUserRole == com.example.viewmodel.UserRole.OWNER) {
+        Spacer(modifier = Modifier.height(16.dp))
+        OutlinedTextField(
+          value = secretPassword,
+          onValueChange = { secretPassword = it },
+          label = { Text("Owner Secret Password") },
+          visualTransformation = PasswordVisualTransformation(),
+          modifier = Modifier.fillMaxWidth().testTag("edit_profile_secret_password")
+        )
+      }
+
       Spacer(modifier = Modifier.weight(1f))
 
       Button(
@@ -199,6 +215,9 @@ fun EditProfileScreen(
               avatarImageUri = avatarUri
             )
           )
+          if (currentUserRole == com.example.viewmodel.UserRole.OWNER) {
+            viewModel.updateOwnerSecretPassword(secretPassword)
+          }
           Toast.makeText(context, "Profile updated successfully!", Toast.LENGTH_SHORT).show()
           viewModel.navigateTo(Screen.MORE)
         },
