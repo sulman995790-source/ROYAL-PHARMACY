@@ -322,6 +322,28 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
 
   // WhatsApp-Style Automatic Restores & Drive Backups
   val showGoogleDriveAutoRestorePrompt = MutableStateFlow(false)
+  val showUninstallResistantAutoRestorePrompt = MutableStateFlow(false)
+  val uninstallResistantBackupToRestore = MutableStateFlow<com.example.service.LocalBackupItem?>(null)
+
+  fun triggerAutoRestoreFromUninstallResistantBackup(context: Context) {
+    viewModelScope.launch {
+      val backupItem = uninstallResistantBackupToRestore.value
+      if (backupItem != null) {
+        val resolver = context.contentResolver
+        val uri = android.net.Uri.parse(backupItem.filePath)
+        try {
+          resolver.openInputStream(uri)?.use { stream ->
+            val json = stream.bufferedReader().use { it.readText() }
+            restoreSystemBackup(context, json, cleanOverwrite = true) {
+              showUninstallResistantAutoRestorePrompt.value = false
+            }
+          }
+        } catch (e: Exception) {
+          scanFeedbackMessage.value = "Failed to auto-restore offline backup: ${e.message}"
+        }
+      }
+    }
+  }
 
   // Reactive Staff Members Management
   val staffMembers = MutableStateFlow<List<StaffMember>>(
@@ -690,6 +712,21 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
             context = application,
             expiringMedicines = expiringSoon
           )
+        }
+      }
+    }
+
+    // Startup check for empty database to trigger Auto-Restore (WhatsApp-style)
+    viewModelScope.launch {
+      kotlinx.coroutines.delay(1200)
+      val meds = repository.allMedicines.first()
+      if (meds.isEmpty()) {
+        val localSharedBackups = com.example.service.BackupRestoreManager.getSavedUninstallProtectedBackups(application)
+        if (localSharedBackups.isNotEmpty()) {
+          uninstallResistantBackupToRestore.value = localSharedBackups.first()
+          showUninstallResistantAutoRestorePrompt.value = true
+        } else {
+          showGoogleDriveAutoRestorePrompt.value = true
         }
       }
     }
@@ -1258,13 +1295,25 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
         val dao = PharmacyDatabase.getDatabase(getApplication(), viewModelScope).pharmacyDao()
         val json = com.example.service.BackupRestoreManager.generateBackupJson(dao)
         val file = com.example.service.BackupRestoreManager.saveBackupToLocalFile(context, json)
+        com.example.service.BackupRestoreManager.saveBackupToUninstallProtectedStorage(context, json)
         com.example.service.BackupRestoreManager.shareBackupFile(context, file)
-        scanFeedbackMessage.value = "Full Backup generated & ready to save/share!"
+        scanFeedbackMessage.value = "Full Backup generated & saved to uninstall-resistant storage!"
       } catch (e: Exception) {
         scanFeedbackMessage.value = "Backup failed: ${e.localizedMessage}"
       }
     }
   }
+
+  fun loadUninstallProtectedBackups(context: Context) {
+    viewModelScope.launch(Dispatchers.IO) {
+      val list = com.example.service.BackupRestoreManager.getSavedUninstallProtectedBackups(context)
+      kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+        uninstallProtectedBackups.value = list
+      }
+    }
+  }
+
+  val uninstallProtectedBackups = MutableStateFlow<List<com.example.service.LocalBackupItem>>(emptyList())
 
   fun restoreSystemBackup(
     context: Context,

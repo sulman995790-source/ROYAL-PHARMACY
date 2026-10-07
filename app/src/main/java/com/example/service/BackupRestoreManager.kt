@@ -508,4 +508,75 @@ object BackupRestoreManager {
         )
       } ?: emptyList()
   }
+
+  fun saveBackupToUninstallProtectedStorage(context: Context, jsonString: String): String? {
+    return try {
+      val resolver = context.contentResolver
+      val contentValues = android.content.ContentValues().apply {
+        put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, "RoyalPharmacy_UninstallProtected_Backup_${System.currentTimeMillis()}.json")
+        put(android.provider.MediaStore.MediaColumns.MIME_TYPE, "application/json")
+        put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, "Documents/RoyalPharmacy_Backups")
+      }
+      val uri = resolver.insert(android.provider.MediaStore.Files.getContentUri("external"), contentValues)
+      if (uri != null) {
+        resolver.openOutputStream(uri)?.use { out ->
+          out.write(jsonString.toByteArray(Charsets.UTF_8))
+        }
+        "Documents/RoyalPharmacy_Backups"
+      } else {
+        null
+      }
+    } catch (e: Exception) {
+      android.util.Log.e("BackupRestoreManager", "Error saving uninstall-protected backup: ${e.message}", e)
+      null
+    }
+  }
+
+  fun getSavedUninstallProtectedBackups(context: Context): List<LocalBackupItem> {
+    val list = mutableListOf<LocalBackupItem>()
+    try {
+      val resolver = context.contentResolver
+      val projection = arrayOf(
+        android.provider.MediaStore.MediaColumns.DISPLAY_NAME,
+        android.provider.MediaStore.MediaColumns._ID,
+        android.provider.MediaStore.MediaColumns.DATE_MODIFIED,
+        android.provider.MediaStore.MediaColumns.SIZE
+      )
+      val selection = "${android.provider.MediaStore.MediaColumns.RELATIVE_PATH} LIKE ?"
+      val selectionArgs = arrayOf("%Documents/RoyalPharmacy_Backups%")
+      val queryUri = android.provider.MediaStore.Files.getContentUri("external")
+      
+      resolver.query(queryUri, projection, selection, selectionArgs, null)?.use { cursor ->
+        val nameIndex = cursor.getColumnIndexOrThrow(android.provider.MediaStore.MediaColumns.DISPLAY_NAME)
+        val idIndex = cursor.getColumnIndexOrThrow(android.provider.MediaStore.MediaColumns._ID)
+        val dateIndex = cursor.getColumnIndexOrThrow(android.provider.MediaStore.MediaColumns.DATE_MODIFIED)
+        val sizeIndex = cursor.getColumnIndexOrThrow(android.provider.MediaStore.MediaColumns.SIZE)
+        
+        while (cursor.moveToNext()) {
+          val name = cursor.getString(nameIndex)
+          val id = cursor.getLong(idIndex)
+          val dateSecs = cursor.getLong(dateIndex)
+          val sizeBytes = cursor.getLong(sizeIndex)
+          val uri = android.content.ContentUris.withAppendedId(queryUri, id)
+          
+          val sizeKb = sizeBytes / 1024.0
+          val formattedSize = if (sizeKb > 1024) String.format(Locale.getDefault(), "%.1f MB", sizeKb / 1024.0) else String.format(Locale.getDefault(), "%.1f KB", sizeKb)
+          val dateStr = SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault()).format(Date(dateSecs * 1000L))
+          
+          list.add(
+            LocalBackupItem(
+              fileName = name,
+              filePath = uri.toString(),
+              fileSizeFormatted = formattedSize,
+              modifiedDate = dateStr,
+              recordCountText = "Uninstall-Resistant Local Backup"
+            )
+          )
+        }
+      }
+    } catch (e: Exception) {
+      android.util.Log.e("BackupRestoreManager", "Error querying MediaStore for backups: ${e.message}", e)
+    }
+    return list.sortedByDescending { it.modifiedDate }
+  }
 }

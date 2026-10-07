@@ -384,6 +384,46 @@ fun RoyalPharmacyApp(
           }
         )
       }
+
+      // WhatsApp-Style Uninstall-Resistant Local Backup Auto-Restore Dialog Overlay
+      val showUninstallResistantPrompt by viewModel.showUninstallResistantAutoRestorePrompt.collectAsState()
+      val uninstallBackupItem by viewModel.uninstallResistantBackupToRestore.collectAsState()
+      if (showUninstallResistantPrompt && uninstallBackupItem != null) {
+        androidx.compose.material3.AlertDialog(
+          onDismissRequest = { viewModel.showUninstallResistantAutoRestorePrompt.value = false },
+          title = {
+            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+              androidx.compose.material3.Icon(
+                imageVector = Icons.Default.Home,
+                contentDescription = null,
+                tint = androidx.compose.ui.graphics.Color(0xFF059669),
+                modifier = Modifier.size(24.dp)
+              )
+              Spacer(modifier = Modifier.width(8.dp))
+              androidx.compose.material3.Text("Offline Backup Found", fontSize = 16.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+            }
+          },
+          text = {
+            androidx.compose.material3.Text(
+              "We detected your local database is empty after re-installation. We found an uninstall-resistant backup on your device (${uninstallBackupItem?.fileName}, ${uninstallBackupItem?.modifiedDate}). Would you like to automatically restore your data?",
+              fontSize = 13.sp
+            )
+          },
+          confirmButton = {
+            androidx.compose.material3.Button(
+              onClick = { viewModel.triggerAutoRestoreFromUninstallResistantBackup(context) },
+              colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = androidx.compose.ui.graphics.Color(0xFF059669))
+            ) {
+              androidx.compose.material3.Text("Restore Local Backup", color = androidx.compose.ui.graphics.Color.White)
+            }
+          },
+          dismissButton = {
+            androidx.compose.material3.TextButton(onClick = { viewModel.showUninstallResistantAutoRestorePrompt.value = false }) {
+              androidx.compose.material3.Text("Skip", color = androidx.compose.ui.graphics.Color.Gray)
+            }
+          }
+        )
+      }
     }
   }
 }
