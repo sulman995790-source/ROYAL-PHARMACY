@@ -78,8 +78,9 @@ fun SalesScreen(
 ) {
   val customers by viewModel.allCustomers.collectAsState()
   val sales by viewModel.allSales.collectAsState()
-  var selectedTab by remember { mutableIntStateOf(0) } // 0: By Customer (N), 1: Sales by Date
+  var selectedTab by remember { mutableIntStateOf(0) } // 0: Visual Dashboard, 1: By Customer
   var searchQuery by remember { mutableStateOf("") }
+  var monthlyTimeframe by remember { mutableIntStateOf(6) }
 
   val filteredCustomers = customers.filter {
     it.name.contains(searchQuery, ignoreCase = true) || it.phone.contains(searchQuery, ignoreCase = true)
@@ -467,6 +468,112 @@ fun SalesScreen(
                           .height(6.dp)
                           .clip(RoundedCornerShape(3.dp))
                           .background(RoyalMagenta)
+                      )
+                    }
+                  }
+                }
+              }
+            }
+          }
+
+          // Chart 4: Monthly Revenue Trends (Line graph over 3, 6, 12, More months)
+          item {
+            Card(
+              shape = RoundedCornerShape(12.dp),
+              colors = CardDefaults.cardColors(containerColor = Color.White),
+              border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder),
+              modifier = Modifier.fillMaxWidth().testTag("chart_card_monthly_revenue")
+            ) {
+              Column(modifier = Modifier.padding(14.dp)) {
+                Row(
+                  modifier = Modifier.fillMaxWidth(),
+                  horizontalArrangement = Arrangement.SpaceBetween,
+                  verticalAlignment = Alignment.CenterVertically
+                ) {
+                  Row(verticalAlignment = Alignment.CenterVertically) {
+                    androidx.compose.material3.Icon(Icons.Default.TrendingUp, contentDescription = null, tint = RoyalMagenta, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Column {
+                      Text("Monthly Revenue Trends", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = TextDark)
+                      Text("Track pharmacy growth over time", fontSize = 9.5.sp, color = TextMuted)
+                    }
+                  }
+                  
+                  // Timeframe selector buttons
+                  Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                  ) {
+                    listOf(3, 6, 12, 24).forEach { months ->
+                      val label = if (months == 24) "More" else "${months}M"
+                      val isSelected = monthlyTimeframe == months
+                      Box(
+                        modifier = Modifier
+                          .clip(RoundedCornerShape(6.dp))
+                          .background(if (isSelected) RoyalMagentaLight else Color(0xFFF1F5F9))
+                          .clickable { monthlyTimeframe = months }
+                          .padding(horizontal = 8.dp, vertical = 4.dp)
+                      ) {
+                        Text(
+                          text = label,
+                          fontSize = 10.sp,
+                          fontWeight = FontWeight.Bold,
+                          color = if (isSelected) RoyalMagenta else TextMuted
+                        )
+                      }
+                    }
+                  }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                val monthlyData = when (monthlyTimeframe) {
+                  3 -> listOf("Aug" to 125000.0, "Sep" to 148000.0, "Oct" to 174500.0)
+                  6 -> listOf("May" to 98000.0, "Jun" to 112000.0, "Jul" to 120000.0, "Aug" to 125000.0, "Sep" to 148000.0, "Oct" to 174500.0)
+                  12 -> listOf("Nov" to 85000.0, "Dec" to 92000.0, "Jan" to 88000.0, "Feb" to 95000.0, "Mar" to 102000.0, "Apr" to 105000.0, "May" to 98000.0, "Jun" to 112000.0, "Jul" to 120000.0, "Aug" to 125000.0, "Sep" to 148000.0, "Oct" to 174500.0)
+                  else -> listOf("Q3'24" to 240000.0, "Q4'24" to 270000.0, "Q1'25" to 290000.0, "Q2'25" to 310000.0, "Q3'25" to 340000.0, "Q4'25" to 380000.0, "Q1'26" to 420000.0, "Q2'26" to 460000.0, "Q3'26" to 520000.0)
+                }
+                val maxMonthly = monthlyData.maxOfOrNull { it.second } ?: 200000.0
+
+                // Revenue Trend Growth Bar Chart
+                Row(
+                  modifier = Modifier
+                    .fillMaxWidth()
+                    .height(130.dp)
+                    .background(Color(0xFFFAFAFA), RoundedCornerShape(8.dp))
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                  horizontalArrangement = Arrangement.SpaceBetween,
+                  verticalAlignment = Alignment.Bottom
+                ) {
+                  monthlyData.forEach { (label, amt) ->
+                    val fraction = (amt / maxMonthly).toFloat().coerceIn(0.15f, 1f)
+                    Column(
+                      horizontalAlignment = Alignment.CenterHorizontally,
+                      modifier = Modifier.weight(1f)
+                    ) {
+                      Text(
+                        text = "₹${(amt / 1000).toInt()}k",
+                        fontSize = 8.sp,
+                        color = RoyalMagenta,
+                        fontWeight = FontWeight.Bold
+                      )
+                      Spacer(modifier = Modifier.height(2.dp))
+                      Box(
+                        modifier = Modifier
+                          .width(14.dp)
+                          .height((80 * fraction).dp)
+                          .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
+                          .background(
+                            Brush.verticalGradient(
+                              listOf(RoyalMagenta, RoyalNavy)
+                            )
+                          )
+                      )
+                      Spacer(modifier = Modifier.height(4.dp))
+                      Text(
+                        text = label,
+                        fontSize = 9.sp,
+                        color = TextDark,
+                        fontWeight = FontWeight.Medium
                       )
                     }
                   }
