@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.AdminPanelSettings
@@ -564,6 +565,15 @@ fun MoreScreen(
         title = "Security & PIN Lock",
         subtitle = if (isAppLockEnabled) "Enabled (4-digit PIN)" else "Disabled",
         onClick = { showSecurityDialog = true }
+      )
+      MoreMenuRow(
+        icon = Icons.AutoMirrored.Filled.ExitToApp,
+        title = "Log Out & Exit Session",
+        subtitle = "Securely sign out of current pharmacy session",
+        onClick = {
+          viewModel.logout()
+          Toast.makeText(context, "Logged out successfully!", Toast.LENGTH_SHORT).show()
+        }
       )
 
       // Dark Mode Toggle

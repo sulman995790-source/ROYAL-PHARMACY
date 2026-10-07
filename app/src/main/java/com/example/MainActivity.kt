@@ -51,6 +51,7 @@ import com.example.ui.screens.DoctorManagementScreen
 import com.example.ui.screens.DrugInteractionCheckerScreen
 import com.example.ui.screens.EditProfileScreen
 import com.example.ui.screens.HomeScreen
+import com.example.ui.screens.LoginScreen
 import com.example.ui.screens.InventoryDashboardScreen
 import com.example.ui.screens.InventoryQrScreen
 import com.example.ui.screens.InvoicePrinterScreen
@@ -143,10 +144,17 @@ fun RoyalPharmacyApp(
   val ownerPin by viewModel.ownerPin.collectAsState()
   val ownerPinErrorMessage by viewModel.ownerPinErrorMessage.collectAsState()
   val pendingRestrictedActionName by viewModel.pendingRestrictedActionName.collectAsState()
+  val isLoggedIn by viewModel.isLoggedIn.collectAsState()
 
   // Full-screen Biometric & PIN Security Lock
   if (isAppLocked) {
     AppLockScreen(viewModel = viewModel)
+    return
+  }
+
+  // Intercept for Startup Sign Up / Login Screen
+  if (!isLoggedIn) {
+    LoginScreen(viewModel = viewModel)
     return
   }
 

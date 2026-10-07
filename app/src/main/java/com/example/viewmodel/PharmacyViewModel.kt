@@ -304,7 +304,7 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
   val currentUserEmail = MutableStateFlow("sulman995790@gmail.com")
   val currentUserName = MutableStateFlow("Suleman Hoque")
   val authLoginType = MutableStateFlow(AuthLoginType.GMAIL)
-  val isLoggedIn = MutableStateFlow(true)
+  val isLoggedIn = MutableStateFlow(false)
   val ownerPin = MutableStateFlow("1234")
   val showUserRoleAuthDialog = MutableStateFlow(false)
   val showOwnerPinAuthDialog = MutableStateFlow(false)
@@ -424,6 +424,11 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
     isLoggedIn.value = true
     GoogleDriveSyncService.switchAccount(email, userName)
     scanFeedbackMessage.value = "Signed in via Gmail ($email) as ${role.label}"
+  }
+
+  fun logout() {
+    isLoggedIn.value = false
+    navigateTo(Screen.HOME)
   }
 
   fun executeWithOwnerPermission(actionTitle: String, onPermissionGranted: () -> Unit) {
