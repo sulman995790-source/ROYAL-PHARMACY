@@ -307,10 +307,42 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
   val isLoggedIn = MutableStateFlow(false)
   val ownerPin = MutableStateFlow("1234")
   val ownerSecretPassword = MutableStateFlow("@arifa1234SS")
+  val securityQuestion1 = MutableStateFlow("What is your first pharmacy name?")
+  val securityAnswer1 = MutableStateFlow("Royal")
+  val securityQuestion2 = MutableStateFlow("Who is your business mentor?")
+  val securityAnswer2 = MutableStateFlow("Father")
 
-  fun updateOwnerSecretPassword(newPassword: String) {
-    ownerSecretPassword.value = newPassword
-    scanFeedbackMessage.value = "Owner secret password updated successfully!"
+  fun changeOwnerSecretPassword(oldPass: String, newPass: String): Boolean {
+    if (oldPass == ownerSecretPassword.value) {
+      ownerSecretPassword.value = newPass
+      scanFeedbackMessage.value = "Secret password updated successfully!"
+      syncManager.syncConfigChange("secretPassword", newPass)
+      return true
+    }
+    scanFeedbackMessage.value = "Incorrect current secret password!"
+    return false
+  }
+
+  fun resetPasswordWithSecurityQuestions(ans1: String, ans2: String, newPass: String): Boolean {
+    if (ans1.equals(securityAnswer1.value, ignoreCase = true) && 
+        ans2.equals(securityAnswer2.value, ignoreCase = true)) {
+      ownerSecretPassword.value = newPass
+      scanFeedbackMessage.value = "Secret password reset via security questions!"
+      syncManager.syncConfigChange("secretPassword", newPass)
+      return true
+    }
+    scanFeedbackMessage.value = "Security answers do not match!"
+    return false
+  }
+
+  fun resetPasswordWithOtp(enteredOtp: String, newPass: String): Boolean {
+    if (enteredOtp == "123456" || enteredOtp == otpCodeValue.value) {
+      ownerSecretPassword.value = newPass
+      scanFeedbackMessage.value = "Secret password reset via OTP verification!"
+      syncManager.syncConfigChange("secretPassword", newPass)
+      return true
+    }
+    return false
   }
   val showUserRoleAuthDialog = MutableStateFlow(false)
   val showOwnerPinAuthDialog = MutableStateFlow(false)

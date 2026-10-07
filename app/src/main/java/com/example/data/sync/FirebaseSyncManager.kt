@@ -69,6 +69,71 @@ class FirebaseSyncManager(
         wasOnline = isOnline
       }
     }
+    
+    // Start real-time listeners for App <-> Web sync
+    startFirestoreListeners()
+  }
+
+  private fun startFirestoreListeners() {
+    val fs = firestore ?: return
+    
+    // Listen for inventory updates from web
+    fs.collection("pharmacy_inventory")
+      .addSnapshotListener { snapshot, e ->
+        if (e != null) return@addSnapshotListener
+        snapshot?.documentChanges?.forEach { change ->
+          val data = change.document.data
+          // Avoid feedback loop: skip changes from this app (if we had a device ID, but we can check _lastUpdatedBy)
+          if (data["_lastUpdatedBy"] == "WEB_PORTAL") {
+            scope.launch(Dispatchers.IO) {
+              try {
+                val medId = (data["id"] as? Number)?.toLong() ?: 0L
+                if (medId != 0L) {
+                  // Map Firestore data back to MedicineItem and update Room
+                  val item = mapToMedicineItem(data)
+                  dao.insertMedicine(item)
+                  addLog("Cloud Sync: Updated ${item.name} from Web")
+                }
+              } catch (ex: Exception) {
+                Log.e("FirebaseSyncManager", "Error syncing back med: ${ex.message}")
+              }
+            }
+          }
+        }
+      }
+      
+    // Listen for config changes (secret password, profile)
+    fs.collection("pharmacy_config").document("business_settings")
+      .addSnapshotListener { doc, e ->
+        if (e != null || doc == null || !doc.exists()) return@addSnapshotListener
+        val data = doc.data ?: return@addSnapshotListener
+        if (data["_lastUpdatedBy"] == "WEB_PORTAL") {
+          // Trigger callbacks or update shared states in ViewModel if possible
+          // For now we just log it. In a real app we might use a shared state flow
+          addLog("Cloud Sync: Business settings updated from Web")
+        }
+      }
+  }
+
+  private fun mapToMedicineItem(data: Map<String, Any>): MedicineItem {
+    return MedicineItem(
+      id = (data["id"] as? Number)?.toLong() ?: 0L,
+      name = data["name"] as? String ?: "",
+      manufacturer = data["manufacturer"] as? String ?: "Generic",
+      composition = data["composition"] as? String ?: "",
+      saltMolecule = data["saltMolecule"] as? String ?: (data["genericName"] as? String ?: ""),
+      category = data["category"] as? String ?: "Tablet",
+      hsnCode = data["hsnCode"] as? String ?: "3004",
+      batchNumber = data["batchNumber"] as? String ?: "",
+      expiryDate = data["expiryDate"] as? String ?: "12/26",
+      stockPacks = (data["stockPacks"] as? Number)?.toInt() ?: 1,
+      mrp = (data["mrp"] as? Number)?.toDouble() ?: 0.0,
+      purchaseRate = (data["purchaseRate"] as? Number)?.toDouble() ?: (data["purchasePrice"] as? Number)?.toDouble() ?: 0.0,
+      saleRate = (data["saleRate"] as? Number)?.toDouble() ?: (data["salePrice"] as? Number)?.toDouble() ?: 0.0,
+      rackLocation = data["rackLocation"] as? String ?: (data["locationRack"] as? String ?: "Rack A-1"),
+      minStockAlert = (data["minStockAlert"] as? Number)?.toInt() ?: 5,
+      isLifeSaving = data["isLifeSaving"] as? Boolean ?: false
+    )
   }
 
   fun setAutoSync(enabled: Boolean) {
@@ -79,6 +144,23 @@ class FirebaseSyncManager(
   fun syncNow() {
     scope.launch {
       performSync()
+    }
+  }
+
+  fun syncConfigChange(key: String, value: Any) {
+    scope.launch(Dispatchers.IO) {
+      try {
+        val fs = firestore ?: return@launch
+        val configMap = mapOf(
+          key to value,
+          "_lastUpdatedAt" to System.currentTimeMillis()
+        )
+        fs.collection("pharmacy_config").document("business_settings")
+          .set(configMap, SetOptions.merge()).await()
+        Log.i("FirebaseSyncManager", "Synced config change: $key")
+      } catch (e: Exception) {
+        Log.e("FirebaseSyncManager", "Failed to sync config change: ${e.message}")
+      }
     }
   }
 

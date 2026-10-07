@@ -123,6 +123,7 @@ fun BatchTrackingScreen(
   var selectedTab by remember { mutableIntStateOf(0) } // 0: All Batches, 1: Active In-Stock, 2: Critical Low, 3: Near Expiry, 4: Quarantined
   var showAddBatchDialog by remember { mutableStateOf(false) }
   var batchToEdit by remember { mutableStateOf<MedicineBatchDetail?>(null) }
+  var showQrForBatch by remember { mutableStateOf<MedicineBatchDetail?>(null) }
   var quarantinedBatchIds by remember { mutableStateOf(setOf<String>()) }
 
   // Synthesize rich batch items from catalog
@@ -519,6 +520,14 @@ fun BatchTrackingScreen(
                   Text("Adjust Qty", fontSize = 11.sp, color = RoyalNavy)
                 }
 
+                // Batch QR Button
+                IconButton(
+                  onClick = { showQrForBatch = batch },
+                  modifier = Modifier.size(38.dp).border(1.dp, CardBorder, RoundedCornerShape(8.dp))
+                ) {
+                  Icon(Icons.Default.QrCode, contentDescription = "Batch QR", tint = RoyalMagenta, modifier = Modifier.size(18.8.dp))
+                }
+
                 if (batch.isQuarantined) {
                   Button(
                     onClick = {
@@ -606,6 +615,47 @@ fun BatchTrackingScreen(
       dismissButton = {
         TextButton(onClick = { batchToEdit = null }) {
           Text("Cancel")
+        }
+      }
+    )
+  }
+
+  if (showQrForBatch != null) {
+    val batch = showQrForBatch!!
+    val qrPayload = remember(batch) { com.example.util.MedicineQrPayload.fromMedicine(batch.medicine).toJsonString() }
+    val qrBitmap = remember(batch) { com.example.util.QrCodeGeneratorUtil.generateQrBitmap(qrPayload, 320) }
+
+    AlertDialog(
+      onDismissRequest = { showQrForBatch = null },
+      title = {
+        Text("Batch #${batch.batchNumber} QR Label", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+      },
+      text = {
+        Column(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+          androidx.compose.foundation.Image(
+            bitmap = qrBitmap.asImageBitmap(),
+            contentDescription = "Batch QR Code",
+            modifier = Modifier.size(200.dp).border(1.dp, Color.LightGray)
+          )
+          Spacer(modifier = Modifier.height(12.dp))
+          Text(batch.medicine.name, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextDark)
+          Text("Batch: ${batch.batchNumber} | Exp: ${batch.expiryDate}", fontSize = 12.sp, color = TextMuted)
+          Text("Price: ₹${batch.saleRate}", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = RoyalMagenta)
+          Spacer(modifier = Modifier.height(8.dp))
+          Text(
+            "Scan this code at the POS Billing Counter to automatically populate all batch details.",
+            fontSize = 10.sp,
+            color = TextMuted,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+          )
+        }
+      },
+      confirmButton = {
+        TextButton(onClick = { showQrForBatch = null }) {
+          Text("Close", color = RoyalNavy, fontWeight = FontWeight.Bold)
         }
       }
     )

@@ -53,6 +53,7 @@ fun LoginScreen(
 
   var showGoogleChooser by remember { mutableStateOf(false) }
   var showOtpField by remember { mutableStateOf(false) }
+  var showResetPasswordDialog by remember { mutableStateOf(false) }
   var isAuthenticating by remember { mutableStateOf(false) }
 
   val ownerSecretPassword by viewModel.ownerSecretPassword.collectAsState()
@@ -215,6 +216,17 @@ fun LoginScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().testTag("owner_secret_password_input")
+              )
+              
+              Text(
+                text = "Forgot Secret Password?",
+                fontSize = 11.sp,
+                color = RoyalMagenta,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.End,
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .clickable { showResetPasswordDialog = true }
               )
             }
 
@@ -480,6 +492,82 @@ fun LoginScreen(
         confirmButton = {
           TextButton(onClick = { showGoogleChooser = false }) {
             Text("Cancel", color = RoyalMagenta, fontWeight = FontWeight.Bold)
+          }
+        }
+      )
+    }
+
+    if (showResetPasswordDialog) {
+      var resetMethod by remember { mutableStateOf("SECURITY") } // SECURITY or OTP
+      var ans1 by remember { mutableStateOf("") }
+      var ans2 by remember { mutableStateOf("") }
+      var otpCode by remember { mutableStateOf("") }
+      var newSecretPass by remember { mutableStateOf("") }
+
+      AlertDialog(
+        onDismissRequest = { showResetPasswordDialog = false },
+        title = { Text("Reset Secret Password", fontSize = 16.sp, fontWeight = FontWeight.Bold) },
+        text = {
+          Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+              OutlinedButton(
+                onClick = { resetMethod = "SECURITY" },
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.outlinedButtonColors(containerColor = if (resetMethod == "SECURITY") RoyalMagenta.copy(alpha = 0.1f) else Color.Transparent)
+              ) {
+                Text("Questions", fontSize = 11.sp)
+              }
+              OutlinedButton(
+                onClick = { resetMethod = "OTP" },
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.outlinedButtonColors(containerColor = if (resetMethod == "OTP") RoyalMagenta.copy(alpha = 0.1f) else Color.Transparent)
+              ) {
+                Text("OTP Code", fontSize = 11.sp)
+              }
+            }
+
+            if (resetMethod == "SECURITY") {
+              Text(viewModel.securityQuestion1.value, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+              OutlinedTextField(value = ans1, onValueChange = { ans1 = it }, placeholder = { Text("Answer 1") }, modifier = Modifier.fillMaxWidth())
+              Text(viewModel.securityQuestion2.value, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+              OutlinedTextField(value = ans2, onValueChange = { ans2 = it }, placeholder = { Text("Answer 2") }, modifier = Modifier.fillMaxWidth())
+            } else {
+              Text("Verify Mobile OTP", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+              OutlinedTextField(value = otpCode, onValueChange = { otpCode = it }, placeholder = { Text("Enter 123456") }, modifier = Modifier.fillMaxWidth())
+            }
+
+            OutlinedTextField(
+              value = newSecretPass,
+              onValueChange = { newSecretPass = it },
+              label = { Text("New Secret Password") },
+              visualTransformation = PasswordVisualTransformation(),
+              modifier = Modifier.fillMaxWidth()
+            )
+          }
+        },
+        confirmButton = {
+          Button(
+            onClick = {
+              val success = if (resetMethod == "SECURITY") {
+                viewModel.resetPasswordWithSecurityQuestions(ans1, ans2, newSecretPass)
+              } else {
+                viewModel.resetPasswordWithOtp(otpCode, newSecretPass)
+              }
+              if (success) {
+                showResetPasswordDialog = false
+                Toast.makeText(context, "Password reset successfully!", Toast.LENGTH_SHORT).show()
+              } else {
+                Toast.makeText(context, "Reset verification failed!", Toast.LENGTH_SHORT).show()
+              }
+            },
+            enabled = newSecretPass.isNotBlank()
+          ) {
+            Text("Reset Password")
+          }
+        },
+        dismissButton = {
+          TextButton(onClick = { showResetPasswordDialog = false }) {
+            Text("Cancel")
           }
         }
       )

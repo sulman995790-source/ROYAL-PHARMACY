@@ -216,7 +216,8 @@ fun EditProfileScreen(
             )
           )
           if (currentUserRole == com.example.viewmodel.UserRole.OWNER) {
-            viewModel.updateOwnerSecretPassword(secretPassword)
+            viewModel.ownerSecretPassword.value = secretPassword
+            viewModel.syncManager.syncConfigChange("secretPassword", secretPassword)
           }
           Toast.makeText(context, "Profile updated successfully!", Toast.LENGTH_SHORT).show()
           viewModel.navigateTo(Screen.MORE)

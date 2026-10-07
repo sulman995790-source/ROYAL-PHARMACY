@@ -35,6 +35,8 @@ fun RoleManagementScreen(
   
   var showChangePinDialog by remember { mutableStateOf(false) }
   var showAddStaffDialog by remember { mutableStateOf(false) }
+  var showChangePasswordDialog by remember { mutableStateOf(false) }
+  var showSecurityQuestionsDialog by remember { mutableStateOf(false) }
 
   Column(
     modifier = modifier
@@ -145,6 +147,36 @@ fun RoleManagementScreen(
                   shape = RoundedCornerShape(8.dp)
                 ) {
                   Text("Change PIN")
+                }
+              }
+            )
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = Color(0xFFF1F5F9))
+            ListItem(
+              headlineContent = { Text("Owner Secret Password") },
+              supportingContent = { Text("Cloud-synced login password for owners") },
+              leadingContent = { Icon(Icons.Default.Security, contentDescription = null, tint = RoyalNavy) },
+              trailingContent = {
+                Button(
+                  onClick = { showChangePasswordDialog = true },
+                  colors = ButtonDefaults.buttonColors(containerColor = RoyalNavy),
+                  shape = RoundedCornerShape(8.dp)
+                ) {
+                  Text("Update")
+                }
+              }
+            )
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = Color(0xFFF1F5F9))
+            ListItem(
+              headlineContent = { Text("Security Questions") },
+              supportingContent = { Text("Reset options for forgotten passwords") },
+              leadingContent = { Icon(Icons.Default.HelpCenter, contentDescription = null, tint = RoyalNavy) },
+              trailingContent = {
+                Button(
+                  onClick = { showSecurityQuestionsDialog = true },
+                  colors = ButtonDefaults.buttonColors(containerColor = RoyalNavy),
+                  shape = RoundedCornerShape(8.dp)
+                ) {
+                  Text("Edit")
                 }
               }
             )
@@ -380,6 +412,83 @@ fun RoleManagementScreen(
       dismissButton = {
         TextButton(onClick = { showChangePinDialog = false }) {
           Text("Cancel")
+        }
+      }
+    )
+  }
+
+  if (showChangePasswordDialog) {
+    var oldPass by remember { mutableStateOf("") }
+    var newPass by remember { mutableStateOf("") }
+    AlertDialog(
+      onDismissRequest = { showChangePasswordDialog = false },
+      title = { Text("Change Owner Secret Password") },
+      text = {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+          OutlinedTextField(
+            value = oldPass,
+            onValueChange = { oldPass = it },
+            label = { Text("Current Secret Password") },
+            modifier = Modifier.fillMaxWidth()
+          )
+          OutlinedTextField(
+            value = newPass,
+            onValueChange = { newPass = it },
+            label = { Text("New Secret Password") },
+            modifier = Modifier.fillMaxWidth()
+          )
+        }
+      },
+      confirmButton = {
+        Button(
+          onClick = {
+            if (viewModel.changeOwnerSecretPassword(oldPass, newPass)) {
+              showChangePasswordDialog = false
+            }
+          },
+          enabled = oldPass.isNotBlank() && newPass.isNotBlank()
+        ) {
+          Text("Update Password")
+        }
+      },
+      dismissButton = {
+        TextButton(onClick = { showChangePasswordDialog = false }) {
+          Text("Cancel")
+        }
+      }
+    )
+  }
+
+  if (showSecurityQuestionsDialog) {
+    var q1 by remember { mutableStateOf(viewModel.securityQuestion1.value) }
+    var a1 by remember { mutableStateOf(viewModel.securityAnswer1.value) }
+    var q2 by remember { mutableStateOf(viewModel.securityQuestion2.value) }
+    var a2 by remember { mutableStateOf(viewModel.securityAnswer2.value) }
+    
+    AlertDialog(
+      onDismissRequest = { showSecurityQuestionsDialog = false },
+      title = { Text("Set Security Questions") },
+      text = {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+          OutlinedTextField(value = q1, onValueChange = { q1 = it }, label = { Text("Question 1") })
+          OutlinedTextField(value = a1, onValueChange = { a1 = it }, label = { Text("Answer 1") })
+          OutlinedTextField(value = q2, onValueChange = { q2 = it }, label = { Text("Question 2") })
+          OutlinedTextField(value = a2, onValueChange = { a2 = it }, label = { Text("Answer 2") })
+        }
+      },
+      confirmButton = {
+        Button(onClick = {
+          viewModel.securityQuestion1.value = q1
+          viewModel.securityAnswer1.value = a1
+          viewModel.securityQuestion2.value = q2
+          viewModel.securityAnswer2.value = a2
+          viewModel.syncManager.syncConfigChange("securityQuestion1", q1)
+          viewModel.syncManager.syncConfigChange("securityAnswer1", a1)
+          viewModel.syncManager.syncConfigChange("securityQuestion2", q2)
+          viewModel.syncManager.syncConfigChange("securityAnswer2", a2)
+          showSecurityQuestionsDialog = false
+        }) {
+          Text("Save Questions")
         }
       }
     )

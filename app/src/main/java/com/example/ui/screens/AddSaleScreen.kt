@@ -921,6 +921,7 @@ fun SearchItemForBillingContent(
   onScanClick: () -> Unit
 ) {
   var query by remember { mutableStateOf("") }
+  var showQrDialogForMed by remember { mutableStateOf<MedicineItem?>(null) }
 
   val filtered = medicines.filter {
     it.name.contains(query, ignoreCase = true) ||
@@ -1037,12 +1038,22 @@ fun SearchItemForBillingContent(
                   fontWeight = FontWeight.Medium
                 )
               }
-              Text(
-                text = "₹${med.saleRate}",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextDark
-              )
+              Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(
+                  onClick = { showQrDialogForMed = med },
+                  modifier = Modifier.size(28.dp)
+                ) {
+                  Icon(Icons.Default.QrCode, contentDescription = "Batch QR", tint = RoyalNavy, modifier = Modifier.size(16.dp))
+                }
+                
+                Text(
+                  text = "₹${med.saleRate}",
+                  fontSize = 14.sp,
+                  fontWeight = FontWeight.Bold,
+                  color = TextDark
+                )
+              }
+              
               Text(
                 text = "+ Add",
                 fontSize = 12.sp,
@@ -1053,6 +1064,47 @@ fun SearchItemForBillingContent(
           }
         }
       }
+    }
+
+    if (showQrDialogForMed != null) {
+      val med = showQrDialogForMed!!
+      val qrPayload = remember(med) { com.example.util.MedicineQrPayload.fromMedicine(med).toJsonString() }
+      val qrBitmap = remember(med) { com.example.util.QrCodeGeneratorUtil.generateQrBitmap(qrPayload, 320) }
+
+      AlertDialog(
+        onDismissRequest = { showQrDialogForMed = null },
+        title = {
+          Text("Batch QR Code", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        },
+        text = {
+          Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+          ) {
+            androidx.compose.foundation.Image(
+              bitmap = qrBitmap.asImageBitmap(),
+              contentDescription = "Medicine QR Code",
+              modifier = Modifier.size(200.dp).border(1.dp, Color.LightGray)
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(med.name, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextDark)
+            Text("Batch: ${med.batchNumber} | Exp: ${med.expiryDate}", fontSize = 12.sp, color = TextMuted)
+            Text("Price: ₹${med.saleRate}", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = RoyalMagenta)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+              "Scan this code at the POS to automatically fill medicine, batch, expiry and price details.",
+              fontSize = 10.sp,
+              color = TextMuted,
+              textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+          }
+        },
+        confirmButton = {
+          TextButton(onClick = { showQrDialogForMed = null }) {
+            Text("Close", color = RoyalNavy, fontWeight = FontWeight.Bold)
+          }
+        }
+      )
     }
   }
 }
