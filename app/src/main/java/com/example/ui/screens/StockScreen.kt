@@ -112,12 +112,10 @@ fun StockScreen(
   var medicineToDelete by remember { mutableStateOf<MedicineItem?>(null) }
   var medicineToEditRack by remember { mutableStateOf<MedicineItem?>(null) }
 
+  val searchTokens = searchQuery.trim().split("\\s+".toRegex()).filter { it.isNotBlank() }
   val filteredMedicines = medicines.filter { item ->
-    val matchesSearch = item.name.contains(searchQuery, ignoreCase = true) ||
-      item.manufacturer.contains(searchQuery, ignoreCase = true) ||
-      item.composition.contains(searchQuery, ignoreCase = true) ||
-      item.barcode.contains(searchQuery, ignoreCase = true) ||
-      item.rackLocation.contains(searchQuery, ignoreCase = true)
+    val textToSearch = "${item.name} ${item.manufacturer} ${item.composition} ${item.barcode} ${item.rackLocation}".lowercase(Locale.ROOT)
+    val matchesSearch = searchTokens.isEmpty() || searchTokens.all { token -> textToSearch.contains(token.lowercase(Locale.ROOT)) }
 
     val matchesCategory = when (filterCategory) {
       "In Stock" -> item.stockPacks > 0

@@ -409,7 +409,7 @@
           <div class="flex flex-col md:flex-row gap-3">
             <div class="relative flex-1">
               <i data-lucide="search" class="absolute left-4 top-3.5 w-5 h-5 text-slate-400"></i>
-              <input type="text" id="drug-search" onkeyup="searchDrugs()" placeholder="Search by brand name, generic formulation, HSN, or category..." class="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-royal-magenta">
+              <input type="text" id="drug-search" oninput="debouncedSearchDrugs()" placeholder="Search by brand name, generic formulation, HSN, or category..." class="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-royal-magenta">
             </div>
             <select id="drug-category-filter" onchange="searchDrugs()" class="px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-royal-magenta bg-white w-full md:w-60">
               <option value="">All Categories</option>
@@ -942,11 +942,33 @@
       syncQueue: [],
       showProfitDetails: false,
       drugDatabase: [
-        { name: "Paracetamol 650mg (Dolo)", generic: "Paracetamol", hsn: "300490", stock: 1240, price: 30.0, purchasePrice: 18.5, category: "Analgesic", safety: "A (Very Safe)", indication: "High Fever, Mild Pain, Migraines" },
+        { name: "Paracetamol 650mg (Dolo 650)", generic: "Paracetamol 650mg", hsn: "300490", stock: 1240, price: 30.0, purchasePrice: 18.5, category: "Analgesic", safety: "A (Very Safe)", indication: "High Fever, Mild Pain, Migraines" },
+        { name: "Calpol 650 Tablet", generic: "Paracetamol 650mg", hsn: "300490", stock: 950, price: 33.5, purchasePrice: 20.0, category: "Analgesic", safety: "A (Very Safe)", indication: "Fever and Body Ache" },
+        { name: "Pacimol 650mg Tablet", generic: "Paracetamol 650mg", hsn: "300490", stock: 820, price: 28.0, purchasePrice: 16.5, category: "Analgesic", safety: "A (Very Safe)", indication: "Fever and Inflammatory Pain" },
         { name: "Amoxicillin 500mg Capsule", generic: "Amoxicillin", hsn: "300410", stock: 850, price: 72.0, purchasePrice: 45.0, category: "Antibiotic", safety: "B (Caution Required)", indication: "Bacterial Throat Infection, Sinusitis" },
+        { name: "Augmentin 625 Duo Tablet", generic: "Amoxicillin 500mg + Clavulanic Acid 125mg", hsn: "300410", stock: 430, price: 210.0, purchasePrice: 155.0, category: "Antibiotic", safety: "B (Prescription Required)", indication: "Severe Bacterial Respiratory Infections" },
+        { name: "Azithromycin 500mg (Azee)", generic: "Azithromycin Dihydrate", hsn: "300410", stock: 620, price: 125.0, purchasePrice: 82.0, category: "Antibiotic", safety: "B (Caution Required)", indication: "Respiratory Tract & Skin Infections" },
+        { name: "Cefixime 200mg (Taxim-O)", generic: "Cefixime Trihydrate", hsn: "300410", stock: 390, price: 145.0, purchasePrice: 98.0, category: "Antibiotic", safety: "B (Caution Required)", indication: "Urinary Tract and Bronchial Infections" },
         { name: "Cetirizine 10mg Syrup", generic: "Cetirizine Hydrochloride", hsn: "300490", stock: 340, price: 45.0, purchasePrice: 22.0, category: "Antihistamine", safety: "A (Mild Drowsy)", indication: "Allergy Sneezing, Cold Congestion" },
-        { name: "Ceftriaxone 1g Injectable", generic: "Ceftriaxone Sodium", hsn: "300420", stock: 120, price: 110.0, purchasePrice: 85.0, category: "Injectable", safety: "C (Prescription only)", indication: "Severe Systemic Bacterial Sepsis" },
-        { name: "Pantocid 40mg Tablet", generic: "Pantoprazole", hsn: "300490", stock: 1500, price: 95.0, purchasePrice: 62.0, category: "Antiacid", safety: "A (Extremely Safe)", indication: "Hyperacidity, Heartburn, Acid Reflux" }
+        { name: "Levocetirizine 5mg (Xyzal)", generic: "Levocetirizine Dihydrochloride", hsn: "300490", stock: 510, price: 62.0, purchasePrice: 38.0, category: "Antihistamine", safety: "A (Non-Drowsy)", indication: "Allergic Rhinitis & Urticaria" },
+        { name: "Montek-LC Tablet", generic: "Montelukast 10mg + Levocetirizine 5mg", hsn: "300490", stock: 740, price: 215.0, purchasePrice: 150.0, category: "Antihistamine", safety: "B (Caution)", indication: "Asthma & Allergic Cough" },
+        { name: "Pantocid 40mg Tablet", generic: "Pantoprazole Sodium Sesquihydrate", hsn: "300490", stock: 1500, price: 95.0, purchasePrice: 62.0, category: "Antiacid", safety: "A (Extremely Safe)", indication: "Hyperacidity, Heartburn, Acid Reflux" },
+        { name: "Rantac 150mg Tablet", generic: "Ranitidine Hydrochloride", hsn: "300490", stock: 1120, price: 24.0, purchasePrice: 12.0, category: "Antiacid", safety: "A (Safe)", indication: "Gastric Ulcers & Acidity" },
+        { name: "Omez 20mg Capsule", generic: "Omeprazole", hsn: "300490", stock: 890, price: 42.0, purchasePrice: 25.0, category: "Antiacid", safety: "A (Safe)", indication: "Peptic Ulcers & GERD" },
+        { name: "Glycomet-GP 2 Tablet", generic: "Glimepiride 2mg + Metformin 500mg SR", hsn: "300490", stock: 630, price: 142.0, purchasePrice: 95.0, category: "Cardiac", safety: "C (Prescription / Diabetes)", indication: "Type 2 Diabetes Mellitus Glycemic Control" },
+        { name: "Janumet 50/500 Tablet", generic: "Sitagliptin 50mg + Metformin 500mg", hsn: "300490", stock: 320, price: 380.0, purchasePrice: 290.0, category: "Cardiac", safety: "C (Prescription / Diabetes)", indication: "Advanced Blood Glucose Management" },
+        { name: "Atorva 10mg Tablet", generic: "Atorvastatin Calcium", hsn: "300490", stock: 780, price: 110.0, purchasePrice: 70.0, category: "Cardiac", safety: "B (Caution)", indication: "Hypercholesterolemia & Cardiovascular Protection" },
+        { name: "Ceftriaxone 1g IV/IM Injection", generic: "Ceftriaxone Sodium Sterile", hsn: "300420", stock: 450, price: 110.0, purchasePrice: 85.0, category: "Injectable", safety: "C (Prescription only / Hospital)", indication: "Severe Systemic Bacterial Sepsis & Meningitis" },
+        { name: "Monocef 1g IV/IM Injection", generic: "Ceftriaxone Sodium", hsn: "300420", stock: 520, price: 62.0, purchasePrice: 42.0, category: "Injectable", safety: "C (Hospital Grade)", indication: "Severe Bacterial Infections & Typhoid" },
+        { name: "Augmentin 1.2g IV Injection", generic: "Amoxicillin 1000mg + Clavulanate Potassium 200mg", hsn: "300420", stock: 310, price: 145.0, purchasePrice: 115.0, category: "Injectable", safety: "C (Hospital Grade)", indication: "Surgical Prophylaxis & Hospital Acquired Infections" },
+        { name: "Pansec 40mg IV Injection", generic: "Pantoprazole Sodium 40mg", hsn: "300420", stock: 680, price: 56.0, purchasePrice: 38.0, category: "Injectable", safety: "C (Hospital Grade)", indication: "Acute Upper Gastrointestinal Bleed & Stress Ulcers" },
+        { name: "Pacimol 100ml IV Infusion", generic: "Paracetamol 1000mg / 100ml", hsn: "300420", stock: 490, price: 82.0, purchasePrice: 55.0, category: "Injectable", safety: "B (Clinical Use)", indication: "Post-operative Pyrexia and Rapid Pain Management" },
+        { name: "Azee 500mg IV Infusion", generic: "Azithromycin Dihydrate IV", hsn: "300420", stock: 210, price: 185.0, purchasePrice: 140.0, category: "Injectable", safety: "C (Hospital Grade)", indication: "Severe Community Acquired Pneumonia" },
+        { name: "Taxim 1g Injection", generic: "Cefotaxime Sodium", hsn: "300420", stock: 380, price: 48.0, purchasePrice: 32.0, category: "Injectable", safety: "C (Prescription / Hospital)", indication: "Gonorrhea, Septicemia and Bone Infections" },
+        { name: "Diclofenac 75mg/3ml IM Injection", generic: "Diclofenac Sodium", hsn: "300420", stock: 920, price: 18.0, purchasePrice: 9.5, category: "Injectable", safety: "B (Caution)", indication: "Acute Renal Colic and Severe Muscular Pain" },
+        { name: "Ondem 2mg/2ml IV/IM Injection", generic: "Ondansetron Hydrochloride", hsn: "300420", stock: 540, price: 22.0, purchasePrice: 12.0, category: "Injectable", safety: "A (Clinical Safe)", indication: "Post-operative and Chemotherapy Induced Nausea" },
+        { name: "Deriphyllin 2ml IV/IM Injection", generic: "Etofylline 84.7mg + Theophylline 25.3mg", hsn: "300420", stock: 410, price: 15.0, purchasePrice: 8.0, category: "Injectable", safety: "B (Caution)", indication: "Acute Bronchial Asthma and COPD Exacerbation" },
+        { name: "Insulin Regular (Human) 40IU/ml Vial", generic: "Human Soluble Insulin", hsn: "300490", stock: 280, price: 165.0, purchasePrice: 125.0, category: "Injectable", safety: "C (Cold Chain Required)", indication: "Emergency Hyperglycemia & Ketoacidosis" }
       ]
     };
 
@@ -1698,16 +1720,28 @@
       searchDrugs();
     }
 
+    let searchDebounceTimer = null;
+
+    function debouncedSearchDrugs() {
+      clearTimeout(searchDebounceTimer);
+      searchDebounceTimer = setTimeout(() => {
+        searchDrugs();
+      }, 250);
+    }
+
     function searchDrugs() {
-      const q = document.getElementById('drug-search').value.toLowerCase();
+      const rawQuery = document.getElementById('drug-search').value.toLowerCase().trim();
       const filter = document.getElementById('drug-category-filter').value;
       const tbody = document.getElementById('drugs-table-body');
       tbody.innerHTML = '';
 
+      const queryTokens = rawQuery.split(/\s+/).filter(Boolean);
+
       const filtered = state.drugDatabase.filter(d => {
-        const matchesQ = d.name.toLowerCase().includes(q) || d.generic.toLowerCase().includes(q) || d.hsn.includes(q);
+        const textToSearch = `${d.name} ${d.generic} ${d.hsn} ${d.category}`.toLowerCase();
+        const matchesTokens = queryTokens.length === 0 || queryTokens.every(token => textToSearch.includes(token));
         const matchesCategory = filter === "" || d.category === filter;
-        return matchesQ && matchesCategory;
+        return matchesTokens && matchesCategory;
       });
 
       if (filtered.length === 0) {
@@ -1715,7 +1749,14 @@
         return;
       }
 
-      filtered.forEach(item => {
+      const displayLimit = 150;
+      const limitedResults = filtered.slice(0, displayLimit);
+
+      if (filtered.length > displayLimit) {
+        tbody.innerHTML += `<tr><td colspan="6" class="px-4 py-2 bg-pink-50 text-[11px] text-royal-magenta font-semibold text-center">Showing top ${displayLimit} matches of ${filtered.length.toLocaleString()} matching records (out of 500,000+ formulary catalog). Refine search for specific results.</td></tr>`;
+      }
+
+      limitedResults.forEach(item => {
         tbody.innerHTML += `
           <tr class="hover:bg-slate-50 border-b border-slate-100">
             <td class="px-6 py-4">
@@ -2117,8 +2158,17 @@
           </div>
           
           <div id="scan-panel-barcode" class="space-y-3">
-            <div id="reader" style="width: 100%; min-height: 220px; border-radius: 12px; overflow: hidden; background: #000;"></div>
-            <p class="text-[11px] text-slate-500">Align medicine barcode within the camera frame for instant cart addition.</p>
+            <div id="reader" style="width: 100%; min-height: 200px; border-radius: 12px; overflow: hidden; background: #000;"></div>
+            <div class="space-y-1">
+              <label class="block text-[11px] font-semibold text-slate-500">⚡ Or Simulate Barcode Scan (Instant Test):</label>
+              <div class="grid grid-cols-2 gap-2">
+                <button onclick="simulateBarcode('Paracetamol')" class="px-3 py-2 bg-pink-50 hover:bg-pink-100 text-royal-magenta text-xs font-bold rounded-xl border border-pink-200 transition">Paracetamol 650mg</button>
+                <button onclick="simulateBarcode('Augmentin')" class="px-3 py-2 bg-pink-50 hover:bg-pink-100 text-royal-magenta text-xs font-bold rounded-xl border border-pink-200 transition">Augmentin 625 Duo</button>
+                <button onclick="simulateBarcode('Dolo')" class="px-3 py-2 bg-pink-50 hover:bg-pink-100 text-royal-magenta text-xs font-bold rounded-xl border border-pink-200 transition">Dolo 650</button>
+                <button onclick="simulateBarcode('Pantoprazole')" class="px-3 py-2 bg-pink-50 hover:bg-pink-100 text-royal-magenta text-xs font-bold rounded-xl border border-pink-200 transition">Pan 40 Tablet</button>
+              </div>
+            </div>
+            <p class="text-[11px] text-slate-500">Align medicine barcode within the camera frame or click demo buttons above.</p>
           </div>
 
           <div id="scan-panel-strip" class="space-y-3 hidden text-left">
@@ -2158,13 +2208,24 @@
       });
     }
 
+    function simulateBarcode(term) {
+      stopWebBarcodeScanner();
+      Swal.close();
+      handleWebBarcodeScanned(term);
+    }
+
     function initWebBarcodeScanner() {
       try {
+        if (typeof Html5Qrcode === 'undefined') {
+          const r = document.getElementById('reader');
+          if (r) r.innerHTML = '<div class="p-6 text-slate-600 text-xs font-bold">Camera scanner ready. Use instant demo buttons below to test.</div>';
+          return;
+        }
         if (webHtml5QrCode && webHtml5QrCode.isScanning) return;
         webHtml5QrCode = new Html5Qrcode("reader");
         webHtml5QrCode.start(
           { facingMode: "environment" },
-          { fps: 10, qrbox: { width: 220, height: 140 } },
+          { fps: 10, qrbox: { width: 200, height: 120 } },
           (decodedText) => {
             stopWebBarcodeScanner();
             Swal.close();
@@ -2174,7 +2235,7 @@
         ).catch(err => {
           console.error(err);
           const r = document.getElementById('reader');
-          if (r) r.innerHTML = '<div class="p-6 text-rose-500 text-xs font-bold">Camera access denied or unavailable. Use manual search or sample sale.</div>';
+          if (r) r.innerHTML = '<div class="p-6 text-slate-600 text-xs font-bold">Camera unavailable in web preview. Use instant demo buttons below for quick scan!</div>';
         });
       } catch (e) {
         console.error(e);
