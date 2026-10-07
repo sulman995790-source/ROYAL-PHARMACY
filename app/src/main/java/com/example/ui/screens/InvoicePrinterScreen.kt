@@ -91,6 +91,11 @@ import com.example.ui.theme.TextMuted
 import com.example.viewmodel.PharmacyViewModel
 import com.example.viewmodel.Screen
 import java.util.Locale
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 
 @Composable
 fun InvoicePrinterScreen(
@@ -98,6 +103,27 @@ fun InvoicePrinterScreen(
   modifier: Modifier = Modifier
 ) {
   val context = LocalContext.current
+
+  // Bluetooth Permission Handling
+  var hasBluetoothPermission by remember {
+    mutableStateOf(
+      if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+        ContextCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
+      } else {
+        true
+      }
+    )
+  }
+
+  val bluetoothPermissionLauncher = rememberLauncherForActivityResult(
+    ActivityResultContracts.RequestPermission()
+  ) { granted ->
+    hasBluetoothPermission = granted
+    if (!granted) {
+      Toast.makeText(context, "Bluetooth connection permission required for printing", Toast.LENGTH_LONG).show()
+    }
+  }
+
   val profile by viewModel.businessProfile.collectAsState()
   val allSales by viewModel.allSales.collectAsState()
   val lastGeneratedInvoice by viewModel.lastGeneratedInvoice.collectAsState()
@@ -647,8 +673,12 @@ fun InvoicePrinterScreen(
           // Bluetooth Thermal POS Print button
           OutlinedButton(
             onClick = {
-              pairedPrinters = InvoicePrinterService.getPairedBluetoothPrinters(context)
-              showBluetoothPrinterPickerDialog = true
+              if (!hasBluetoothPermission && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                bluetoothPermissionLauncher.launch(Manifest.permission.BLUETOOTH_CONNECT)
+              } else {
+                pairedPrinters = InvoicePrinterService.getPairedBluetoothPrinters(context)
+                showBluetoothPrinterPickerDialog = true
+              }
             },
             shape = RoundedCornerShape(10.dp),
             modifier = Modifier.fillMaxWidth().height(46.dp).testTag("btn_bluetooth_thermal_print")
@@ -748,6 +778,10 @@ fun EditPharmacyInvoiceDetailsDialog(
   var dl21 by remember { mutableStateOf(profile.drugLicenseForm21) }
   var gstin by remember { mutableStateOf(profile.gstin) }
   var ayushmanHfr by remember { mutableStateOf(profile.ayushmanHfrId) }
+  var bankName by remember { mutableStateOf(profile.bankName) }
+  var bankAcc by remember { mutableStateOf(profile.bankAccountNumber) }
+  var bankIfsc by remember { mutableStateOf(profile.bankIfsc) }
+  var bankUpi by remember { mutableStateOf(profile.bankUpiId) }
   var ownerName by remember { mutableStateOf(profile.ownerName) }
   var customerName by remember { mutableStateOf(invoice.customerName) }
   var doctorName by remember { mutableStateOf(invoice.doctorName) }
@@ -791,6 +825,18 @@ fun EditPharmacyInvoiceDetailsDialog(
           OutlinedTextField(value = ayushmanHfr, onValueChange = { ayushmanHfr = it }, label = { Text("Ayushman HFR ID") }, singleLine = true, modifier = Modifier.fillMaxWidth())
         }
         item {
+          OutlinedTextField(value = bankName, onValueChange = { bankName = it }, label = { Text("Bank Name (For Invoice)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        }
+        item {
+          OutlinedTextField(value = bankAcc, onValueChange = { bankAcc = it }, label = { Text("Bank Account No") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        }
+        item {
+          OutlinedTextField(value = bankIfsc, onValueChange = { bankIfsc = it }, label = { Text("Bank IFSC Code") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        }
+        item {
+          OutlinedTextField(value = bankUpi, onValueChange = { bankUpi = it }, label = { Text("UPI ID (For Payments)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        }
+        item {
           OutlinedTextField(value = ownerName, onValueChange = { ownerName = it }, label = { Text("Pharmacist Signatory Name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
         }
         item {
@@ -814,6 +860,10 @@ fun EditPharmacyInvoiceDetailsDialog(
             drugLicenseForm21 = dl21,
             gstin = gstin,
             ayushmanHfrId = ayushmanHfr,
+            bankName = bankName,
+            bankAccountNumber = bankAcc,
+            bankIfsc = bankIfsc,
+            bankUpiId = bankUpi,
             ownerName = ownerName
           )
           onSave(updatedProfile, customerName, doctorName)

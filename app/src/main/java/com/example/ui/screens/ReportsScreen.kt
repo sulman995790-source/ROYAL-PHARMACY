@@ -55,6 +55,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.service.CsvExportService
 import com.example.ui.theme.CardBorder
 import com.example.ui.theme.GrayBackground
 import com.example.ui.theme.RoyalMagenta
@@ -66,12 +67,15 @@ import com.example.ui.theme.TextMuted
 import com.example.viewmodel.PharmacyViewModel
 import com.example.viewmodel.Screen
 import java.util.Locale
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.ui.platform.LocalContext
 
 @Composable
 fun ReportsScreen(
   viewModel: PharmacyViewModel,
   modifier: Modifier = Modifier
 ) {
+  val context = LocalContext.current
   val analytics by viewModel.analyticsData.collectAsState()
   val medicines by viewModel.allMedicines.collectAsState()
   val sales by viewModel.allSales.collectAsState()
@@ -109,6 +113,16 @@ fun ReportsScreen(
         }
 
         Row(verticalAlignment = Alignment.CenterVertically) {
+          IconButton(
+            onClick = {
+              if (selectedTab == 0) CsvExportService.exportSalesToCsv(context, sales)
+              else CsvExportService.exportInventoryToCsv(context, medicines)
+            },
+            modifier = Modifier.testTag("btn_export_csv_reports")
+          ) {
+            Icon(Icons.Default.Download, contentDescription = "Export CSV", tint = RoyalNavy)
+          }
+
           Button(
             onClick = { viewModel.navigateTo(Screen.SMART_SALES_ANALYTICS) },
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0F766E)),

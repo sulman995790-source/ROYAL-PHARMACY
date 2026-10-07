@@ -12,6 +12,9 @@
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
   
+  <!-- html5-qrcode for Quick Scan -->
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  
   <!-- SheetJS & jsPDF & SweetAlert2 -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -163,6 +166,10 @@
             <p class="text-sm text-slate-500">Generate fast, GST-compliant chemist cash memos.</p>
           </div>
           <div class="flex items-center space-x-2">
+            <button onclick="startQuickScan()" class="flex items-center space-x-2 bg-royal-navy text-white px-3 py-1.5 rounded-lg font-semibold hover:bg-slate-800 transition">
+              <i data-lucide="scan-barcode" class="w-4 h-4 text-pink-400"></i>
+              <span>Quick Scan</span>
+            </button>
             <button onclick="loadDemoSaleData()" class="text-xs bg-pink-100 text-royal-magenta px-3 py-1.5 rounded-lg font-semibold hover:bg-pink-200 transition">
               Load Sample Sale
             </button>
@@ -1488,6 +1495,8 @@
           <input id="inv-gstin" class="swal2-input" placeholder="GSTIN" value="${state.profile.gstin}">
           <input id="inv-dl20" class="swal2-input" placeholder="Drug Lic 20B" value="${state.profile.drugLicenseForm20}">
           <input id="inv-dl21" class="swal2-input" placeholder="Drug Lic 21B" value="${state.profile.drugLicenseForm21}">
+          <input id="inv-bank-acc" class="swal2-input" placeholder="Bank Account Number" value="${state.profile.bankAccountNumber || ''}">
+          <input id="inv-bank-ifsc" class="swal2-input" placeholder="Bank IFSC & Name" value="${state.profile.bankIfsc || ''}">
         `,
         focusConfirm: false,
         preConfirm: () => {
@@ -1496,7 +1505,9 @@
             phone: document.getElementById('inv-phone').value,
             gstin: document.getElementById('inv-gstin').value,
             drugLicenseForm20: document.getElementById('inv-dl20').value,
-            drugLicenseForm21: document.getElementById('inv-dl21').value
+            drugLicenseForm21: document.getElementById('inv-dl21').value,
+            bankAccountNumber: document.getElementById('inv-bank-acc').value,
+            bankIfsc: document.getElementById('inv-bank-ifsc').value
           }
         }
       }).then((res) => {
@@ -1623,6 +1634,15 @@
 
           <div style="border-bottom: 1px dashed #475569;"></div>
 
+          <!-- Bank Details -->
+          ${state.profile.bankAccountNumber ? `
+          <div class="text-[9px] text-slate-500 bg-slate-50 p-2 rounded border border-slate-200">
+            <p><strong>Bank:</strong> ${state.profile.bankIfsc}</p>
+            <p><strong>A/c No:</strong> ${state.profile.bankAccountNumber}</p>
+          </div>` : ''}
+
+          <div style="border-bottom: 1px dashed #475569;"></div>
+
           <!-- Licenses and Signatures -->
           <div class="text-[9px] text-slate-500 space-y-1">
             ${incDl ? `<p><strong>DL Form 20B / 21B:</strong> ${state.profile.drugLicenseForm20} / ${state.profile.drugLicenseForm21}</p>` : ''}
@@ -1713,6 +1733,104 @@
       loadSavedState();
       onDosageDrugChange();
     });
+
+    // Quick Scan (Camera Barcode) Implementation
+    let html5QrCode = null;
+
+    function startQuickScan() {
+      Swal.fire({
+        title: 'Quick Scan Barcode',
+        html: `
+          <div id="reader" style="width: 100%; min-height: 250px; border-radius: 12px; overflow: hidden; background: #000;"></div>
+          <p class="text-[10px] text-slate-500 mt-2">Align the medicine barcode inside the camera frame.</p>
+        `,
+        showCancelButton: true,
+        cancelButtonText: 'Stop Scanner',
+        showConfirmButton: false,
+        didOpen: () => {
+          html5QrCode = new Html5Qrcode("reader");
+          const config = { fps: 10, qrbox: { width: 250, height: 150 } };
+          
+          html5QrCode.start(
+            { facingMode: "environment" }, 
+            config,
+            (decodedText) => {
+              // On Success
+              html5QrCode.stop().then(() => {
+                handleWebBarcodeScanned(decodedText);
+                Swal.close();
+              });
+            },
+            (errorMessage) => {
+              // parse error, ignore
+            }
+          ).catch((err) => {
+            console.error("Camera error:", err);
+            document.getElementById('reader').innerHTML = `
+              <div class="p-8 text-rose-500 text-xs font-bold">
+                <i data-lucide="camera-off" class="w-8 h-8 mx-auto mb-2"></i>
+                <p>Camera access denied or not available.</p>
+              </div>
+            `;
+            lucide.createIcons();
+          });
+        },
+        willClose: () => {
+          if (html5QrCode && html5QrCode.isScanning) {
+            html5QrCode.stop();
+          }
+        }
+      });
+    }
+
+    function handleWebBarcodeScanned(barcode) {
+      // Find item in database by barcode
+      const item = state.drugDatabase.find(d => d.hsn === barcode || d.name.toLowerCase().includes(barcode.toLowerCase()));
+      
+      if (item) {
+        state.currentSale.items.push({
+          name: item.name,
+          batch: "SCN-" + Math.floor(100+Math.random()*900),
+          expiry: "12/27",
+          qty: 1,
+          mrp: item.price,
+          total: item.price
+        });
+        saveStateToLocal();
+        syncUiState();
+        Swal.fire({
+          title: 'Medicine Added!',
+          text: `${item.name} added to bill.`,
+          icon: 'success',
+          toast: true,
+          position: 'top-end',
+          timer: 3000,
+          showConfirmButton: false
+        });
+      } else {
+        // Fallback: If not in database, add as unidentified
+        Swal.fire({
+          title: 'Unidentified Barcode',
+          text: `Barcode: ${barcode}. Add manually?`,
+          icon: 'question',
+          showCancelButton: true,
+          confirmButtonText: 'Add to Bill'
+        }).then((res) => {
+          if (res.isConfirmed) {
+            state.currentSale.items.push({
+              name: "Scanned Medicine (" + barcode + ")",
+              batch: "SCN-NEW",
+              expiry: "12/27",
+              qty: 1,
+              mrp: 120.0,
+              total: 120.0
+            });
+            saveStateToLocal();
+            syncUiState();
+          }
+        });
+      }
+    }
   </script>
 </body>
 </html>

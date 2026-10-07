@@ -138,6 +138,13 @@ object InvoicePrinterService {
         append("<div>Ayushman Bharat HFR ID: <span class='bold'>${profile.ayushmanHfrId}</span></div>")
       }
 
+      if (profile.bankAccountNumber.isNotBlank()) {
+        append("<div style='font-size: 9px; color: #4B5563;'>Bank: ${profile.bankName} | A/c: ${profile.bankAccountNumber} | IFSC: ${profile.bankIfsc}</div>")
+      }
+      if (profile.bankUpiId.isNotBlank()) {
+        append("<div style='font-size: 9px; color: #4B5563;'>UPI ID: <span class='bold'>${profile.bankUpiId}</span></div>")
+      }
+
       append("""
             <div class="badge">${options.copyType.label}</div>
           </div>
@@ -484,6 +491,15 @@ object InvoicePrinterService {
       }
       if (options.includeAyushmanHfr && profile.ayushmanHfrId.isNotBlank()) {
         canvas.drawText("Ayushman Bharat HFR ID: ${profile.ayushmanHfrId}", 40f, currentY, paintMuted)
+        currentY += 13f
+      }
+
+      if (profile.bankAccountNumber.isNotBlank()) {
+        canvas.drawText("Bank: ${profile.bankName} | A/c: ${profile.bankAccountNumber} | IFSC: ${profile.bankIfsc}", 40f, currentY, paintMuted)
+        currentY += 13f
+      }
+      if (profile.bankUpiId.isNotBlank()) {
+        canvas.drawText("UPI ID: ${profile.bankUpiId}", 40f, currentY, paintMuted)
         currentY += 13f
       }
 

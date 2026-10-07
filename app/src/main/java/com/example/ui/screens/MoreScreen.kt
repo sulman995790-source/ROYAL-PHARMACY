@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.BabyChangingStation
@@ -550,6 +551,13 @@ fun MoreScreen(
         title = "Cloud & Google Drive Sync",
         subtitle = "Real-time sync queue & automated cloud backups",
         onClick = { viewModel.navigateTo(Screen.SYNC_MANAGER) }
+      )
+      MoreMenuRow(
+        icon = Icons.Default.AdminPanelSettings,
+        title = "Role & Access Management",
+        subtitle = "Owner vs Staff permissions & owner PIN",
+        hasNewTag = true,
+        onClick = { viewModel.navigateTo(Screen.ROLE_MANAGEMENT) }
       )
       MoreMenuRow(
         icon = Icons.Default.Fingerprint,

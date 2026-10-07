@@ -36,7 +36,7 @@ import kotlinx.coroutines.launch
     SyncQueueItem::class,
     Doctor::class
   ],
-  version = 8,
+  version = 9,
   exportSchema = false
 )
 abstract class PharmacyDatabase : RoomDatabase() {
@@ -97,6 +97,10 @@ abstract class PharmacyDatabase : RoomDatabase() {
           addressLine1 = "Darrang, Assam - 784146",
           addressLine2 = "Hospital Road, Near Civil Hospital",
           addressLine3 = "Darrang, Assam - 784146",
+          bankName = "State Bank of India",
+          bankAccountNumber = "XXXX-XXXX-8821",
+          bankIfsc = "SBIN0001234",
+          bankUpiId = "royalpharmacy@okaxis",
           timings = "08:00 AM - 10:30 PM",
           walletBalance = 0.0
         )

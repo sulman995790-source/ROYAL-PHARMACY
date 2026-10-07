@@ -55,6 +55,7 @@ import com.example.ui.screens.PurchaseOrdersScreen
 import com.example.ui.screens.PurchasesScreen
 import com.example.ui.screens.QuickScanScreen
 import com.example.ui.screens.ReportsScreen
+import com.example.ui.screens.RoleManagementScreen
 import com.example.ui.screens.SalesScreen
 import com.example.ui.screens.SearchAnythingScreen
 import com.example.ui.screens.SmartDosageCalculatorScreen
@@ -165,7 +166,7 @@ fun RoyalPharmacyApp(
       Screen.INVENTORY_DASHBOARD, Screen.BATCH_TRACKING, Screen.STOCK_ANALYTICS -> viewModel.navigateTo(Screen.STOCK)
       Screen.PURCHASE_ORDERS -> viewModel.navigateTo(Screen.PURCHASE)
       Screen.VOICE_SEARCH, Screen.SYNC_MANAGER, Screen.PRESCRIPTION_SCANNER, Screen.DAILY_HUDDLE, Screen.BACKUP_RESTORE, Screen.INVENTORY_QR -> viewModel.navigateTo(Screen.HOME)
-      Screen.CASH_BANK_ACCOUNTS, Screen.PRESCRIPTION_HISTORY, Screen.SMART_DOSAGE_CALCULATOR, Screen.UNIT_CONVERTER, Screen.DRUG_INTERACTION_CHECKER, Screen.SMART_INVENTORY_SUGGESTIONS, Screen.DOCTOR_MANAGEMENT, Screen.SYMPTOM_DISEASE_TRACKER -> viewModel.navigateTo(Screen.MORE)
+      Screen.CASH_BANK_ACCOUNTS, Screen.PRESCRIPTION_HISTORY, Screen.SMART_DOSAGE_CALCULATOR, Screen.UNIT_CONVERTER, Screen.DRUG_INTERACTION_CHECKER, Screen.SMART_INVENTORY_SUGGESTIONS, Screen.DOCTOR_MANAGEMENT, Screen.SYMPTOM_DISEASE_TRACKER, Screen.ROLE_MANAGEMENT -> viewModel.navigateTo(Screen.MORE)
       else -> viewModel.navigateTo(Screen.HOME)
     }
   }
@@ -240,6 +241,7 @@ fun RoyalPharmacyApp(
         Screen.SMART_INVENTORY_SUGGESTIONS -> SmartInventorySuggestionScreen(viewModel = viewModel)
         Screen.DOCTOR_MANAGEMENT -> DoctorManagementScreen(viewModel = viewModel)
         Screen.SYMPTOM_DISEASE_TRACKER -> DiseaseTrackerScreen(viewModel = viewModel)
+        Screen.ROLE_MANAGEMENT -> RoleManagementScreen(viewModel = viewModel)
       }
 
       // Quick Actions Bottom Sheet

@@ -191,20 +191,30 @@ fun RoyalPharmacyTopHeader(
 
         Row(verticalAlignment = Alignment.CenterVertically) {
           // Visual Sync Status Badge
-          Box(
-            modifier = Modifier
-              .size(7.dp)
-              .clip(CircleShape)
-              .background(Color(visualSyncState.statusColorHex))
-          )
-          Spacer(modifier = Modifier.width(4.dp))
-          Text(
-            text = visualSyncState.label,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Medium,
-            color = Color(visualSyncState.statusColorHex),
+          Surface(
+            shape = RoundedCornerShape(8.dp),
+            color = Color(visualSyncState.statusColorHex).copy(alpha = 0.15f),
             modifier = Modifier.clickable { onVisualSyncClick?.invoke() }
-          )
+          ) {
+            Row(
+              verticalAlignment = Alignment.CenterVertically,
+              modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+            ) {
+              Box(
+                modifier = Modifier
+                  .size(6.dp)
+                  .clip(CircleShape)
+                  .background(Color(visualSyncState.statusColorHex))
+              )
+              Spacer(modifier = Modifier.width(4.dp))
+              Text(
+                text = visualSyncState.label,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(visualSyncState.statusColorHex)
+              )
+            }
+          }
         }
       }
     }
