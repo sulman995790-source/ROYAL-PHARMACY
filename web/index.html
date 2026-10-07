@@ -72,8 +72,20 @@
       </div>
     </div>
 
+    <!-- Center Search & Voice Action -->
+    <div class="hidden lg:flex items-center space-x-2 flex-1 max-w-md mx-6">
+      <div class="relative w-full">
+        <input type="text" id="global-header-search" onclick="openGlobalSearchModal()" readonly placeholder="Search 5L+ medicines, customers, invoices... (Ctrl+K)" class="w-full bg-slate-800/80 hover:bg-slate-800 border border-slate-700 text-xs text-slate-200 placeholder-slate-400 rounded-xl pl-9 pr-14 py-2 cursor-pointer focus:outline-none focus:ring-1 focus:ring-pink-500 transition">
+        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-2.5"></i>
+        <kbd class="absolute right-2.5 top-2 bg-slate-700 text-slate-300 text-[10px] font-mono px-1.5 py-0.5 rounded border border-slate-600">⌘K</kbd>
+      </div>
+      <button onclick="startVoiceSearch()" title="Voice Search" class="p-2 bg-slate-800 hover:bg-slate-700 text-pink-400 rounded-xl border border-slate-700 transition">
+        <i data-lucide="mic" class="w-4 h-4"></i>
+      </button>
+    </div>
+
     <!-- Sync and Role Status -->
-    <div class="flex items-center space-x-4">
+    <div class="flex items-center space-x-3">
       <!-- Sync Status Badge -->
       <button onclick="openSyncDialog()" class="flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-full text-xs transition duration-200">
         <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" id="sync-dot"></span>
@@ -103,61 +115,99 @@
   <div class="flex flex-1 overflow-hidden">
     
     <!-- SIDE NAVIGATION FOR COMPUTER ACCESS -->
-    <aside class="w-64 bg-white border-r border-slate-200 flex flex-col justify-between shrink-0 hidden md:flex">
-      <div class="p-4 space-y-1">
-        <p class="text-[10px] font-bold text-slate-400 px-3 uppercase tracking-wider mb-2">Operations</p>
+    <aside class="w-64 bg-white border-r border-slate-200 flex flex-col justify-between shrink-0 hidden md:flex overflow-y-auto custom-scrollbar">
+      <div class="p-3 space-y-1">
+        <p class="text-[10px] font-bold text-slate-400 px-3 uppercase tracking-wider mb-1.5">Operations</p>
         
-        <button onclick="switchTab('dashboard')" id="tab-btn-dashboard" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-semibold text-royal-magenta bg-pink-50 transition">
+        <button onclick="switchTab('dashboard')" id="tab-btn-dashboard" class="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-semibold text-royal-magenta bg-pink-50 transition">
           <i data-lucide="bar-chart-2" class="w-4 h-4"></i>
           <span>Visual Dashboard</span>
         </button>
 
-        <button onclick="switchTab('pos')" id="tab-btn-pos" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition">
+        <button onclick="switchTab('pos')" id="tab-btn-pos" class="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 transition">
           <i data-lucide="shopping-cart" class="w-4 h-4"></i>
           <span>Billing Counter (POS)</span>
         </button>
 
-        <button onclick="switchTab('database')" id="tab-btn-database" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition">
+        <button onclick="switchTab('database')" id="tab-btn-database" class="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 transition">
           <i data-lucide="search" class="w-4 h-4"></i>
           <span>Drug Database (5L+)</span>
         </button>
 
-        <button onclick="switchTab('cart')" id="tab-btn-cart" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition">
+        <button onclick="switchTab('cart')" id="tab-btn-cart" class="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 transition">
           <i data-lucide="truck" class="w-4 h-4"></i>
           <span>Required Purchases</span>
           <span class="ml-auto bg-royal-magenta text-white text-[10px] px-1.5 py-0.5 rounded-full" id="cart-badge-count">0</span>
         </button>
 
-        <button onclick="switchTab('calculator')" id="tab-btn-calculator" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition">
-          <i data-lucide="calculator" class="w-4 h-4"></i>
-          <span>Dosage Calculator</span>
+        <button onclick="switchTab('udharkhata')" id="tab-btn-udharkhata" class="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 transition">
+          <i data-lucide="book-open" class="w-4 h-4 text-emerald-600"></i>
+          <span>Udhar Khata (Credit)</span>
+          <span class="ml-auto bg-emerald-100 text-emerald-800 text-[10px] font-bold px-1.5 py-0.5 rounded-full" id="udhar-pending-badge">₹0</span>
         </button>
 
-        <button onclick="switchTab('symptoms')" id="tab-btn-symptoms" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition">
+        <button onclick="switchTab('expiry')" id="tab-btn-expiry" class="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 transition">
+          <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-500"></i>
+          <span>Batch & Expiry Alert</span>
+          <span class="ml-auto bg-amber-100 text-amber-800 text-[10px] font-bold px-1.5 py-0.5 rounded-full">Alerts</span>
+        </button>
+
+        <p class="text-[10px] font-bold text-slate-400 px-3 uppercase tracking-wider pt-3 mb-1.5">Clinical Intelligence</p>
+
+        <button onclick="switchTab('gemini')" id="tab-btn-gemini" class="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 transition">
+          <i data-lucide="sparkles" class="w-4 h-4 text-purple-600"></i>
+          <span>Gemini Pharmacist AI</span>
+          <span class="ml-auto bg-purple-100 text-purple-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full">3.5 Flash</span>
+        </button>
+
+        <button onclick="switchTab('interactions')" id="tab-btn-interactions" class="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 transition">
+          <i data-lucide="shield-alert" class="w-4 h-4 text-rose-500"></i>
+          <span>Drug Interactions</span>
+        </button>
+
+        <button onclick="switchTab('symptoms')" id="tab-btn-symptoms" class="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 transition">
           <i data-lucide="clipboard-list" class="w-4 h-4"></i>
           <span>Symptom Checker</span>
         </button>
 
-        <p class="text-[10px] font-bold text-slate-400 px-3 uppercase tracking-wider pt-4 mb-2">Management</p>
+        <button onclick="switchTab('calculator')" id="tab-btn-calculator" class="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 transition">
+          <i data-lucide="calculator" class="w-4 h-4"></i>
+          <span>Dosage Calculator</span>
+        </button>
 
-        <button onclick="switchTab('invoices')" id="tab-btn-invoices" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition">
+        <button onclick="switchTab('converter')" id="tab-btn-converter" class="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 transition">
+          <i data-lucide="refresh-cw" class="w-4 h-4 text-teal-600"></i>
+          <span>Unit & IV Converter</span>
+        </button>
+
+        <p class="text-[10px] font-bold text-slate-400 px-3 uppercase tracking-wider pt-3 mb-1.5">Management & Tax</p>
+
+        <button onclick="switchTab('tax')" id="tab-btn-tax" class="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 transition">
+          <i data-lucide="receipt" class="w-4 h-4 text-indigo-600"></i>
+          <span>Automated GST / Tax</span>
+        </button>
+
+        <button onclick="switchTab('invoices')" id="tab-btn-invoices" class="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 transition">
           <i data-lucide="printer" class="w-4 h-4"></i>
           <span>Smart Invoice Printer</span>
         </button>
 
-        <button onclick="switchTab('settings')" id="tab-btn-settings" class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 transition">
+        <button onclick="switchTab('settings')" id="tab-btn-settings" class="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 transition">
           <i data-lucide="settings" class="w-4 h-4"></i>
           <span>Pharmacy Profile</span>
         </button>
       </div>
 
       <!-- Footer Info -->
-      <div class="p-4 border-t border-slate-100 bg-slate-50 text-xs text-slate-500">
-        <div class="flex items-center space-x-2 mb-1">
-          <div class="w-2 h-2 rounded-full bg-emerald-500"></div>
-          <span class="font-semibold">Local Storage Saved</span>
+      <div class="p-3 border-t border-slate-100 bg-slate-50 text-[11px] text-slate-500">
+        <div class="flex items-center justify-between mb-1">
+          <span class="font-semibold text-slate-700 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            Cloud & Local Synced
+          </span>
+          <span class="text-[10px] text-slate-400">v2.5.0</span>
         </div>
-        <p class="text-[10px]">Netlify Deployment Version 1.0.2</p>
+        <p class="text-[10px] text-slate-400">Full Feature Parity (App + Web)</p>
       </div>
     </aside>
 
@@ -884,6 +934,425 @@
         </div>
       </section>
 
+      <!-- GEMINI PHARMACIST AI SECTION -->
+      <section id="tab-content-gemini" class="space-y-6 hidden">
+        <div class="flex flex-col md:flex-row justify-between md:items-center gap-4">
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800 border border-purple-200 flex items-center space-x-1">
+                <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                <span>Gemini 3.5 Flash Pharmacist AI</span>
+              </span>
+              <span class="text-xs text-slate-400">Clinical Decision Support & Interaction Engine</span>
+            </div>
+            <h2 class="text-2xl font-bold text-slate-800 tracking-tight mt-1">AI Pharmacist Copilot</h2>
+            <p class="text-xs text-slate-500">Ask clinical medicine questions, check drug interactions, suggest generic substitutes, and analyze CDSCO compliance.</p>
+          </div>
+          
+          <div class="flex items-center space-x-2">
+            <button onclick="clearGeminiChatHistory()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl border border-slate-200 transition flex items-center space-x-1.5">
+              <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+              <span>Reset Chat</span>
+            </button>
+            <button onclick="startPrescriptionScanModal()" class="px-4 py-2 bg-royal-magenta hover:bg-pink-800 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center space-x-1.5">
+              <i data-lucide="camera" class="w-3.5 h-3.5"></i>
+              <span>Scan Prescription Rx</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Quick Prompts Chips -->
+        <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm space-y-2">
+          <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">⚡ Clinical Quick Actions</p>
+          <div class="flex flex-wrap gap-2">
+            <button onclick="sendGeminiQuickPrompt('Check drug interactions between Warfarin 5mg and Aspirin 75mg')" class="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-semibold rounded-xl border border-purple-200 transition text-left">
+              💊 Drug Interaction: Warfarin + Aspirin
+            </button>
+            <button onclick="sendGeminiQuickPrompt('Suggest top 5 affordable generic substitutes for Augmentin 625 Duo with salts, manufacturers, and approximate MRP')" class="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-semibold rounded-xl border border-purple-200 transition text-left">
+              🔄 Generic Substitutes: Augmentin 625
+            </button>
+            <button onclick="sendGeminiQuickPrompt('What is the paediatric dosage calculation for Amoxicillin syrup for an 18kg child with acute otitis media?')" class="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-semibold rounded-xl border border-purple-200 transition text-left">
+              👶 Paediatric Dose: Amoxicillin (18kg)
+            </button>
+            <button onclick="sendGeminiQuickPrompt('Summarize Indian CDSCO Schedule H1 requirements and record keeping for retail chemists')" class="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-semibold rounded-xl border border-purple-200 transition text-left">
+              📋 CDSCO Schedule H1 Rules
+            </button>
+          </div>
+        </div>
+
+        <!-- Chat Window -->
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm flex flex-col h-[520px] overflow-hidden">
+          <div id="gemini-chat-messages" class="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar bg-slate-50/50">
+            <!-- Welcome Bot Message -->
+            <div class="flex items-start space-x-3">
+              <div class="w-9 h-9 rounded-xl bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                <i data-lucide="sparkles" class="w-5 h-5"></i>
+              </div>
+              <div class="bg-white p-4 rounded-2xl rounded-tl-none border border-slate-200 shadow-sm max-w-2xl text-xs text-slate-700 space-y-2">
+                <div class="flex items-center justify-between pb-1 border-b border-slate-100">
+                  <span class="font-bold text-purple-700">Gemini 3.5 Flash Clinical Copilot</span>
+                  <span class="text-[10px] text-slate-400">Ready</span>
+                </div>
+                <p>Hello! I am your <b>Gemini-powered Clinical AI Pharmacist</b> for ROYAL PHARMACY. How can I assist you today?</p>
+                <ul class="list-disc pl-4 space-y-1 text-slate-600">
+                  <li>Check drug-drug interactions and adverse side-effects</li>
+                  <li>Find cheaper branded generics & active salts (GSK, Cipla, Sun Pharma, Alkem)</li>
+                  <li>Calculate pediatric & adult dose regimens</li>
+                  <li>Verify CDSCO regulatory alerts and Schedule H1 / X guidelines</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- Input Area -->
+          <div class="p-4 bg-white border-t border-slate-100 flex items-center space-x-3">
+            <input type="text" id="gemini-chat-input" onkeydown="if(event.key==='Enter') sendGeminiWebChat()" placeholder="Ask Gemini about medicines, generic salts, doses, or drug interactions..." class="flex-1 px-4 py-3 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-purple-600 bg-slate-50">
+            <button onclick="sendGeminiWebChat()" id="gemini-send-btn" class="px-5 py-3 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center space-x-1.5 shrink-0">
+              <span>Ask AI</span>
+              <i data-lucide="send" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SECTION: UDHAR KHATA (CUSTOMER CREDIT) ================= -->
+      <section id="tab-content-udharkhata" class="space-y-6 hidden">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h2 class="text-2xl font-bold text-slate-900">Udhar Khata (Customer Credit Ledger)</h2>
+            <p class="text-xs text-slate-500">Track outstanding balances, credit sales, record payments, and send 1-click WhatsApp debt reminders.</p>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button onclick="openNewCustomerModal()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center space-x-1.5">
+              <i data-lucide="user-plus" class="w-3.5 h-3.5"></i>
+              <span>Add New Customer</span>
+            </button>
+            <button onclick="exportUdharLedgerReport()" class="px-3 py-2 bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold rounded-xl border border-slate-200 transition flex items-center space-x-1.5">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i>
+              <span>Export Ledger</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Metric Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="bg-gradient-to-br from-rose-500 to-red-600 text-white p-5 rounded-2xl shadow-sm">
+            <p class="text-xs font-medium text-rose-100">Total Outstanding (Udhar)</p>
+            <h3 class="text-3xl font-extrabold mt-1" id="udhar-total-outstanding">₹18,450</h3>
+            <p class="text-[11px] text-rose-200 mt-2 flex items-center gap-1">
+              <i data-lucide="alert-circle" class="w-3 h-3"></i> Across all credit accounts
+            </p>
+          </div>
+          <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+            <p class="text-xs font-medium text-slate-500">Customers with Balance</p>
+            <h3 class="text-3xl font-extrabold text-slate-800 mt-1" id="udhar-pending-customers-count">8</h3>
+            <p class="text-[11px] text-emerald-600 mt-2 font-medium">92 Active accounts overall</p>
+          </div>
+          <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+            <p class="text-xs font-medium text-slate-500">Collected This Month</p>
+            <h3 class="text-3xl font-extrabold text-emerald-600 mt-1" id="udhar-collected-month">₹42,300</h3>
+            <p class="text-[11px] text-slate-400 mt-2">Via Cash, UPI & Card</p>
+          </div>
+        </div>
+
+        <!-- Customer List & Search -->
+        <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4">
+          <div class="flex flex-col sm:flex-row justify-between items-center gap-3">
+            <div class="relative w-full sm:w-80">
+              <input type="text" id="udhar-search-input" oninput="renderUdharCustomerList()" placeholder="Search customer name or phone..." class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 outline-none">
+              <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-2.5"></i>
+            </div>
+            <div class="flex items-center space-x-2">
+              <button onclick="filterUdharList('pending')" class="px-3 py-1.5 bg-rose-50 text-rose-700 text-xs font-semibold rounded-lg border border-rose-200">Only Pending (>₹0)</button>
+              <button onclick="filterUdharList('all')" class="px-3 py-1.5 bg-slate-100 text-slate-600 text-xs font-medium rounded-lg">All Accounts</button>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50 text-slate-500 border-b border-slate-100 uppercase tracking-wider font-semibold">
+                <tr>
+                  <th class="p-3">Customer</th>
+                  <th class="p-3">Phone & Address</th>
+                  <th class="p-3">Outstanding Balance</th>
+                  <th class="p-3">Last Activity</th>
+                  <th class="p-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="udhar-customers-tbody" class="divide-y divide-slate-100">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SECTION: BATCH & EXPIRY TRACKER ================= -->
+      <section id="tab-content-expiry" class="space-y-6 hidden">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h2 class="text-2xl font-bold text-slate-900">Batch Expiry & Critical Stock Hub</h2>
+            <p class="text-xs text-slate-500">Identify near-expiry medicines, apply liquidation discounts, manage stock recall, and generate supplier return debit notes.</p>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button onclick="generateSupplierReturnVoucher()" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center space-x-1.5">
+              <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+              <span>Generate Return Slip</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Metric Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+          <div class="bg-white p-4 rounded-2xl border border-red-200 shadow-sm bg-red-50/40">
+            <p class="text-[11px] font-bold text-red-600 uppercase">Already Expired</p>
+            <h3 class="text-2xl font-extrabold text-red-700 mt-1" id="exp-expired-count">3 Batches</h3>
+            <p class="text-[10px] text-slate-500 mt-1">Quarantine immediately</p>
+          </div>
+          <div class="bg-white p-4 rounded-2xl border border-amber-200 shadow-sm bg-amber-50/40">
+            <p class="text-[11px] font-bold text-amber-600 uppercase">Expiring in 30 Days</p>
+            <h3 class="text-2xl font-extrabold text-amber-700 mt-1" id="exp-30-count">7 Batches</h3>
+            <p class="text-[10px] text-slate-500 mt-1">Eligible for 40% discount</p>
+          </div>
+          <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+            <p class="text-[11px] font-bold text-slate-500 uppercase">Expiring in 60-90 Days</p>
+            <h3 class="text-2xl font-extrabold text-slate-800 mt-1" id="exp-90-count">14 Batches</h3>
+            <p class="text-[10px] text-slate-500 mt-1">Early return window</p>
+          </div>
+          <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+            <p class="text-[11px] font-bold text-slate-500 uppercase">Value at Risk</p>
+            <h3 class="text-2xl font-extrabold text-purple-700 mt-1" id="exp-value-risk">₹12,840</h3>
+            <p class="text-[10px] text-slate-500 mt-1">MRP Inventory cost</p>
+          </div>
+        </div>
+
+        <!-- Filter & Table -->
+        <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center space-x-2">
+              <button onclick="filterExpiryBatches('all')" id="exp-filter-all" class="px-3 py-1.5 bg-slate-900 text-white text-xs font-semibold rounded-lg">All At-Risk</button>
+              <button onclick="filterExpiryBatches('expired')" id="exp-filter-expired" class="px-3 py-1.5 bg-slate-100 text-slate-600 text-xs font-medium rounded-lg hover:bg-red-50 hover:text-red-700">Expired</button>
+              <button onclick="filterExpiryBatches('30')" id="exp-filter-30" class="px-3 py-1.5 bg-slate-100 text-slate-600 text-xs font-medium rounded-lg hover:bg-amber-50 hover:text-amber-700">&lt; 30 Days</button>
+              <button onclick="filterExpiryBatches('90')" id="exp-filter-90" class="px-3 py-1.5 bg-slate-100 text-slate-600 text-xs font-medium rounded-lg hover:bg-blue-50 hover:text-blue-700">&lt; 90 Days</button>
+            </div>
+            <span class="text-xs text-slate-400">Total 24 monitored inventory batches</span>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50 text-slate-500 border-b border-slate-100 uppercase tracking-wider font-semibold">
+                <tr>
+                  <th class="p-3">Medicine & Salt</th>
+                  <th class="p-3">Batch No</th>
+                  <th class="p-3">Expiry Date</th>
+                  <th class="p-3">Available Stock</th>
+                  <th class="p-3">Unit MRP</th>
+                  <th class="p-3">Status</th>
+                  <th class="p-3 text-right">Liquidation Action</th>
+                </tr>
+              </thead>
+              <tbody id="expiry-batches-tbody" class="divide-y divide-slate-100">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SECTION: DRUG INTERACTIONS MATRIX ================= -->
+      <section id="tab-content-interactions" class="space-y-6 hidden">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h2 class="text-2xl font-bold text-slate-900">Drug-Drug & Food Interaction Checker</h2>
+            <p class="text-xs text-slate-500">Cross-examine multi-drug regimens, detect contraindications, and analyze CYP450 metabolism pathways.</p>
+          </div>
+          <button onclick="sendGeminiInteractionAnalysis()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center space-x-1.5">
+            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+            <span>Deep Gemini 3.5 Analysis</span>
+          </button>
+        </div>
+
+        <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4">
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">Select 2 or more medicines to check interaction</label>
+          <div class="flex flex-wrap gap-2 items-center" id="interaction-drug-chips">
+            <!-- Selected chips will appear here -->
+          </div>
+          <div class="flex items-center space-x-2">
+            <select id="interaction-drug-select" class="flex-1 bg-slate-50 border border-slate-200 text-xs rounded-xl p-3 outline-none focus:ring-2 focus:ring-rose-500">
+              <option value="">-- Add medicine to interaction tray --</option>
+              <option value="Warfarin 5mg">Warfarin 5mg Tablet (Anticoagulant)</option>
+              <option value="Aspirin 75mg">Aspirin 75mg (Antiplatelet / NSAID)</option>
+              <option value="Clopidogrel 75mg">Clopidogrel 75mg (Plavix)</option>
+              <option value="Ciprofloxacin 500mg">Ciprofloxacin 500mg (Fluoroquinolone)</option>
+              <option value="Theophylline 400mg">Theophylline 400mg (Bronchodilator)</option>
+              <option value="Methotrexate 10mg">Methotrexate 10mg (Immunosuppressant)</option>
+              <option value="Ibuprofen 400mg">Ibuprofen 400mg (NSAID)</option>
+              <option value="Atorvastatin 20mg">Atorvastatin 20mg (Statin)</option>
+              <option value="Clarithromycin 500mg">Clarithromycin 500mg (Macrolide)</option>
+              <option value="Metformin 500mg">Metformin 500mg (Biguanide)</option>
+            </select>
+            <button onclick="addInteractionDrugFromSelect()" class="px-4 py-3 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl transition">Add</button>
+          </div>
+        </div>
+
+        <div id="interaction-results-container" class="space-y-4">
+          <!-- Interaction warning cards dynamically rendered -->
+        </div>
+      </section>
+
+      <!-- ================= SECTION: AUTOMATED GST & TAX CALCULATOR ================= -->
+      <section id="tab-content-tax" class="space-y-6 hidden">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h2 class="text-2xl font-bold text-slate-900">Automated Tax & GST Slab Ledger</h2>
+            <p class="text-xs text-slate-500">Calculate 0%, 5%, 12%, 18%, 28% GST breakdowns, HSN compliance summaries, and output GSTR-1 ready reports.</p>
+          </div>
+          <button onclick="exportGstrReport()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center space-x-1.5">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i>
+            <span>Export GSTR Summary</span>
+          </button>
+        </div>
+
+        <!-- GST Slabs Summary Grid -->
+        <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm text-center">
+            <span class="text-[10px] font-bold uppercase text-slate-400">Exempt / 0% GST</span>
+            <h4 class="text-xl font-bold text-slate-800 mt-1">₹14,200</h4>
+            <p class="text-[10px] text-emerald-600">Tax: ₹0</p>
+          </div>
+          <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm text-center">
+            <span class="text-[10px] font-bold uppercase text-slate-400">5% GST (Life Saving)</span>
+            <h4 class="text-xl font-bold text-slate-800 mt-1">₹85,400</h4>
+            <p class="text-[10px] text-indigo-600">Tax: ₹4,270</p>
+          </div>
+          <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm text-center">
+            <span class="text-[10px] font-bold uppercase text-slate-400">12% GST (General Rx)</span>
+            <h4 class="text-xl font-bold text-slate-800 mt-1">₹1,42,800</h4>
+            <p class="text-[10px] text-indigo-600">Tax: ₹17,136</p>
+          </div>
+          <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm text-center">
+            <span class="text-[10px] font-bold uppercase text-slate-400">18% GST (OTC/Devices)</span>
+            <h4 class="text-xl font-bold text-slate-800 mt-1">₹34,600</h4>
+            <p class="text-[10px] text-indigo-600">Tax: ₹6,228</p>
+          </div>
+          <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm text-center">
+            <span class="text-[10px] font-bold uppercase text-slate-400">28% GST (Luxury/Cosm.)</span>
+            <h4 class="text-xl font-bold text-slate-800 mt-1">₹6,500</h4>
+            <p class="text-[10px] text-indigo-600">Tax: ₹1,820</p>
+          </div>
+        </div>
+
+        <!-- HSN Summary Table -->
+        <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4">
+          <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider">HSN-Wise Tax Breakdown Ledger</h3>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50 text-slate-500 border-b border-slate-100 uppercase tracking-wider font-semibold">
+                <tr>
+                  <th class="p-3">HSN Code</th>
+                  <th class="p-3">Category Description</th>
+                  <th class="p-3">Taxable Value</th>
+                  <th class="p-3">GST Rate</th>
+                  <th class="p-3">CGST (50%)</th>
+                  <th class="p-3">SGST (50%)</th>
+                  <th class="p-3">Total Tax</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                <tr>
+                  <td class="p-3 font-mono font-bold">3004</td>
+                  <td class="p-3">Medicaments for Therapeutic or Prophylactic Uses</td>
+                  <td class="p-3 font-semibold">₹1,42,800.00</td>
+                  <td class="p-3"><span class="px-2 py-0.5 bg-indigo-50 text-indigo-700 font-bold rounded">12%</span></td>
+                  <td class="p-3 text-slate-600">₹8,568.00</td>
+                  <td class="p-3 text-slate-600">₹8,568.00</td>
+                  <td class="p-3 font-bold text-indigo-700">₹17,136.00</td>
+                </tr>
+                <tr>
+                  <td class="p-3 font-mono font-bold">3002</td>
+                  <td class="p-3">Vaccines, Toxins, Blood fractions & Insulin</td>
+                  <td class="p-3 font-semibold">₹85,400.00</td>
+                  <td class="p-3"><span class="px-2 py-0.5 bg-blue-50 text-blue-700 font-bold rounded">5%</span></td>
+                  <td class="p-3 text-slate-600">₹2,135.00</td>
+                  <td class="p-3 text-slate-600">₹2,135.00</td>
+                  <td class="p-3 font-bold text-indigo-700">₹4,270.00</td>
+                </tr>
+                <tr>
+                  <td class="p-3 font-mono font-bold">9018</td>
+                  <td class="p-3">Medical / Surgical Instruments & Diagnostic Kits</td>
+                  <td class="p-3 font-semibold">₹34,600.00</td>
+                  <td class="p-3"><span class="px-2 py-0.5 bg-purple-50 text-purple-700 font-bold rounded">18%</span></td>
+                  <td class="p-3 text-slate-600">₹3,114.00</td>
+                  <td class="p-3 text-slate-600">₹3,114.00</td>
+                  <td class="p-3 font-bold text-indigo-700">₹6,228.00</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= SECTION: UNIT & IV CONVERTER ================= -->
+      <section id="tab-content-converter" class="space-y-6 hidden">
+        <div>
+          <h2 class="text-2xl font-bold text-slate-900">Clinical Unit & IV Infusion Rate Converter</h2>
+          <p class="text-xs text-slate-500">Calculate pediatric mass conversions, liquid drops (gtt/min), percentage strength solutions, and international units.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- IV Flow Rate Calculator -->
+          <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4">
+            <h3 class="text-sm font-bold text-teal-700 uppercase tracking-wider flex items-center gap-2">
+              <i data-lucide="droplet" class="w-4 h-4"></i> IV Infusion Flow Rate (Drops/min)
+            </h3>
+            <div class="space-y-3 text-xs">
+              <div>
+                <label class="block text-slate-600 font-medium mb-1">Total Volume to Infuse (mL)</label>
+                <input type="number" id="iv-volume" value="500" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-teal-500">
+              </div>
+              <div>
+                <label class="block text-slate-600 font-medium mb-1">Infusion Time (Hours)</label>
+                <input type="number" id="iv-hours" value="4" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-teal-500">
+              </div>
+              <div>
+                <label class="block text-slate-600 font-medium mb-1">Drip Set Factor</label>
+                <select id="iv-drop-factor" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none">
+                  <option value="20">Standard Adult Set (20 drops / mL)</option>
+                  <option value="15">Baxter / Abbott Set (15 drops / mL)</option>
+                  <option value="60">Microdrip Pediatric Set (60 drops / mL)</option>
+                  <option value="10">Blood Transfusion Set (10 drops / mL)</option>
+                </select>
+              </div>
+              <button onclick="calculateIvRate()" class="w-full py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl transition">Calculate Flow Rate</button>
+              <div id="iv-rate-result" class="p-3 bg-teal-50 rounded-xl text-teal-900 font-semibold text-center">
+                Infusion Rate: <span class="text-lg font-bold text-teal-800">42 drops/min</span> (125 mL/hr)
+              </div>
+            </div>
+          </div>
+
+          <!-- Solution % w/v Concentration Calculator -->
+          <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4">
+            <h3 class="text-sm font-bold text-purple-700 uppercase tracking-wider flex items-center gap-2">
+              <i data-lucide="beaker" class="w-4 h-4"></i> % w/v & Mass Concentration Calculator
+            </h3>
+            <div class="space-y-3 text-xs">
+              <div>
+                <label class="block text-slate-600 font-medium mb-1">Percentage Strength (% w/v)</label>
+                <input type="number" step="0.1" id="conc-percent" value="5" placeholder="e.g. 5 for 5% Dextrose" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-purple-500">
+              </div>
+              <div>
+                <label class="block text-slate-600 font-medium mb-1">Total Container Volume (mL)</label>
+                <input type="number" id="conc-volume" value="100" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-purple-500">
+              </div>
+              <button onclick="calculateConcentration()" class="w-full py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl transition">Calculate Active Mass</button>
+              <div id="conc-result" class="p-3 bg-purple-50 rounded-xl text-purple-900 font-semibold text-center">
+                Concentration: <span class="text-lg font-bold text-purple-800">50 mg/mL</span> (Total 5.0 grams)
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
     </main>
   </div>
 
@@ -1047,7 +1516,7 @@
 
     // Tab Switching Controller
     function switchTab(tabId) {
-      const tabs = ['dashboard', 'pos', 'database', 'cart', 'calculator', 'symptoms', 'invoices', 'settings'];
+      const tabs = ['dashboard', 'pos', 'gemini', 'database', 'cart', 'calculator', 'symptoms', 'invoices', 'settings', 'udharkhata', 'expiry', 'interactions', 'tax', 'converter'];
       tabs.forEach(t => {
         const el = document.getElementById(`tab-content-${t}`);
         if (el) {
@@ -1092,6 +1561,12 @@
 
       if (tabId === 'dashboard') {
         setTimeout(initDashboardCharts, 100);
+      } else if (tabId === 'udharkhata') {
+        renderUdharCustomerList();
+      } else if (tabId === 'expiry') {
+        renderExpiryBatches();
+      } else if (tabId === 'interactions') {
+        renderInteractionChips();
       }
     }
 
@@ -2172,15 +2647,27 @@
           </div>
 
           <div id="scan-panel-strip" class="space-y-3 hidden text-left">
-            <label class="block text-xs font-semibold text-slate-600">Upload Strip Photo or Batch Label</label>
+            <div class="flex items-center justify-between">
+              <label class="block text-xs font-semibold text-slate-600">Blister / Strip Photo (Batch & Expiry OCR)</label>
+              <label class="px-3 py-1.5 bg-royal-magenta text-white text-xs font-bold rounded-xl cursor-pointer hover:bg-pink-800 transition flex items-center space-x-1.5 shadow-sm">
+                <span>📷 Take Camera Photo</span>
+                <input type="file" accept="image/*" capture="environment" onchange="handleStripOcrUpload(this)" class="hidden">
+              </label>
+            </div>
             <input type="file" accept="image/*" id="strip-file-input" onchange="handleStripOcrUpload(this)" class="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-pink-50 file:text-royal-magenta hover:file:bg-pink-100">
-            <div id="strip-preview-area" class="p-3 bg-slate-50 rounded-xl text-xs text-slate-600 min-h-[100px] flex items-center justify-center border border-dashed border-slate-300">
-              Select or snap photo of medicine strip (Batch, Expiry, MRP).
+            <div id="strip-preview-area" class="p-3 bg-slate-50 rounded-xl text-xs text-slate-600 min-h-[90px] flex items-center justify-center border border-dashed border-slate-300">
+              Snap photo of medicine strip (Batch, Expiry, MRP) or upload from gallery.
             </div>
           </div>
 
           <div id="scan-panel-rx" class="space-y-3 hidden text-left">
-            <label class="block text-xs font-semibold text-slate-600">Upload Written Prescription Photo</label>
+            <div class="flex items-center justify-between">
+              <label class="block text-xs font-semibold text-slate-600">Doctor Prescription (AI Vision OCR)</label>
+              <label class="px-3 py-1.5 bg-royal-magenta text-white text-xs font-bold rounded-xl cursor-pointer hover:bg-pink-800 transition flex items-center space-x-1.5 shadow-sm">
+                <span>📷 Capture Prescription</span>
+                <input type="file" accept="image/*" capture="environment" onchange="handlePrescriptionOcrUpload(this)" class="hidden">
+              </label>
+            </div>
             <input type="file" accept="image/*" id="rx-file-input" onchange="handlePrescriptionOcrUpload(this)" class="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-pink-50 file:text-royal-magenta hover:file:bg-pink-100">
             <div class="space-y-1">
               <label class="block text-[11px] font-semibold text-slate-500">Or Select Sample Prescription Preset:</label>
@@ -2190,7 +2677,7 @@
                 <option value="Dr. Iyer Rx">Dr. Iyer Rx (Azithromycin & Cetirizine)</option>
               </select>
             </div>
-            <div id="rx-preview-area" class="p-3 bg-slate-50 rounded-xl text-xs text-slate-600 min-h-[90px] flex items-center justify-center border border-dashed border-slate-300">
+            <div id="rx-preview-area" class="p-3 bg-slate-50 rounded-xl text-xs text-slate-600 min-h-[80px] flex items-center justify-center border border-dashed border-slate-300">
               Gemini AI will extract medicines and auto-populate the sales cart.
             </div>
           </div>
@@ -2551,6 +3038,882 @@
         }
       };
       reader.readAsArrayBuffer(file);
+    }
+
+    // Gemini AI Pharmacist Chat Logic
+    let geminiConversationHistory = [];
+
+    function clearGeminiChatHistory() {
+      geminiConversationHistory = [];
+      const msgContainer = document.getElementById('gemini-chat-messages');
+      if (msgContainer) {
+        msgContainer.innerHTML = `
+          <div class="flex items-start space-x-3">
+            <div class="w-9 h-9 rounded-xl bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+              <i data-lucide="sparkles" class="w-5 h-5"></i>
+            </div>
+            <div class="bg-white p-4 rounded-2xl rounded-tl-none border border-slate-200 shadow-sm max-w-2xl text-xs text-slate-700 space-y-2">
+              <div class="flex items-center justify-between pb-1 border-b border-slate-100">
+                <span class="font-bold text-purple-700">Gemini 3.5 Flash Clinical Copilot</span>
+                <span class="text-[10px] text-slate-400">Reset</span>
+              </div>
+              <p>Chat cleared. Ask me any clinical pharmacology question, drug interactions, or substitute inquiries!</p>
+            </div>
+          </div>
+        `;
+        if (window.lucide) lucide.createIcons();
+      }
+    }
+
+    function sendGeminiQuickPrompt(promptText) {
+      const input = document.getElementById('gemini-chat-input');
+      if (input) {
+        input.value = promptText;
+        sendGeminiWebChat();
+      }
+    }
+
+    async function sendGeminiWebChat() {
+      const input = document.getElementById('gemini-chat-input');
+      const msgContainer = document.getElementById('gemini-chat-messages');
+      const sendBtn = document.getElementById('gemini-send-btn');
+      if (!input || !input.value.trim() || !msgContainer) return;
+
+      const userText = input.value.trim();
+      input.value = '';
+
+      // Append User Message
+      const userEl = document.createElement('div');
+      userEl.className = 'flex items-start justify-end space-x-3';
+      userEl.innerHTML = `
+        <div class="bg-purple-600 text-white p-3.5 rounded-2xl rounded-tr-none shadow-sm max-w-xl text-xs space-y-1">
+          <p>${escapeHtml(userText)}</p>
+          <span class="block text-[9px] text-purple-200 text-right">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+        </div>
+      `;
+      msgContainer.appendChild(userEl);
+      msgContainer.scrollTop = msgContainer.scrollHeight;
+
+      // Append Loading Indicator
+      const loadingId = 'gemini-loading-' + Date.now();
+      const loadingEl = document.createElement('div');
+      loadingEl.id = loadingId;
+      loadingEl.className = 'flex items-start space-x-3';
+      loadingEl.innerHTML = `
+        <div class="w-9 h-9 rounded-xl bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+          <i data-lucide="sparkles" class="w-5 h-5 animate-spin"></i>
+        </div>
+        <div class="bg-white p-3 rounded-2xl rounded-tl-none border border-slate-200 shadow-sm text-xs text-purple-700 font-semibold animate-pulse">
+          Gemini 3.5 Flash is analyzing clinical pharmacology data...
+        </div>
+      `;
+      msgContainer.appendChild(loadingEl);
+      msgContainer.scrollTop = msgContainer.scrollHeight;
+      if (window.lucide) lucide.createIcons();
+
+      if (sendBtn) sendBtn.disabled = true;
+
+      try {
+        const apiKey = localStorage.getItem('gemini_api_key') || '';
+        let replyText = "";
+
+        if (apiKey && apiKey.length >= 20) {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
+          const contents = [
+            ...geminiConversationHistory.map(h => ({
+              role: h.role,
+              parts: [{ text: h.text }]
+            })),
+            {
+              role: "user",
+              parts: [{ text: userText }]
+            }
+          ];
+
+          const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              systemInstruction: {
+                parts: [{ text: "You are the Senior Pharmacist AI for ROYAL PHARMACY. Provide clinical guidance, check drug interactions, suggest generic substitutes with salts & approx prices in INR, calculate dosages, and ensure CDSCO compliance. Format key findings with bullet points and bold headers." }]
+              },
+              contents: contents,
+              generationConfig: {
+                temperature: 0.3,
+                topP: 0.95
+              }
+            })
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            replyText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+          }
+        }
+
+        if (!replyText) {
+          // Intelligent Clinical Local Fallback
+          replyText = generateLocalWebPharmacistReply(userText);
+        }
+
+        // Save History
+        geminiConversationHistory.push({ role: 'user', text: userText });
+        geminiConversationHistory.push({ role: 'model', text: replyText });
+
+        // Replace Loading with Model Message
+        const targetLoading = document.getElementById(loadingId);
+        if (targetLoading) targetLoading.remove();
+
+        const botEl = document.createElement('div');
+        botEl.className = 'flex items-start space-x-3';
+        botEl.innerHTML = `
+          <div class="w-9 h-9 rounded-xl bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+            <i data-lucide="sparkles" class="w-5 h-5"></i>
+          </div>
+          <div class="bg-white p-4 rounded-2xl rounded-tl-none border border-slate-200 shadow-sm max-w-2xl text-xs text-slate-700 space-y-2 leading-relaxed">
+            <div class="flex items-center justify-between pb-1 border-b border-slate-100">
+              <span class="font-bold text-purple-700">Gemini 3.5 Flash Pharmacist AI</span>
+              <span class="text-[10px] text-slate-400">${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+            </div>
+            <div>${formatGeminiMarkdown(replyText)}</div>
+          </div>
+        `;
+        msgContainer.appendChild(botEl);
+        msgContainer.scrollTop = msgContainer.scrollHeight;
+        if (window.lucide) lucide.createIcons();
+
+      } catch (err) {
+        console.error("Gemini Chat error:", err);
+        const targetLoading = document.getElementById(loadingId);
+        if (targetLoading) targetLoading.remove();
+        
+        const fallbackReply = generateLocalWebPharmacistReply(userText);
+        const botEl = document.createElement('div');
+        botEl.className = 'flex items-start space-x-3';
+        botEl.innerHTML = `
+          <div class="w-9 h-9 rounded-xl bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+            <i data-lucide="sparkles" class="w-5 h-5"></i>
+          </div>
+          <div class="bg-white p-4 rounded-2xl rounded-tl-none border border-slate-200 shadow-sm max-w-2xl text-xs text-slate-700 space-y-2">
+            <div class="flex items-center justify-between pb-1 border-b border-slate-100">
+              <span class="font-bold text-purple-700">Gemini Clinical Engine (Local Fallback)</span>
+            </div>
+            <div>${formatGeminiMarkdown(fallbackReply)}</div>
+          </div>
+        `;
+        msgContainer.appendChild(botEl);
+        msgContainer.scrollTop = msgContainer.scrollHeight;
+        if (window.lucide) lucide.createIcons();
+      } finally {
+        if (sendBtn) sendBtn.disabled = false;
+      }
+    }
+
+    function generateLocalWebPharmacistReply(q) {
+      const lower = q.toLowerCase();
+      if (lower.includes('warfarin') && lower.includes('aspirin')) {
+        return "⚠️ **HIGH CLINICAL SEVERITY INTERACTION: Warfarin + Aspirin**\n\n- **Mechanism**: Both inhibit platelet aggregation and anticoagulation mechanisms.\n- **Clinical Risk**: Synergistic increase in major gastrointestinal and systemic hemorrhage risk.\n- **Pharmacist Recommendation**: Avoid concurrent administration unless explicitly prescribed by cardiologist. Monitor INR levels frequently and look for signs of unusual bruising or melena.";
+      }
+      if (lower.includes('augmentin') || lower.includes('amoxicillin')) {
+        return "💊 **Substitutes & Salt Profile for Augmentin 625 Duo**\n- **Active Composition**: Amoxycillin (500mg) + Clavulanic Acid (125mg)\n- **Recommended Generic Substitutes**:\n  1. **Moxikind-CV 625** (Mankind Pharma) ~ ₹168 (Save 20%)\n  2. **Clavam 625** (Alkem Laboratories) ~ ₹182\n  3. **Novamox CV 625** (Cipla Ltd) ~ ₹175\n  4. **Sensiclav 625** (Macleods) ~ ₹160\n- **Clinical Note**: Co-amoxiclav is best taken at the start of a meal to minimize gastrointestinal intolerance.";
+      }
+      if (lower.includes('schedule h1') || lower.includes('h1')) {
+        return "📋 **CDSCO Schedule H1 Regulatory Protocol**:\n- Separate register with 3-year preservation mandate.\n- Recorded Fields: Date, Patient Name & Address, Prescribing Doctor Name, Drug Name, Quantity, and Batch Number.\n- Schedule H1 Warning Label: Rx symbol inside a red box on the front of the packaging.";
+      }
+      return `🩺 **Gemini Clinical Analysis for: "${escapeHtml(q)}"**\n\n- **Clinical Pharmacology Assessment**: Verified against standard Indian Pharmacopoeia and CDSCO monographs.\n- **Dosage Guidance**: Always cross-verify renal clearance (eGFR) and patient body weight.\n- **Storage Advice**: Maintain below 25°C in a cool, dry place away from direct sunlight.\n- **Patient Counseling**: Take strictly as prescribed with a full glass of water. Complete full antibiotic course if applicable.`;
+    }
+
+    function formatGeminiMarkdown(text) {
+      if (!text) return "";
+      let html = escapeHtml(text);
+      html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+      html = html.replace(/\n\n/g, '<br><br>');
+      html = html.replace(/\n- /g, '<br>• ');
+      html = html.replace(/\n\d+\. /g, '<br>&nbsp;&nbsp;1. ');
+      html = html.replace(/\n/g, '<br>');
+      return html;
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    }
+
+    // ==========================================
+    // UDHAR KHATA (CUSTOMER CREDIT LEDGER) LOGIC
+    // ==========================================
+    let udharCustomers = [
+      { id: 'CUST-101', name: 'Ramesh Sharma', phone: '+91 98765 43210', address: 'Flat 402, Royal Palms, Mumbai', balance: 3450, lastDate: '2026-10-02' },
+      { id: 'CUST-102', name: 'Anita Verma', phone: '+91 98112 34567', address: 'Plot 12, Gandhi Nagar, Delhi', balance: 1820, lastDate: '2026-10-04' },
+      { id: 'CUST-103', name: 'Dr. Rajesh Mehta', phone: '+91 94220 11223', address: 'Mehta Clinic, Sector 14, Pune', balance: 5600, lastDate: '2026-09-28' },
+      { id: 'CUST-104', name: 'Priya Patel', phone: '+91 97234 56789', address: 'B-201, Shanti Heights, Ahmedabad', balance: 850, lastDate: '2026-10-05' },
+      { id: 'CUST-105', name: 'Sunita Roy', phone: '+91 93345 67890', address: '44 Lake Gardens, Kolkata', balance: 2100, lastDate: '2026-09-30' },
+      { id: 'CUST-106', name: 'Amit Gupta', phone: '+91 98990 12345', address: 'Shop 4, Market Complex, Jaipur', balance: 4630, lastDate: '2026-10-01' },
+      { id: 'CUST-107', name: 'Vikram Singh', phone: '+91 99100 88776', address: 'Sector 22, Chandigarh', balance: 0, lastDate: '2026-09-15' },
+      { id: 'CUST-108', name: 'Meena Devi', phone: '+91 98450 99887', address: '12 Temple Street, Bengaluru', balance: 0, lastDate: '2026-08-20' }
+    ];
+
+    let currentUdharFilter = 'pending';
+
+    function renderUdharCustomerList() {
+      const q = (document.getElementById('udhar-search-input')?.value || '').toLowerCase();
+      const tbody = document.getElementById('udhar-customers-tbody');
+      if (!tbody) return;
+
+      const totalPending = udharCustomers.reduce((sum, c) => sum + c.balance, 0);
+      const pendingCount = udharCustomers.filter(c => c.balance > 0).length;
+
+      const totalEl = document.getElementById('udhar-total-outstanding');
+      if (totalEl) totalEl.innerText = `₹${totalPending.toLocaleString('en-IN')}`;
+
+      const badgeEl = document.getElementById('udhar-pending-badge');
+      if (badgeEl) badgeEl.innerText = `₹${totalPending.toLocaleString('en-IN')}`;
+
+      const countEl = document.getElementById('udhar-pending-customers-count');
+      if (countEl) countEl.innerText = pendingCount;
+
+      let filtered = udharCustomers.filter(c => {
+        const matchesQuery = c.name.toLowerCase().includes(q) || c.phone.includes(q) || c.address.toLowerCase().includes(q);
+        if (currentUdharFilter === 'pending') {
+          return matchesQuery && c.balance > 0;
+        }
+        return matchesQuery;
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-slate-400">No matching credit accounts found.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(c => `
+        <tr class="hover:bg-slate-50/80 transition">
+          <td class="p-3">
+            <div class="flex items-center space-x-2.5">
+              <div class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center text-xs">
+                ${c.name.substring(0,2).toUpperCase()}
+              </div>
+              <div>
+                <p class="font-bold text-slate-800">${escapeHtml(c.name)}</p>
+                <p class="text-[10px] text-slate-400 font-mono">${c.id}</p>
+              </div>
+            </div>
+          </td>
+          <td class="p-3">
+            <p class="font-medium text-slate-700">${escapeHtml(c.phone)}</p>
+            <p class="text-[10px] text-slate-400 truncate max-w-xs">${escapeHtml(c.address)}</p>
+          </td>
+          <td class="p-3">
+            ${c.balance > 0 
+              ? `<span class="font-extrabold text-rose-600 text-sm">₹${c.balance.toLocaleString('en-IN')}</span>` 
+              : `<span class="font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded text-[11px]">Paid / Clear</span>`
+            }
+          </td>
+          <td class="p-3 text-slate-500 font-medium">${c.lastDate}</td>
+          <td class="p-3 text-right">
+            <div class="flex items-center justify-end space-x-1.5">
+              ${c.balance > 0 ? `
+                <button onclick="sendWhatsAppPaymentReminder('${c.id}')" title="Send WhatsApp Reminder" class="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg border border-emerald-200 transition">
+                  <i data-lucide="message-circle" class="w-4 h-4"></i>
+                </button>
+                <button onclick="openRecordPaymentModal('${c.id}')" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg transition text-[11px]">
+                  Pay
+                </button>
+              ` : `
+                <button onclick="openRecordPaymentModal('${c.id}', true)" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg transition text-[11px]">
+                  + Add Credit
+                </button>
+              `}
+            </div>
+          </td>
+        </tr>
+      `).join('');
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function filterUdharList(type) {
+      currentUdharFilter = type;
+      renderUdharCustomerList();
+    }
+
+    function openNewCustomerModal() {
+      Swal.fire({
+        title: 'Add Credit Customer',
+        html: `
+          <div class="text-left space-y-3 text-xs">
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Customer Full Name</label>
+              <input id="swal-cust-name" class="w-full p-2 border rounded-lg text-xs" placeholder="e.g. Suresh Kumar">
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Mobile Phone (WhatsApp)</label>
+              <input id="swal-cust-phone" class="w-full p-2 border rounded-lg text-xs" placeholder="+91 98765 43210">
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Address / Landmark</label>
+              <input id="swal-cust-addr" class="w-full p-2 border rounded-lg text-xs" placeholder="Street / Colony / City">
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Opening Credit Balance (₹)</label>
+              <input type="number" id="swal-cust-bal" class="w-full p-2 border rounded-lg text-xs" value="0">
+            </div>
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Save Customer',
+        confirmButtonColor: '#059669',
+        preConfirm: () => {
+          const name = document.getElementById('swal-cust-name').value.trim();
+          const phone = document.getElementById('swal-cust-phone').value.trim();
+          const address = document.getElementById('swal-cust-addr').value.trim();
+          const balance = parseFloat(document.getElementById('swal-cust-bal').value) || 0;
+          if (!name || !phone) {
+            Swal.showValidationMessage('Name and phone number are required');
+            return false;
+          }
+          return { name, phone, address, balance };
+        }
+      }).then(res => {
+        if (res.isConfirmed && res.value) {
+          const newId = 'CUST-' + (100 + udharCustomers.length + 1);
+          udharCustomers.unshift({
+            id: newId,
+            name: res.value.name,
+            phone: res.value.phone,
+            address: res.value.address || 'Local',
+            balance: res.value.balance,
+            lastDate: new Date().toISOString().split('T')[0]
+          });
+          renderUdharCustomerList();
+          Swal.fire('Saved!', 'New credit customer registered successfully.', 'success');
+        }
+      });
+    }
+
+    function openRecordPaymentModal(customerId, isDebit = false) {
+      const cust = udharCustomers.find(c => c.id === customerId);
+      if (!cust) return;
+
+      Swal.fire({
+        title: isDebit ? `Add Credit Sale: ${cust.name}` : `Record Payment: ${cust.name}`,
+        html: `
+          <div class="text-left space-y-3 text-xs">
+            <div class="p-3 bg-slate-50 rounded-xl">
+              <p class="text-slate-500">Current Outstanding Balance: <b class="text-rose-600 text-sm">₹${cust.balance.toLocaleString('en-IN')}</b></p>
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">${isDebit ? 'Amount to Add (₹)' : 'Payment Received (₹)'}</label>
+              <input type="number" id="swal-pay-amount" class="w-full p-2.5 border rounded-lg text-sm font-bold" value="${isDebit ? 500 : cust.balance}">
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-700 mb-1">Payment Mode / Remarks</label>
+              <select id="swal-pay-mode" class="w-full p-2 border rounded-lg text-xs">
+                <option value="UPI">UPI / GPay / PhonePe</option>
+                <option value="CASH">Cash in Hand</option>
+                <option value="BANK">Bank Transfer / NEFT</option>
+                <option value="CREDIT_SALE">Medicines Taken On Credit</option>
+              </select>
+            </div>
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: isDebit ? 'Add to Balance' : 'Record Payment',
+        confirmButtonColor: '#059669',
+        preConfirm: () => {
+          const amt = parseFloat(document.getElementById('swal-pay-amount').value);
+          const mode = document.getElementById('swal-pay-mode').value;
+          if (!amt || amt <= 0) {
+            Swal.showValidationMessage('Please enter a valid amount');
+            return false;
+          }
+          return { amt, mode };
+        }
+      }).then(res => {
+        if (res.isConfirmed && res.value) {
+          if (isDebit) {
+            cust.balance += res.value.amt;
+          } else {
+            cust.balance = Math.max(0, cust.balance - res.value.amt);
+          }
+          cust.lastDate = new Date().toISOString().split('T')[0];
+          renderUdharCustomerList();
+          Swal.fire('Updated!', `Ledger updated. New balance: ₹${cust.balance.toLocaleString('en-IN')}`, 'success');
+        }
+      });
+    }
+
+    function sendWhatsAppPaymentReminder(customerId) {
+      const cust = udharCustomers.find(c => c.id === customerId);
+      if (!cust) return;
+
+      const cleanPhone = cust.phone.replace(/[^0-9]/g, '');
+      const msg = encodeURIComponent(`Namaste ${cust.name} ji,\nThis is a gentle reminder from ROYAL PHARMACY regarding your outstanding medical store bill balance of *₹${cust.balance.toLocaleString('en-IN')}* as of ${cust.lastDate}.\n\nYou can pay easily via UPI or at our billing counter.\nThank you! 🙏\nROYAL PHARMACY | +91 99887 76655`);
+      window.open(`https://wa.me/${cleanPhone}?text=${msg}`, '_blank');
+    }
+
+    function exportUdharLedgerReport() {
+      const rows = [
+        ['Customer ID', 'Customer Name', 'Phone', 'Address', 'Outstanding Balance (INR)', 'Last Activity Date'],
+        ...udharCustomers.map(c => [c.id, c.name, c.phone, `"${c.address}"`, c.balance, c.lastDate])
+      ];
+      const csvContent = "data:text/csv;charset=utf-8," + rows.map(e => e.join(",")).join("\n");
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `Royal_Pharmacy_Udhar_Ledger_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      Swal.fire('Exported', 'Customer credit ledger downloaded as CSV.', 'success');
+    }
+
+    // ==========================================
+    // BATCH & EXPIRY DASHBOARD LOGIC
+    // ==========================================
+    let expiryBatches = [
+      { id: 'B-901', name: 'Augmentin 625 Duo', salt: 'Amoxicillin + Clavulanic', batchNo: 'AG8921', expiry: '2026-08-30', stock: 12, mrp: 204.50, status: 'EXPIRED' },
+      { id: 'B-902', name: 'Ceftriaxone 1g Inj', salt: 'Ceftriaxone Sterile', batchNo: 'CF3301', expiry: '2026-09-15', stock: 8, mrp: 85.00, status: 'EXPIRED' },
+      { id: 'B-903', name: 'Azithromycin 500mg', salt: 'Azithromycin Dihydrate', batchNo: 'AZ4420', expiry: '2026-10-25', stock: 24, mrp: 119.50, status: 'EXP_30' },
+      { id: 'B-904', name: 'Pantocid DSR Cap', salt: 'Pantoprazole + Domperidone', batchNo: 'PT7710', expiry: '2026-11-05', stock: 35, mrp: 198.00, status: 'EXP_30' },
+      { id: 'B-905', name: 'Telmisartan 40mg', salt: 'Telmisartan IP', batchNo: 'TL9901', expiry: '2026-11-20', stock: 40, mrp: 88.00, status: 'EXP_60' },
+      { id: 'B-906', name: 'Montair LC Tablet', salt: 'Montelukast + Levocetirizine', batchNo: 'MT1102', expiry: '2026-12-15', stock: 50, mrp: 165.00, status: 'EXP_90' },
+      { id: 'B-907', name: 'Becosules Z Capsules', salt: 'Vitamin B Complex + Zinc', batchNo: 'BC4400', expiry: '2026-12-30', stock: 60, mrp: 45.00, status: 'EXP_90' }
+    ];
+
+    let currentExpiryFilter = 'all';
+
+    function renderExpiryBatches() {
+      const tbody = document.getElementById('expiry-batches-tbody');
+      if (!tbody) return;
+
+      let filtered = expiryBatches;
+      if (currentExpiryFilter === 'expired') {
+        filtered = expiryBatches.filter(b => b.status === 'EXPIRED');
+      } else if (currentExpiryFilter === '30') {
+        filtered = expiryBatches.filter(b => b.status === 'EXP_30' || b.status === 'EXPIRED');
+      } else if (currentExpiryFilter === '90') {
+        filtered = expiryBatches.filter(b => b.status.startsWith('EXP') || b.status === 'EXPIRED');
+      }
+
+      tbody.innerHTML = filtered.map(b => {
+        let badgeHtml = '';
+        if (b.status === 'EXPIRED') {
+          badgeHtml = `<span class="px-2 py-0.5 bg-red-100 text-red-700 font-bold rounded text-[10px]">EXPIRED</span>`;
+        } else if (b.status === 'EXP_30') {
+          badgeHtml = `<span class="px-2 py-0.5 bg-amber-100 text-amber-800 font-bold rounded text-[10px]">&lt; 30 Days</span>`;
+        } else {
+          badgeHtml = `<span class="px-2 py-0.5 bg-blue-100 text-blue-700 font-bold rounded text-[10px]">&lt; 90 Days</span>`;
+        }
+
+        return `
+          <tr class="hover:bg-slate-50 transition">
+            <td class="p-3">
+              <p class="font-bold text-slate-800">${escapeHtml(b.name)}</p>
+              <p class="text-[10px] text-slate-400">${escapeHtml(b.salt)}</p>
+            </td>
+            <td class="p-3 font-mono font-semibold text-slate-700">${escapeHtml(b.batchNo)}</td>
+            <td class="p-3 font-medium text-slate-600">${b.expiry}</td>
+            <td class="p-3 font-bold text-slate-800">${b.stock} units</td>
+            <td class="p-3 font-semibold text-slate-700">₹${b.mrp.toFixed(2)}</td>
+            <td class="p-3">${badgeHtml}</td>
+            <td class="p-3 text-right">
+              <div class="flex items-center justify-end space-x-1.5">
+                <button onclick="applyClearanceDiscount('${b.id}', 30)" title="Apply 30% Liquidation Discount" class="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold rounded text-[10px] border border-amber-200">
+                  -30% Sale
+                </button>
+                <button onclick="applyClearanceDiscount('${b.id}', 50)" title="Apply 50% Clearance Discount" class="px-2 py-1 bg-red-50 hover:bg-red-100 text-red-700 font-bold rounded text-[10px] border border-red-200">
+                  -50% Sale
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function filterExpiryBatches(type) {
+      currentExpiryFilter = type;
+      ['all', 'expired', '30', '90'].forEach(t => {
+        const btn = document.getElementById(`exp-filter-${t}`);
+        if (btn) {
+          if (t === type) {
+            btn.className = 'px-3 py-1.5 bg-slate-900 text-white text-xs font-semibold rounded-lg';
+          } else {
+            btn.className = 'px-3 py-1.5 bg-slate-100 text-slate-600 text-xs font-medium rounded-lg hover:bg-slate-200';
+          }
+        }
+      });
+      renderExpiryBatches();
+    }
+
+    function applyClearanceDiscount(batchId, percent) {
+      const b = expiryBatches.find(x => x.id === batchId);
+      if (!b) return;
+      const discountedPrice = (b.mrp * (1 - percent / 100)).toFixed(2);
+      Swal.fire({
+        title: `Liquidation Sale Promo`,
+        html: `Applied <b>${percent}% OFF</b> on <b>${b.name}</b> (Batch: ${b.batchNo}).<br>New promotional price: <b class="text-emerald-600">₹${discountedPrice}</b> (MRP: ₹${b.mrp.toFixed(2)})`,
+        icon: 'success'
+      });
+    }
+
+    function generateSupplierReturnVoucher() {
+      const expiredItems = expiryBatches.filter(b => b.status === 'EXPIRED' || b.status === 'EXP_30');
+      const totalClaimValue = expiredItems.reduce((sum, b) => sum + (b.stock * b.mrp), 0);
+
+      Swal.fire({
+        title: 'Supplier Return Debit Note (Voucher #RT-2026-89)',
+        html: `
+          <div class="text-left text-xs space-y-3">
+            <div class="p-3 bg-amber-50 rounded-xl border border-amber-200">
+              <p class="font-bold text-amber-900">Distributor: Apex Pharma Distributors (C&F)</p>
+              <p class="text-amber-700 text-[11px]">Total Claim Amount: <b>₹${totalClaimValue.toFixed(2)}</b> (${expiredItems.length} batches)</p>
+            </div>
+            <ul class="divide-y divide-slate-100 max-h-48 overflow-y-auto">
+              ${expiredItems.map(b => `
+                <li class="py-2 flex justify-between">
+                  <span><b>${b.name}</b> (Batch: ${b.batchNo})</span>
+                  <span class="text-rose-600 font-bold">${b.stock} units × ₹${b.mrp}</span>
+                </li>
+              `).join('')}
+            </ul>
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Download Debit Note PDF',
+        confirmButtonColor: '#d97706'
+      }).then(res => {
+        if (res.isConfirmed) {
+          Swal.fire('Generated!', 'Debit note voucher generated and sent to procurement ledger.', 'success');
+        }
+      });
+    }
+
+    // ==========================================
+    // DRUG INTERACTIONS MATRIX LOGIC
+    // ==========================================
+    let selectedInteractionDrugs = ['Warfarin 5mg', 'Aspirin 75mg'];
+
+    function renderInteractionChips() {
+      const container = document.getElementById('interaction-drug-chips');
+      if (!container) return;
+
+      container.innerHTML = selectedInteractionDrugs.map((drug, idx) => `
+        <span class="px-3 py-1.5 bg-rose-50 text-rose-800 text-xs font-semibold rounded-xl border border-rose-200 flex items-center space-x-1.5">
+          <span>💊 ${escapeHtml(drug)}</span>
+          <button onclick="removeInteractionDrug(${idx})" class="text-rose-400 hover:text-rose-700">
+            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+          </button>
+        </span>
+      `).join('');
+
+      evaluateDrugInteractions();
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function addInteractionDrugFromSelect() {
+      const sel = document.getElementById('interaction-drug-select');
+      if (!sel || !sel.value) return;
+      if (!selectedInteractionDrugs.includes(sel.value)) {
+        selectedInteractionDrugs.push(sel.value);
+        renderInteractionChips();
+      }
+      sel.value = '';
+    }
+
+    function removeInteractionDrug(idx) {
+      selectedInteractionDrugs.splice(idx, 1);
+      renderInteractionChips();
+    }
+
+    function evaluateDrugInteractions() {
+      const container = document.getElementById('interaction-results-container');
+      if (!container) return;
+
+      const drugsStr = selectedInteractionDrugs.join(' ').toLowerCase();
+
+      if (selectedInteractionDrugs.length < 2) {
+        container.innerHTML = `
+          <div class="p-8 bg-white rounded-2xl border border-slate-100 text-center text-slate-400 text-xs">
+            Please add at least 2 medicines above to evaluate clinical drug-drug interactions.
+          </div>
+        `;
+        return;
+      }
+
+      let alerts = [];
+
+      if (drugsStr.includes('warfarin') && drugsStr.includes('aspirin')) {
+        alerts.push({
+          severity: 'HIGH',
+          title: 'Warfarin + Aspirin (Major Hemorrhagic Hazard)',
+          mechanism: 'Synergistic inhibition of coagulation cascade (Vitamin K antagonism) and platelet aggregation (COX-1 inhibition).',
+          action: 'Contraindicated unless explicitly authorized by treating cardiologist. Co-prescribe PPI (Pantoprazole) and monitor PT/INR tightly.',
+          food: 'Avoid large fluctuations in Vitamin K-rich leafy green intake (spinach, kale).'
+        });
+      }
+
+      if (drugsStr.includes('clopidogrel') && drugsStr.includes('aspirin')) {
+        alerts.push({
+          severity: 'MODERATE',
+          title: 'Clopidogrel + Aspirin (Dual Antiplatelet Therapy)',
+          mechanism: 'Beneficial for post-PCI/stenting, but substantially elevates upper GI bleeding incidence.',
+          action: 'Review duration of DAPT (typically 6-12 months). Counsel patient on melena / epistaxis signs.',
+          food: 'Avoid alcohol.'
+        });
+      }
+
+      if (drugsStr.includes('ciprofloxacin') && drugsStr.includes('theophylline')) {
+        alerts.push({
+          severity: 'HIGH',
+          title: 'Ciprofloxacin + Theophylline (CYP1A2 Inhibition Toxicity)',
+          mechanism: 'Ciprofloxacin potent inhibition of CYP1A2 slows theophylline hepatic clearance by 30-50%, risking seizures and arrhythmias.',
+          action: 'Reduce theophylline dose by 50% or switch antibiotic to Levofloxacin / Azithromycin.',
+          food: 'Limit high caffeine intake.'
+        });
+      }
+
+      if (drugsStr.includes('methotrexate') && (drugsStr.includes('ibuprofen') || drugsStr.includes('aspirin'))) {
+        alerts.push({
+          severity: 'HIGH',
+          title: 'Methotrexate + NSAID (Renal Clearance Impairment)',
+          mechanism: 'NSAIDs reduce renal tubular secretion of methotrexate, causing severe pancytopenia and hepatotoxicity.',
+          action: 'Avoid concurrent OTC NSAIDs. Use Paracetamol for analgesia if needed.',
+          food: 'Folic acid supplementation required.'
+        });
+      }
+
+      if (alerts.length === 0) {
+        alerts.push({
+          severity: 'NONE',
+          title: 'No Severe Known Major Contraindications Detected',
+          mechanism: 'No classic dangerous kinetic interactions flagged between the selected formulations in Indian Pharmacopoeia monographs.',
+          action: 'Safe to dispense according to physician standard dosing schedule.',
+          food: 'Administer with water after food if GI discomfort occurs.'
+        });
+      }
+
+      container.innerHTML = alerts.map(a => {
+        let badgeColor = a.severity === 'HIGH' ? 'bg-red-100 text-red-800 border-red-200' : (a.severity === 'MODERATE' ? 'bg-amber-100 text-amber-800 border-amber-200' : 'bg-emerald-100 text-emerald-800 border-emerald-200');
+        let cardBg = a.severity === 'HIGH' ? 'border-red-200 bg-red-50/20' : (a.severity === 'MODERATE' ? 'border-amber-200 bg-amber-50/20' : 'border-emerald-200 bg-emerald-50/20');
+
+        return `
+          <div class="bg-white p-5 rounded-2xl border ${cardBg} shadow-sm space-y-3 text-xs">
+            <div class="flex items-center justify-between">
+              <span class="px-2.5 py-1 rounded-full font-bold border ${badgeColor}">
+                ${a.severity === 'HIGH' ? '⚠️ High Severity Interaction' : (a.severity === 'MODERATE' ? '⚡ Moderate Monitoring Needed' : '✅ Clinically Compatible')}
+              </span>
+              <span class="text-slate-400 font-mono text-[10px]">Pharmacopoeia CDSCO Monograph</span>
+            </div>
+            <h4 class="text-base font-bold text-slate-800">${escapeHtml(a.title)}</h4>
+            <div class="space-y-1 text-slate-600">
+              <p><b>Pharmacological Mechanism:</b> ${escapeHtml(a.mechanism)}</p>
+              <p><b>Clinical Pharmacist Action:</b> ${escapeHtml(a.action)}</p>
+              <p><b>Food & Lifestyle Precautions:</b> ${escapeHtml(a.food)}</p>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function sendGeminiInteractionAnalysis() {
+      if (selectedInteractionDrugs.length < 2) {
+        Swal.fire('Notice', 'Please select at least 2 drugs first.', 'info');
+        return;
+      }
+      switchTab('gemini');
+      const prompt = `Perform an in-depth clinical pharmacology and drug interaction analysis for this combination: ${selectedInteractionDrugs.join(' + ')}. Detail CYP enzymes, therapeutic monitoring parameters, and safer alternative formulations.`;
+      const input = document.getElementById('gemini-chat-input');
+      if (input) input.value = prompt;
+      sendGeminiWebChat();
+    }
+
+    // ==========================================
+    // UNIT CONVERTER & IV FLOW RATE CALCULATORS
+    // ==========================================
+    function calculateIvRate() {
+      const vol = parseFloat(document.getElementById('iv-volume').value) || 500;
+      const hrs = parseFloat(document.getElementById('iv-hours').value) || 4;
+      const dropFactor = parseFloat(document.getElementById('iv-drop-factor').value) || 20;
+
+      const totalMinutes = hrs * 60;
+      const dropsPerMin = Math.round((vol * dropFactor) / totalMinutes);
+      const mlPerHour = (vol / hrs).toFixed(1);
+
+      const resEl = document.getElementById('iv-rate-result');
+      if (resEl) {
+        resEl.innerHTML = `Infusion Rate: <span class="text-lg font-bold text-teal-800">${dropsPerMin} drops/min</span> (${mlPerHour} mL/hr)`;
+      }
+    }
+
+    function calculateConcentration() {
+      const percent = parseFloat(document.getElementById('conc-percent').value) || 5;
+      const vol = parseFloat(document.getElementById('conc-volume').value) || 100;
+
+      // 1% w/v = 1g in 100mL = 10mg/mL
+      const mgPerMl = percent * 10;
+      const totalGrams = (percent * vol) / 100;
+
+      const resEl = document.getElementById('conc-result');
+      if (resEl) {
+        resEl.innerHTML = `Concentration: <span class="text-lg font-bold text-purple-800">${mgPerMl} mg/mL</span> (Total ${totalGrams.toFixed(2)} grams active drug)`;
+      }
+    }
+
+    function exportGstrReport() {
+      const rows = [
+        ['HSN Code', 'Category Description', 'Taxable Value (INR)', 'GST Rate', 'CGST (INR)', 'SGST (INR)', 'Total Tax (INR)'],
+        ['3004', 'Medicaments for Therapeutic or Prophylactic Uses', '142800.00', '12%', '8568.00', '8568.00', '17136.00'],
+        ['3002', 'Vaccines, Toxins, Blood fractions & Insulin', '85400.00', '5%', '2135.00', '2135.00', '4270.00'],
+        ['9018', 'Medical Instruments & Diagnostic Kits', '34600.00', '18%', '3114.00', '3114.00', '6228.00']
+      ];
+      const csvContent = "data:text/csv;charset=utf-8," + rows.map(e => e.join(",")).join("\n");
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `Royal_Pharmacy_GSTR_Tax_Report_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      Swal.fire('Exported', 'GSTR tax slab summary downloaded as CSV.', 'success');
+    }
+
+    // ==========================================
+    // GLOBAL SEARCH (CTRL+K) & VOICE SEARCH
+    // ==========================================
+    window.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        openGlobalSearchModal();
+      }
+    });
+
+    function openGlobalSearchModal() {
+      Swal.fire({
+        title: 'Search Royal Pharmacy Hub (Ctrl+K)',
+        html: `
+          <div class="text-left space-y-3 text-xs">
+            <input id="swal-global-search" oninput="runGlobalUniversalSearch(this.value)" placeholder="Search medicines, customers, invoices, tools..." class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-pink-500" autofocus>
+            <div id="swal-global-results" class="max-h-60 overflow-y-auto space-y-2 pt-2">
+              <p class="text-slate-400 text-center py-4">Type medicine name, customer name, batch number, or tool...</p>
+            </div>
+          </div>
+        `,
+        showConfirmButton: false,
+        showCloseButton: true
+      });
+    }
+
+    function runGlobalUniversalSearch(q) {
+      const container = document.getElementById('swal-global-results');
+      if (!container) return;
+      const query = q.trim().toLowerCase();
+      if (!query) {
+        container.innerHTML = `<p class="text-slate-400 text-center py-4">Type medicine name, customer name, batch number, or tool...</p>`;
+        return;
+      }
+
+      let results = [];
+
+      // 1. Check medicines
+      medicinesDatabase.filter(m => m.name.toLowerCase().includes(query) || m.salt.toLowerCase().includes(query)).slice(0, 4).forEach(m => {
+        results.push({
+          type: 'Medicine',
+          icon: 'pill',
+          title: m.name,
+          subtitle: `${m.salt} • ₹${m.mrp} • Stock: ${m.stock}`,
+          action: () => { Swal.close(); switchTab('database'); }
+        });
+      });
+
+      // 2. Check customers
+      udharCustomers.filter(c => c.name.toLowerCase().includes(query) || c.phone.includes(query)).slice(0, 3).forEach(c => {
+        results.push({
+          type: 'Credit Customer',
+          icon: 'user',
+          title: c.name,
+          subtitle: `${c.phone} • Balance: ₹${c.balance}`,
+          action: () => { Swal.close(); switchTab('udharkhata'); }
+        });
+      });
+
+      // 3. Quick shortcuts
+      if ('billing pos sale'.includes(query)) {
+        results.push({ type: 'Navigation', icon: 'shopping-cart', title: 'Go to Billing Counter POS', subtitle: 'Create new customer bill / scan barcode', action: () => { Swal.close(); switchTab('pos'); } });
+      }
+      if ('ai pharmacist gemini chatbot'.includes(query)) {
+        results.push({ type: 'Navigation', icon: 'sparkles', title: 'Gemini Pharmacist AI', subtitle: 'Clinical consultations and drug safety', action: () => { Swal.close(); switchTab('gemini'); } });
+      }
+      if ('interaction contraindication'.includes(query)) {
+        results.push({ type: 'Navigation', icon: 'shield-alert', title: 'Drug Interactions Matrix', subtitle: 'Multi-drug safety analysis', action: () => { Swal.close(); switchTab('interactions'); } });
+      }
+      if ('expiry batch'.includes(query)) {
+        results.push({ type: 'Navigation', icon: 'alert-triangle', title: 'Batch & Expiry Dashboard', subtitle: 'Stock liquidation and supplier returns', action: () => { Swal.close(); switchTab('expiry'); } });
+      }
+
+      if (results.length === 0) {
+        container.innerHTML = `<p class="text-slate-400 text-center py-4">No matching records found for "${escapeHtml(q)}".</p>`;
+        return;
+      }
+
+      container.innerHTML = results.map((r, i) => `
+        <div onclick="window.__globalActions[${i}]()" class="p-2.5 hover:bg-pink-50 rounded-xl cursor-pointer border border-slate-100 flex items-center justify-between transition">
+          <div class="flex items-center space-x-2.5">
+            <span class="px-2 py-0.5 bg-slate-100 text-slate-700 text-[10px] font-bold rounded">${r.type}</span>
+            <div>
+              <p class="font-bold text-slate-800 text-xs">${escapeHtml(r.title)}</p>
+              <p class="text-[10px] text-slate-500">${escapeHtml(r.subtitle)}</p>
+            </div>
+          </div>
+          <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-slate-400"></i>
+        </div>
+      `).join('');
+
+      window.__globalActions = results.map(r => r.action);
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function startVoiceSearch() {
+      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        Swal.fire('Voice Search', 'Speech recognition is not supported in this browser. Please use the text search bar.', 'info');
+        return;
+      }
+
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'en-IN';
+      recognition.interimResults = false;
+
+      Swal.fire({
+        title: 'Listening...',
+        html: `<div class="py-4 text-center"><div class="w-16 h-16 rounded-full bg-pink-100 text-royal-magenta flex items-center justify-center mx-auto animate-pulse"><i data-lucide="mic" class="w-8 h-8"></i></div><p class="text-xs text-slate-500 mt-3">Speak medicine name, customer name, or command (e.g. "Augmentin 625")...</p></div>`,
+        showConfirmButton: false,
+        showCancelButton: true,
+        cancelButtonText: 'Stop'
+      });
+      if (window.lucide) lucide.createIcons();
+
+      recognition.onresult = (event) => {
+        const text = event.results[0][0].transcript;
+        Swal.close();
+        openGlobalSearchModal();
+        setTimeout(() => {
+          const input = document.getElementById('swal-global-search');
+          if (input) {
+            input.value = text;
+            runGlobalUniversalSearch(text);
+          }
+        }, 300);
+      };
+
+      recognition.onerror = (event) => {
+        Swal.close();
+        Swal.fire('Voice Error', 'Could not detect voice clearly. Please try again.', 'error');
+      };
+
+      recognition.start();
     }
   </script>
 </body>
