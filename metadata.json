@@ -1,0 +1,6 @@
+{
+  "name": "ROYAL PHARMACY",
+  "description": "Comprehensive pharmacy ERP & retail management app inspired by LocalWell, eVitalRx, and Marg ERP9+ with real-time inventory, integrated billing, and QuickScan.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
