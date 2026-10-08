@@ -1,3 +1,4 @@
+@file:OptIn(ExperimentalCoroutinesApi::class)
 package com.example.viewmodel
 
 import android.app.Application
@@ -620,6 +621,19 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
   val lastSyncTimeDisplay = MutableStateFlow("Just now")
   val showVisualSyncStatusSheet = MutableStateFlow(false)
 
+  private fun persistSession() {
+    try {
+      val prefs = getApplication<Application>().getSharedPreferences("royal_pharmacy_session", Context.MODE_PRIVATE)
+      prefs.edit()
+        .putBoolean("is_logged_in", isLoggedIn.value)
+        .putString("user_name", currentUserName.value)
+        .putString("user_email", currentUserEmail.value)
+        .putString("user_phone", currentUserPhone.value)
+        .putString("user_role", currentUserRole.value.name)
+        .apply()
+    } catch (e: Exception) {}
+  }
+
   fun switchUserRole(newRole: UserRole, enteredPin: String? = null): Boolean {
     if (newRole == UserRole.OWNER && currentUserRole.value == UserRole.STAFF) {
       if (enteredPin != ownerPin.value) {
@@ -630,6 +644,7 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
     currentUserRole.value = newRole
     ownerPinErrorMessage.value = null
     scanFeedbackMessage.value = "Active role: ${newRole.label}"
+    persistSession()
     return true
   }
 
@@ -640,6 +655,7 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
     currentUserRole.value = role
     isLoggedIn.value = true
     scanFeedbackMessage.value = "Signed in via Mobile ($phone) as ${role.label}"
+    persistSession()
   }
 
   fun loginWithGmail(email: String, userName: String = "Suleman Hoque", role: UserRole = UserRole.OWNER) {
@@ -650,10 +666,15 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
     isLoggedIn.value = true
     GoogleDriveSyncService.switchAccount(email, userName)
     scanFeedbackMessage.value = "Signed in via Gmail ($email) as ${role.label}"
+    persistSession()
   }
 
   fun logout() {
     isLoggedIn.value = false
+    try {
+      val prefs = getApplication<Application>().getSharedPreferences("royal_pharmacy_session", Context.MODE_PRIVATE)
+      prefs.edit().putBoolean("is_logged_in", false).apply()
+    } catch (e: Exception) {}
     navigateTo(Screen.HOME)
   }
 
@@ -880,6 +901,18 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
   val syncManager: FirebaseSyncManager
 
   init {
+    val prefs = application.getSharedPreferences("royal_pharmacy_session", Context.MODE_PRIVATE)
+    isLoggedIn.value = prefs.getBoolean("is_logged_in", false)
+    currentUserName.value = prefs.getString("user_name", "Suleman Hoque") ?: "Suleman Hoque"
+    currentUserEmail.value = prefs.getString("user_email", "sulman995790@gmail.com") ?: "sulman995790@gmail.com"
+    currentUserPhone.value = prefs.getString("user_phone", "+91 99579 05450") ?: "+91 99579 05450"
+    val roleStr = prefs.getString("user_role", UserRole.OWNER.name) ?: UserRole.OWNER.name
+    try {
+      currentUserRole.value = UserRole.valueOf(roleStr)
+    } catch (e: Exception) {
+      currentUserRole.value = UserRole.OWNER
+    }
+
     val db = PharmacyDatabase.getDatabase(application, viewModelScope)
     repository = PharmacyRepository(db.pharmacyDao())
     syncManager = FirebaseSyncManager(application, db.pharmacyDao(), networkMonitor, viewModelScope)

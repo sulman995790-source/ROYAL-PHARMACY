@@ -2424,6 +2424,7 @@
 
     function loadSavedState() {
       const saved = localStorage.getItem('royal_pharmacy_state');
+      const persistentAuth = localStorage.getItem('royal_pharmacy_auth_persistent') || sessionStorage.getItem('royal_pharmacy_auth_persistent');
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
@@ -2445,11 +2446,23 @@
           console.error("Failed to restore local state", e);
         }
       }
+      if (persistentAuth) {
+        try {
+          const authParsed = JSON.parse(persistentAuth);
+          if (authParsed.isLoggedIn) {
+            state.isLoggedIn = true;
+            if (authParsed.userName) state.userName = authParsed.userName;
+            if (authParsed.role) state.role = authParsed.role;
+            if (authParsed.email) state.userEmail = authParsed.email;
+            if (authParsed.phone) state.userPhone = authParsed.phone;
+          }
+        } catch(e) {}
+      }
       syncUiState();
     }
 
     function saveStateToLocal() {
-      localStorage.setItem('royal_pharmacy_state', JSON.stringify({
+      const statePayload = {
         profile: state.profile,
         distributorCart: state.distributorCart,
         pin: state.pin,
@@ -2464,7 +2477,17 @@
         userPhone: state.userPhone,
         customReorderLevels: state.customReorderLevels || {},
         isLoggedIn: state.isLoggedIn
-      }));
+      };
+      localStorage.setItem('royal_pharmacy_state', JSON.stringify(statePayload));
+      const authPayload = JSON.stringify({
+        isLoggedIn: state.isLoggedIn,
+        userName: state.userName,
+        role: state.role,
+        email: state.userEmail,
+        phone: state.userPhone
+      });
+      localStorage.setItem('royal_pharmacy_auth_persistent', authPayload);
+      sessionStorage.setItem('royal_pharmacy_auth_persistent', authPayload);
     }
 
     // UI State Sync
