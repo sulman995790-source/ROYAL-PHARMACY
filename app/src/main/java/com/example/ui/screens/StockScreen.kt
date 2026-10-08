@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import android.widget.Toast
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -36,13 +37,17 @@ import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.QrCode
+import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Warning
+import com.example.util.MedicineQrPayload
+import com.example.util.QrCodeGeneratorUtil
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -74,6 +79,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -111,6 +117,7 @@ fun StockScreen(
   var showManualAddDialog by remember { mutableStateOf(false) }
   var medicineToDelete by remember { mutableStateOf<MedicineItem?>(null) }
   var medicineToEditRack by remember { mutableStateOf<MedicineItem?>(null) }
+  var medicineForQrBatch by remember { mutableStateOf<MedicineItem?>(null) }
 
   val searchTokens = searchQuery.trim().split("\\s+".toRegex()).filter { it.isNotBlank() }
   val filteredMedicines = medicines.filter { item ->
@@ -350,6 +357,9 @@ fun StockScreen(
             },
             onEditRack = {
               medicineToEditRack = med
+            },
+            onGenerateQrBatch = {
+              medicineForQrBatch = med
             }
           )
         }
@@ -616,6 +626,14 @@ fun StockScreen(
         }
       )
     }
+
+    // 10. Generate QR Batch Printable Dialog Modal
+    if (medicineForQrBatch != null) {
+      QrBatchModalDialog(
+        item = medicineForQrBatch!!,
+        onDismiss = { medicineForQrBatch = null }
+      )
+    }
   }
 }
 
@@ -625,7 +643,8 @@ fun StockItemCard(
   onStockAdjust: (Int) -> Unit,
   onAddToCart: () -> Unit,
   onDeleteClick: () -> Unit,
-  onEditRack: () -> Unit
+  onEditRack: () -> Unit,
+  onGenerateQrBatch: () -> Unit
 ) {
   val initials = item.name.take(2).uppercase()
   val isInStock = item.stockPacks > 0
@@ -839,6 +858,21 @@ fun StockItemCard(
               imageVector = Icons.Default.ShoppingCart,
               contentDescription = "Add to bill",
               tint = RoyalNavy,
+              modifier = Modifier.size(16.dp)
+            )
+          }
+
+          Spacer(modifier = Modifier.width(4.dp))
+
+          // Generate QR Batch Button
+          IconButton(
+            onClick = onGenerateQrBatch,
+            modifier = Modifier.size(26.dp).testTag("btn_qr_batch_${item.id}")
+          ) {
+            Icon(
+              imageVector = Icons.Default.QrCode2,
+              contentDescription = "Generate QR Batch Label",
+              tint = RoyalMagenta,
               modifier = Modifier.size(16.dp)
             )
           }
@@ -1165,6 +1199,124 @@ fun ManualAddMedicineDialog(
     dismissButton = {
       TextButton(onClick = onDismiss) {
         Text("Cancel", color = TextMuted)
+      }
+    }
+  )
+}
+
+@Composable
+fun QrBatchModalDialog(
+  item: MedicineItem,
+  onDismiss: () -> Unit
+) {
+  val context = LocalContext.current
+  val payload = MedicineQrPayload.fromMedicine(item)
+  val payloadJson = payload.toJsonString()
+
+  val qrMatrix = remember(payloadJson) { QrCodeGeneratorUtil.generateQrMatrix(payloadJson, 25) }
+
+  AlertDialog(
+    onDismissRequest = onDismiss,
+    title = {
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Default.QrCode2, contentDescription = null, tint = RoyalNavy)
+        Spacer(modifier = Modifier.width(8.dp))
+        Text("Printable QR Batch Label", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+      }
+    },
+    text = {
+      Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+      ) {
+        Card(
+          shape = RoundedCornerShape(12.dp),
+          colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A)),
+          modifier = Modifier.fillMaxWidth()
+        ) {
+          Column(
+            modifier = Modifier.padding(14.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+          ) {
+            Text(item.name, fontSize = 15.sp, fontWeight = FontWeight.Black, color = Color.White, textAlign = TextAlign.Center)
+            Text("${item.manufacturer} • ${item.category}", fontSize = 11.sp, color = Color(0xFF94A3B8))
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Render QR Matrix
+            Box(
+              modifier = Modifier
+                .size(160.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(Color.White)
+                .padding(8.dp),
+              contentAlignment = Alignment.Center
+            ) {
+              Canvas(modifier = Modifier.fillMaxSize()) {
+                val matrixLen = qrMatrix.size
+                val cellWidth = this.size.width / matrixLen
+                val cellHeight = this.size.height / matrixLen
+
+                for (r in 0 until matrixLen) {
+                  for (c in 0 until matrixLen) {
+                    if (qrMatrix[r][c]) {
+                      drawRect(
+                        color = Color(0xFF0F172A),
+                        topLeft = androidx.compose.ui.geometry.Offset(c * cellWidth, r * cellHeight),
+                        size = androidx.compose.ui.geometry.Size(cellWidth, cellHeight)
+                      )
+                    }
+                  }
+                }
+              }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+              Text("Batch: ${payload.batch}", fontSize = 11.sp, color = Color(0xFFE2E8F0), fontWeight = FontWeight.Bold)
+              Text("Exp: ${payload.exp}", fontSize = 11.sp, color = Color(0xFFF472B6), fontWeight = FontWeight.Bold)
+            }
+            Spacer(modifier = Modifier.height(2.dp))
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+              Text("MRP: ₹${item.mrp}", fontSize = 11.sp, color = Color(0xFF4ADE80), fontWeight = FontWeight.Bold)
+              Text("Rack: ${payload.rack}", fontSize = 11.sp, color = Color(0xFFCBD5E1))
+            }
+          }
+        }
+
+        Text(
+          "Scan this QR label with terminal camera or barcode scanner to auto-populate batch details and stock.",
+          fontSize = 10.5.sp,
+          color = TextMuted,
+          textAlign = TextAlign.Center
+        )
+      }
+    },
+    confirmButton = {
+      Button(
+        onClick = {
+          Toast.makeText(context, "Sending QR Batch Label (${item.name}) to Thermal/PDF Printer...", Toast.LENGTH_LONG).show()
+          onDismiss()
+        },
+        colors = ButtonDefaults.buttonColors(containerColor = RoyalNavy),
+        shape = RoundedCornerShape(8.dp)
+      ) {
+        Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(16.dp))
+        Spacer(modifier = Modifier.width(6.dp))
+        Text("Print QR Batch Label", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+      }
+    },
+    dismissButton = {
+      TextButton(onClick = onDismiss) {
+        Text("Close", color = TextMuted)
       }
     }
   )

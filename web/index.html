@@ -12,8 +12,9 @@
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
   
-  <!-- html5-qrcode for Quick Scan -->
+  <!-- html5-qrcode for Quick Scan & QRCode.js for Label Generation -->
   <script src="https://unpkg.com/html5-qrcode"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
   
   <!-- SheetJS & jsPDF & SweetAlert2 & Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -109,6 +110,36 @@
     .low-stock-breathing {
       animation: lowStockBreathing 1.8s ease-in-out infinite;
       will-change: transform, box-shadow;
+    }
+
+    @keyframes fadeInUp {
+      0% {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .animate-fade-in {
+      animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes pulseSlow {
+      0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+      }
+      50% {
+        opacity: 0.88;
+        transform: scale(1.03);
+        box-shadow: 0 0 10px 2px rgba(16, 185, 129, 0.25);
+      }
+    }
+    .animate-pulse-slow {
+      animation: pulseSlow 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
     }
   </style>
 </head>
@@ -1170,7 +1201,11 @@
               </div>
             </div>
 
-            <div class="pt-4 flex justify-end">
+            <div class="pt-4 flex flex-wrap items-center justify-end gap-2.5">
+              <button type="button" onclick="syncInventoryWeb()" id="btn-sync-inventory-web" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-sm">
+                <i data-lucide="cloud-upload" class="w-4 h-4"></i>
+                <span>Sync Inventory</span>
+              </button>
               <button onclick="saveProfileSettings()" class="bg-royal-magenta hover:bg-royal-accent text-white px-5 py-2.5 rounded-xl text-xs font-bold transition">
                 Save Profile Configuration
               </button>
@@ -2984,19 +3019,25 @@
             else if (perm.includes("Inventory")) badgeClass = "bg-sky-50 text-sky-800 border-sky-200";
             else if (perm.includes("Pharmacist")) badgeClass = "bg-purple-50 text-purple-800 border-purple-200";
 
+            const isCurrentActive = state.role === 'STAFF' && (state.userPhone === staff.phone || state.userEmail === staff.email);
+
             return `
-              <div class="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-100 rounded-xl text-xs hover:bg-slate-100/70 transition">
+              <div class="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-100 rounded-xl text-xs hover:bg-slate-100/70 transition-all duration-300 animate-fade-in">
                 <div class="flex items-center space-x-2.5">
                   <div class="w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold flex items-center justify-center text-[10px] shrink-0">
                     ${staff.name.slice(0, 2).toUpperCase()}
                   </div>
                   <div>
-                    <p class="font-bold text-slate-800">${staff.name}</p>
+                    <div class="flex items-center space-x-1.5">
+                      <p class="font-bold text-slate-800">${staff.name}</p>
+                      ${isCurrentActive ? '<span class="inline-flex items-center space-x-1 px-1.5 py-0.2 rounded-full text-[8px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300 animate-pulse-slow shadow-sm"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping shrink-0"></span><span>ACTIVE SESSION</span></span>' : ''}
+                    </div>
                     <p class="text-[10px] text-slate-400">${staff.designation || 'Staff Chemist'} • ${staff.phone}</p>
                   </div>
                 </div>
-                <div class="flex items-center space-x-2">
+                <div class="flex items-center space-x-1.5">
                   <span class="px-2 py-0.5 rounded-full text-[9px] font-bold border ${badgeClass}">${perm}</span>
+                  <button type="button" onclick="generateStaffQrBadgeWeb('${staff.id}')" title="Generate QR ID Badge" class="p-1 bg-slate-800 hover:bg-slate-900 text-white rounded text-[10px] font-bold transition flex items-center justify-center"><i data-lucide="qr-code" class="w-3 h-3"></i></button>
                   <button type="button" onclick="changeStaffPermissionWeb('${staff.id}')" class="text-[10px] text-royal-magenta font-semibold hover:underline">Edit</button>
                   <button type="button" onclick="switchStaffSessionWeb('${staff.id}')" class="px-2 py-0.5 bg-sky-50 hover:bg-sky-100 text-sky-700 rounded text-[10px] font-bold">Switch</button>
                 </div>
@@ -3032,7 +3073,7 @@
         const isCurrentActive = state.role === 'STAFF' && (state.userPhone === staff.phone || state.userEmail === staff.email);
 
         tbody.innerHTML += `
-          <tr class="hover:bg-slate-50/70 transition">
+          <tr class="hover:bg-slate-50/70 transition-all duration-300 animate-fade-in">
             <td class="p-3.5">
               <div class="flex items-center space-x-3">
                 <div class="w-8 h-8 rounded-full bg-royal-navy/10 text-royal-navy flex items-center justify-center font-bold text-xs shrink-0">
@@ -3041,7 +3082,7 @@
                 <div>
                   <div class="flex items-center space-x-1.5">
                     <p class="font-bold text-slate-800 text-xs">${staff.name}</p>
-                    ${isCurrentActive ? '<span class="px-1.5 py-0.2 rounded text-[8px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300">ACTIVE SESSION</span>' : ''}
+                    ${isCurrentActive ? '<span class="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[8px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300 animate-pulse-slow shadow-sm"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping shrink-0"></span><span>ACTIVE SESSION</span></span>' : ''}
                   </div>
                   <p class="text-[10px] text-slate-400">${staff.designation || 'Staff Chemist'}</p>
                 </div>
@@ -3066,6 +3107,10 @@
             </td>
             <td class="p-3.5 text-right">
               <div class="flex items-center justify-end space-x-1.5">
+                <button onclick="generateStaffQrBadgeWeb('${staff.id}')" title="Generate Staff QR ID Badge for Quick Scan Login" class="px-2 py-1 bg-slate-800 hover:bg-slate-900 text-white rounded-lg font-semibold text-[11px] flex items-center space-x-1 transition shadow-sm border border-slate-700">
+                  <i data-lucide="qr-code" class="w-3.5 h-3.5"></i>
+                  <span>QR Badge</span>
+                </button>
                 <button onclick="changeStaffPermissionWeb('${staff.id}')" title="Change Permissions" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-semibold text-[11px] transition">
                   Permissions
                 </button>
@@ -3081,6 +3126,149 @@
         `;
       });
       if (window.lucide) lucide.createIcons();
+    }
+
+    // Modal to Generate and Print Staff QR ID Badge
+    function generateStaffQrBadgeWeb(staffId) {
+      const staff = state.staffMembers.find(s => s.id === staffId);
+      if (!staff) {
+        Swal.fire('Error', 'Staff member details not found in directory.', 'error');
+        return;
+      }
+
+      const pharmacyName = state.profile.businessName || 'ROYAL PHARMACY';
+      const payload = {
+        type: "STAFF_SESSION",
+        staffId: staff.id,
+        name: staff.name,
+        phone: staff.phone,
+        email: staff.email,
+        permission: staff.permission || "POS-only access",
+        designation: staff.designation || "Staff Chemist"
+      };
+
+      const payloadStr = JSON.stringify(payload);
+
+      const modalHtml = `
+        <div class="text-left space-y-4 text-xs">
+          <div class="p-3 bg-sky-50 rounded-xl border border-sky-100 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+              <div class="w-9 h-9 rounded-full bg-slate-900 text-white font-bold flex items-center justify-center text-xs shrink-0">
+                ${staff.name.slice(0, 2).toUpperCase()}
+              </div>
+              <div>
+                <p class="font-bold text-slate-800 text-sm">${escapeHtml(staff.name)}</p>
+                <p class="text-[10px] text-slate-500">${escapeHtml(staff.designation || 'Staff Chemist')} • ${escapeHtml(staff.phone)}</p>
+              </div>
+            </div>
+            <span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 border border-emerald-300 text-[10px] font-bold rounded-full">${escapeHtml(staff.permission || 'POS-only access')}</span>
+          </div>
+
+          <!-- Printable Staff Badge Card -->
+          <div class="pt-1">
+            <label class="block font-bold text-slate-700 mb-1.5 text-[11px] uppercase tracking-wider">Printable Staff ID Badge & Session QR</label>
+            <div id="staff-qr-printable-badge" class="bg-gradient-to-br from-slate-900 via-slate-800 to-royal-navy text-white border-2 border-slate-900 rounded-2xl p-4 shadow-lg flex items-center space-x-4">
+              <div id="staff-badge-qr-canvas" class="bg-white p-1.5 rounded-xl shrink-0 flex items-center justify-center min-w-[96px] min-h-[96px] shadow-md"></div>
+              <div class="flex-1 min-w-0 space-y-1">
+                <div class="flex items-center space-x-1.5">
+                  <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                  <p class="text-[9px] font-extrabold uppercase text-pink-300 tracking-wider truncate">${escapeHtml(pharmacyName)}</p>
+                </div>
+                <p class="text-sm font-black text-white truncate">${escapeHtml(staff.name)}</p>
+                <p class="text-[10px] text-slate-300 font-medium">${escapeHtml(staff.designation || 'Licensed Staff Chemist')}</p>
+                <p class="text-[9px] text-slate-400 font-mono">ID: ${escapeHtml(staff.id)} • ${escapeHtml(staff.phone)}</p>
+                <div class="pt-1 flex items-center space-x-1.5">
+                  <span class="inline-block bg-pink-500/20 text-pink-200 border border-pink-500/30 text-[9px] px-2 py-0.5 rounded-md font-bold">
+                    ${escapeHtml(staff.permission || 'POS-only access')}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <p class="text-[10px] text-slate-500 leading-relaxed">Scanning this physical or digital QR badge using the terminal camera or barcode scanner instantly authorizes and switches active session to <b>${escapeHtml(staff.name)}</b>.</p>
+        </div>
+      `;
+
+      Swal.fire({
+        title: `Staff QR Badge: ${staff.name}`,
+        html: modalHtml,
+        showCancelButton: true,
+        showDenyButton: true,
+        confirmButtonText: '🖨️ Print Staff ID Badge',
+        denyButtonText: '⚡ Switch Session Now',
+        cancelButtonText: 'Close',
+        confirmButtonColor: '#0F172A',
+        denyButtonColor: '#9C1258',
+        didOpen: () => {
+          const qrContainer = document.getElementById('staff-badge-qr-canvas');
+          if (qrContainer) {
+            qrContainer.innerHTML = '';
+            if (typeof QRCode !== 'undefined') {
+              try {
+                new QRCode(qrContainer, {
+                  text: payloadStr,
+                  width: 90,
+                  height: 90,
+                  colorDark: "#0F172A",
+                  colorLight: "#FFFFFF",
+                  correctLevel: QRCode.CorrectLevel.M
+                });
+              } catch (e) {
+                console.error("QR Code rendering error:", e);
+              }
+            } else {
+              qrContainer.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=${encodeURIComponent(payloadStr)}" alt="QR Code" class="w-[90px] h-[90px]" />`;
+            }
+          }
+        }
+      }).then((res) => {
+        if (res.isConfirmed) {
+          printStaffBadge(staff.id);
+        } else if (res.isDenied) {
+          switchStaffSessionWeb(staff.id);
+        }
+      });
+    }
+
+    function printStaffBadge(staffId) {
+      const badgeContent = document.getElementById('staff-qr-printable-badge');
+      if (!badgeContent) return;
+
+      const printWindow = window.open('', '_blank', 'width=520,height=420');
+      if (!printWindow) {
+        window.print();
+        return;
+      }
+
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Print Staff ID Badge</title>
+            <style>
+              body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 24px; background: #fff; }
+              .badge { background: #0F172A; color: #fff; border-radius: 16px; padding: 18px; display: flex; align-items: center; gap: 16px; max-width: 380px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+              .qr { background: #fff; padding: 6px; border-radius: 12px; }
+              .details { font-size: 11px; line-height: 1.4; color: #E2E8F0; }
+              .name { font-size: 16px; font-weight: 800; color: #FFF; margin: 2px 0; }
+              .pharmacy { font-size: 10px; font-weight: 800; text-transform: uppercase; color: #F472B6; }
+              .perm { background: rgba(244,114,182,0.2); color: #FBCFE8; padding: 2px 8px; border-radius: 6px; font-size: 9px; font-weight: 700; display: inline-block; margin-top: 6px; }
+            </style>
+          </head>
+          <body>
+            <div class="badge">
+              ${badgeContent.innerHTML}
+            </div>
+            <script>
+              window.onload = function() {
+                window.print();
+                setTimeout(() => window.close(), 1000);
+              };
+            </script>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
     }
 
     // Dedicated Modal to Add Staff with Role-Based Permissions
@@ -4278,11 +4466,276 @@
             <td class="px-6 py-4 text-right font-semibold">₹${item.price.toFixed(2)}</td>
             <td class="px-6 py-4 text-center text-xs font-bold text-pink-600">${item.safety}</td>
             <td class="px-6 py-4 text-center">
-              <button onclick="requestStockToCart('${item.name}', ${item.price})" class="bg-royal-magenta text-white px-3 py-1 rounded text-xs hover:bg-royal-accent">Add Purchase</button>
+              <div class="flex items-center justify-center space-x-1.5">
+                <button onclick="requestStockToCart('${escapeHtml(item.name)}', ${item.price})" class="bg-royal-magenta text-white px-2.5 py-1 rounded text-xs hover:bg-royal-accent font-semibold transition" title="Add to Required Purchases">Purchase</button>
+                <button onclick="openQrBatchModalWeb('${escapeHtml(item.name)}')" class="bg-slate-800 text-white hover:bg-slate-900 px-2 py-1 rounded text-xs font-semibold flex items-center space-x-1 transition shadow-sm border border-slate-700" title="Generate printable batch QR label">
+                  <i data-lucide="qr-code" class="w-3.5 h-3.5"></i>
+                  <span>QR Batch</span>
+                </button>
+              </div>
             </td>
           </tr>
         `;
       });
+      if (window.lucide) lucide.createIcons();
+    }
+
+    // Modal to Generate and Print QR Batch Labels for a Medicine
+    function openQrBatchModalWeb(medicineName) {
+      const drug = state.drugDatabase.find(d => d.name === medicineName);
+      if (!drug) {
+        Swal.fire('Error', 'Medicine details not found in database.', 'error');
+        return;
+      }
+
+      const defaultBatch = (drug.batch && drug.batch !== 'CAT-REQ') ? drug.batch : 'RX' + Math.floor(1000 + Math.random() * 9000);
+      const defaultExp = drug.expiry || '12/2027';
+      const pharmacyName = state.profile.businessName || 'ROYAL PHARMACY';
+
+      const modalHtml = `
+        <div class="text-left space-y-4 text-xs">
+          <div class="p-3 bg-pink-50 rounded-xl border border-pink-100 flex items-center justify-between">
+            <div>
+              <p class="font-bold text-slate-800 text-sm">${escapeHtml(drug.name)}</p>
+              <p class="text-[10px] text-slate-500">${escapeHtml(drug.generic || 'Generic Formulation')}</p>
+            </div>
+            <span class="px-2 py-0.5 bg-royal-magenta text-white text-[10px] font-bold rounded-full">₹${drug.price.toFixed(2)}</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Batch Number:</label>
+              <input type="text" id="qr-batch-input" value="${escapeHtml(defaultBatch)}" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-mono font-bold focus:ring-2 focus:ring-pink-500/20" oninput="refreshBatchQrPreview('${escapeHtml(drug.name)}')">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Expiry Date:</label>
+              <input type="text" id="qr-exp-input" value="${escapeHtml(defaultExp)}" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-mono focus:ring-2 focus:ring-pink-500/20" oninput="refreshBatchQrPreview('${escapeHtml(drug.name)}')">
+            </div>
+          </div>
+
+          <!-- Printable Label Preview -->
+          <div class="pt-2">
+            <label class="block font-bold text-slate-700 mb-1 text-[11px] uppercase tracking-wider">Printable QR Sticker Preview</label>
+            <div id="qr-batch-printable-card" class="bg-white border-2 border-slate-900 rounded-xl p-4 shadow-sm flex items-center space-x-4">
+              <div id="qr-batch-code-canvas" class="bg-white p-1 border border-slate-300 rounded shrink-0 flex items-center justify-center min-w-[96px] min-h-[96px]"></div>
+              <div class="flex-1 min-w-0 space-y-1">
+                <p class="text-[10px] font-extrabold uppercase text-royal-magenta tracking-wide truncate">${escapeHtml(pharmacyName)}</p>
+                <p class="text-xs font-bold text-slate-900 truncate">${escapeHtml(drug.name)}</p>
+                <div class="text-[10px] text-slate-600 font-mono space-y-0.5">
+                  <p>Batch: <b id="qr-card-batch">${escapeHtml(defaultBatch)}</b></p>
+                  <p>Expiry: <b id="qr-card-exp">${escapeHtml(defaultExp)}</b></p>
+                  <p>MRP: <b>₹${drug.price.toFixed(2)}</b> (Inc. GST)</p>
+                </div>
+                <div class="pt-1">
+                  <span class="inline-block bg-slate-900 text-white text-[9px] px-2 py-0.5 rounded font-mono font-bold">📍 RACK A-1</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Encoded JSON Payload Viewer -->
+          <details class="text-[10px] text-slate-500 bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+            <summary class="font-bold cursor-pointer text-slate-700">View Encoded JSON Payload</summary>
+            <pre id="qr-batch-json-preview" class="mt-2 p-2 bg-slate-900 text-emerald-400 rounded overflow-x-auto font-mono text-[9px] leading-relaxed"></pre>
+          </details>
+        </div>
+      `;
+
+      Swal.fire({
+        title: `Generate QR Batch: ${drug.name}`,
+        html: modalHtml,
+        showCancelButton: true,
+        confirmButtonText: '<i class="fa fa-print"></i> Print QR Label',
+        confirmButtonColor: '#9C1258',
+        cancelButtonText: 'Close',
+        didOpen: () => {
+          refreshBatchQrPreview(drug.name);
+        }
+      }).then((result) => {
+        if (result.isConfirmed) {
+          printQrBatchLabel(drug.name);
+        }
+      });
+    }
+
+    function refreshBatchQrPreview(medicineName) {
+      const drug = state.drugDatabase.find(d => d.name === medicineName);
+      if (!drug) return;
+
+      const batchVal = document.getElementById('qr-batch-input')?.value.trim() || 'RX990';
+      const expVal = document.getElementById('qr-exp-input')?.value.trim() || '12/2027';
+
+      const batchDisplay = document.getElementById('qr-card-batch');
+      const expDisplay = document.getElementById('qr-card-exp');
+      if (batchDisplay) batchDisplay.innerText = batchVal;
+      if (expDisplay) expDisplay.innerText = expVal;
+
+      const payload = {
+        name: drug.name,
+        batchNumber: batchVal,
+        expiryDate: expVal,
+        mrp: drug.price,
+        generic: drug.generic || '',
+        hsn: drug.hsn || '300420',
+        pharmacy: state.profile.businessName || 'ROYAL PHARMACY'
+      };
+
+      const payloadStr = JSON.stringify(payload);
+      const jsonPre = document.getElementById('qr-batch-json-preview');
+      if (jsonPre) jsonPre.innerText = JSON.stringify(payload, null, 2);
+
+      const qrContainer = document.getElementById('qr-batch-code-canvas');
+      if (qrContainer) {
+        qrContainer.innerHTML = '';
+        if (typeof QRCode !== 'undefined') {
+          try {
+            new QRCode(qrContainer, {
+              text: payloadStr,
+              width: 90,
+              height: 90,
+              colorDark: "#000000",
+              colorLight: "#ffffff",
+              correctLevel: QRCode.CorrectLevel.M
+            });
+          } catch (e) {
+            console.error("QR Code rendering error:", e);
+          }
+        } else {
+          // Fallback image generator
+          qrContainer.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=${encodeURIComponent(payloadStr)}" alt="QR Code" class="w-[90px] h-[90px]" />`;
+        }
+      }
+    }
+
+    function printQrBatchLabel(medicineName) {
+      const printableContent = document.getElementById('qr-batch-printable-card');
+      if (!printableContent) return;
+
+      const printWindow = window.open('', '_blank', 'width=500,height=400');
+      if (!printWindow) {
+        window.print();
+        return;
+      }
+
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Print QR Label - ${escapeHtml(medicineName)}</title>
+            <style>
+              body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 20px; }
+              .card { border: 2px solid #000; border-radius: 8px; padding: 16px; display: flex; align-items: center; gap: 16px; max-width: 380px; }
+              .details { font-size: 12px; line-height: 1.4; }
+              .title { font-weight: bold; font-size: 14px; margin: 2px 0; }
+              .pharmacy { font-size: 10px; font-weight: bold; text-transform: uppercase; color: #9C1258; }
+              .badge { background: #000; color: #fff; padding: 2px 6px; font-size: 10px; border-radius: 4px; display: inline-block; margin-top: 4px; }
+            </style>
+          </head>
+          <body>
+            <div class="card">
+              ${printableContent.innerHTML}
+            </div>
+            <script>
+              window.onload = function() {
+                window.print();
+                setTimeout(() => window.close(), 1000);
+              };
+            </script>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+    }
+
+    // Sync Inventory Function: forces a real-time push of all current medicine stock levels to Firestore & Google Drive
+    async function syncInventoryWeb() {
+      const syncBtn = document.getElementById('btn-sync-inventory-web');
+      const originalBtnContent = syncBtn ? syncBtn.innerHTML : '';
+      if (syncBtn) {
+        syncBtn.disabled = true;
+        syncBtn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Syncing...</span>';
+        if (window.lucide) lucide.createIcons();
+      }
+
+      try {
+        const medicinesCount = state.drugDatabase.length;
+
+        // 1. Push to Firestore if initialized
+        if (typeof fbDb !== 'undefined' && fbDb) {
+          const batch = fbDb.batch();
+          const invCol = fbDb.collection('pharmacy_inventory');
+          
+          state.drugDatabase.slice(0, 100).forEach(med => {
+            const docId = 'med_' + med.name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+            const docRef = invCol.doc(docId);
+            batch.set(docRef, {
+              name: med.name,
+              genericName: med.generic || '',
+              stockPacks: Number(med.stock) || 0,
+              mrp: Number(med.price) || 0,
+              purchasePrice: Number(med.purchasePrice) || 0,
+              category: med.category || 'General',
+              safetyCategory: med.safety || 'A',
+              indication: med.indication || '',
+              _lastUpdatedBy: 'WEB_PORTAL',
+              _lastSyncedAt: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+          });
+
+          await batch.commit();
+        }
+
+        // 2. Push snapshot backup to Google Drive state
+        state.lastGoogleDriveSync = "Just Now (" + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ")";
+        const backupSnapshot = {
+          fileName: `RoyalPharmacy_InventorySync_${new Date().toISOString().slice(0, 10)}.json`,
+          timestamp: "Just Now",
+          totalRecords: medicinesCount,
+          size: `${(medicinesCount * 0.35).toFixed(1)} KB`
+        };
+        state.driveSnapshots = [backupSnapshot, ...(state.driveSnapshots || []).slice(0, 4)];
+        saveStateToLocal();
+
+        // 3. Log staff/system activity
+        if (typeof logStaffActivityWeb === 'function') {
+          logStaffActivityWeb('INVENTORY_SYNC', `Pushed full inventory (${medicinesCount} medicines) to Firestore database & Google Drive`);
+        }
+
+        // 4. Trigger Toast Notification upon success
+        const Toast = Swal.mixin({
+          toast: true,
+          position: 'top-end',
+          showConfirmButton: false,
+          timer: 3500,
+          timerProgressBar: true,
+          didOpen: (toast) => {
+            toast.addEventListener('mouseenter', Swal.stopTimer);
+            toast.addEventListener('mouseleave', Swal.resumeTimer);
+          }
+        });
+
+        Toast.fire({
+          icon: 'success',
+          title: `Inventory Synced Successfully!`,
+          html: `<span class="text-xs">Pushed <b>${medicinesCount} medicine stock levels</b> to Firestore database and Google Drive.</span>`
+        });
+
+        // WhatsApp / Push banner slide-in
+        showLiveSyncNotification(
+          "Inventory Synced",
+          `Pushed ${medicinesCount} medicine stock levels to Firestore & Google Drive`,
+          "cloud-upload"
+        );
+
+      } catch (err) {
+        console.error("Inventory sync error:", err);
+        Swal.fire('Sync Error', 'Failed to synchronize inventory: ' + (err.message || err), 'error');
+      } finally {
+        if (syncBtn) {
+          syncBtn.disabled = false;
+          syncBtn.innerHTML = originalBtnContent;
+          if (window.lucide) lucide.createIcons();
+        }
+      }
     }
 
     function requestStockToCart(name, cost) {

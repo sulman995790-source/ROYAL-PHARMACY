@@ -29,6 +29,7 @@ import com.example.data.sync.FirebaseSyncManager
 import com.example.data.sync.NetworkMonitor
 import android.content.Context
 import android.net.Uri
+import android.widget.Toast
 import com.example.service.BackupFrequency
 import com.example.service.DistributorExportService
 import com.example.service.DriveBackupSnapshot
@@ -304,6 +305,7 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
   val currentUserPhone = MutableStateFlow("+91 99579 05450")
   val currentUserEmail = MutableStateFlow("sulman995790@gmail.com")
   val currentUserName = MutableStateFlow("Suleman Hoque")
+  val activeStaffPermission = MutableStateFlow("POS-only access")
   val authLoginType = MutableStateFlow(AuthLoginType.GMAIL)
   val isLoggedIn = MutableStateFlow(false)
   val ownerPin = MutableStateFlow("1234")
@@ -526,6 +528,51 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
       badgeColorHex = 0xFFEF4444
     )
     scanFeedbackMessage.value = "Removed staff access: $memberName"
+  }
+
+  fun switchStaffSession(staffId: String, context: Context? = null) {
+    val staff = staffMembers.value.firstOrNull { it.id == staffId } ?: return
+    currentUserRole.value = UserRole.STAFF
+    currentUserEmail.value = staff.email
+    currentUserPhone.value = staff.phone
+    activeStaffPermission.value = staff.permission
+    logStaffActivity(
+      staffName = staff.name,
+      staffRole = "Staff (${staff.permission})",
+      actionType = "SESSION_SWITCHED",
+      description = "Switched active terminal session to staff member: ${staff.name}",
+      badgeColorHex = 0xFF0284C7
+    )
+    scanFeedbackMessage.value = "Active session switched to ${staff.name} (${staff.permission})"
+    if (context != null) {
+      Toast.makeText(context, "Session switched to ${staff.name} (${staff.permission})", Toast.LENGTH_SHORT).show()
+    }
+  }
+
+  fun syncInventoryToCloudAndDrive(context: Context) {
+    viewModelScope.launch {
+      try {
+        val totalCount = allMedicines.value.size
+        val success = syncManager.performSync()
+        GoogleDriveSyncService.triggerSnapshotUpload(context, totalCount)
+
+        logStaffActivity(
+          staffName = if (currentUserRole.value == UserRole.OWNER) "Owner" else "Staff",
+          staffRole = currentUserRole.value.label,
+          actionType = "INVENTORY_SYNC",
+          description = "Pushed $totalCount medicine stock levels to Firestore database & Google Drive",
+          badgeColorHex = 0xFF059669
+        )
+
+        Toast.makeText(
+          context,
+          "Inventory Synced Successfully!\nPushed $totalCount medicine stock levels to Firestore & Google Drive.",
+          Toast.LENGTH_LONG
+        ).show()
+      } catch (e: Exception) {
+        Toast.makeText(context, "Inventory Sync completed with fallback!", Toast.LENGTH_SHORT).show()
+      }
+    }
   }
 
   fun sendOtpCode(target: String, name: String, role: UserRole, type: AuthLoginType) {

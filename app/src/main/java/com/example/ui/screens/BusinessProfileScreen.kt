@@ -7,6 +7,19 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.draw.alpha
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -36,6 +49,7 @@ import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FileUpload
@@ -44,7 +58,12 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.ManageAccounts
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.Print
+import androidx.compose.material.icons.filled.QrCode
+import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.SwapHoriz
+import com.example.util.QrCodeGeneratorUtil
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -113,13 +132,18 @@ fun BusinessProfileScreen(
   viewModel: PharmacyViewModel,
   modifier: Modifier = Modifier
 ) {
+  val context = LocalContext.current
   val profile by viewModel.businessProfile.collectAsState()
 
   var selectedTabIndex by remember { mutableIntStateOf(0) }
   val tabs = listOf("BASIC", "LICENSE", "TAXATION", "LOCATION", "TIMINGS", "STAFF & PERMISSIONS", "DATA IMPORT")
 
   val staffMembers by viewModel.staffMembers.collectAsState()
+  val currentUserRole by viewModel.currentUserRole.collectAsState()
+  val currentUserEmail by viewModel.currentUserEmail.collectAsState()
+  val currentUserPhone by viewModel.currentUserPhone.collectAsState()
   var showAddStaffDialog by remember { mutableStateOf(false) }
+  var staffForQrBadge by remember { mutableStateOf<StaffMember?>(null) }
 
   // Editable Form states initialized from persistent profile
   var businessName by remember(profile) { mutableStateOf(profile.businessName) }
@@ -292,7 +316,28 @@ fun BusinessProfileScreen(
                 )
 
                 Spacer(modifier = Modifier.height(10.dp))
-                SaveButton(onClick = { saveProfile() })
+                Row(
+                  modifier = Modifier.fillMaxWidth(),
+                  horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                  Button(
+                    onClick = { viewModel.syncInventoryToCloudAndDrive(context) },
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF059669)),
+                    modifier = Modifier
+                      .weight(1f)
+                      .height(48.dp)
+                      .testTag("btn_sync_inventory_profile")
+                  ) {
+                    Icon(Icons.Default.CloudUpload, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Sync Inventory", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                  }
+
+                  Box(modifier = Modifier.weight(1f)) {
+                    SaveButton(onClick = { saveProfile() })
+                  }
+                }
               }
             }
           }
@@ -625,11 +670,22 @@ fun BusinessProfileScreen(
 
                 // Staff Cards
                 staffMembers.forEach { staff ->
-                  StaffProfileItemCard(
-                    staff = staff,
-                    onUpdatePermission = { newPerm -> viewModel.updateStaffPermission(staff.id, newPerm) },
-                    onRemove = { viewModel.removeStaffMember(staff.id) }
-                  )
+                  val isCurrentActive = currentUserRole == com.example.viewmodel.UserRole.STAFF &&
+                      (currentUserPhone.endsWith(staff.phone.takeLast(6)) || currentUserEmail == staff.email)
+
+                  AnimatedVisibility(
+                    visible = true,
+                    enter = fadeIn(tween(400)) + expandVertically()
+                  ) {
+                    StaffProfileItemCard(
+                      staff = staff,
+                      isCurrentActive = isCurrentActive,
+                      onUpdatePermission = { newPerm -> viewModel.updateStaffPermission(staff.id, newPerm) },
+                      onRemove = { viewModel.removeStaffMember(staff.id) },
+                      onGenerateQrBadge = { staffForQrBadge = staff },
+                      onSwitchSession = { viewModel.switchStaffSession(staff.id, context) }
+                    )
+                  }
                 }
 
                 // Audit Trail Navigation Card
@@ -786,6 +842,15 @@ fun BusinessProfileScreen(
         }
       )
     }
+
+    if (staffForQrBadge != null) {
+      StaffQrBadgeDialog(
+        staff = staffForQrBadge!!,
+        pharmacyName = profile.businessName,
+        onDismiss = { staffForQrBadge = null },
+        onSwitchSession = { viewModel.switchStaffSession(staffForQrBadge!!.id, context) }
+      )
+    }
   }
 }
 
@@ -915,10 +980,24 @@ fun SaveButton(onClick: () -> Unit) {
 @Composable
 fun StaffProfileItemCard(
   staff: StaffMember,
+  isCurrentActive: Boolean = false,
   onUpdatePermission: (String) -> Unit,
-  onRemove: () -> Unit
+  onRemove: () -> Unit,
+  onGenerateQrBadge: () -> Unit = {},
+  onSwitchSession: () -> Unit = {}
 ) {
   var showPermissionMenu by remember { mutableStateOf(false) }
+
+  val infiniteTransition = rememberInfiniteTransition(label = "activePulse")
+  val pulseAlpha by infiniteTransition.animateFloat(
+    initialValue = 0.35f,
+    targetValue = 1.0f,
+    animationSpec = infiniteRepeatable(
+      animation = tween(900),
+      repeatMode = RepeatMode.Reverse
+    ),
+    label = "alpha"
+  )
 
   val permColor = when {
     staff.permission.contains("POS-only", ignoreCase = true) -> Color(0xFF10B981)
@@ -956,7 +1035,36 @@ fun StaffProfileItemCard(
           }
           Spacer(modifier = Modifier.width(10.dp))
           Column {
-            Text(text = staff.name, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextDark)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+              Text(text = staff.name, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextDark)
+              if (isCurrentActive) {
+                Spacer(modifier = Modifier.width(6.dp))
+                Box(
+                  modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color(0xFFDCFCE7))
+                    .border(1.dp, Color(0xFF86EFAC), RoundedCornerShape(10.dp))
+                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                  Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                      modifier = Modifier
+                        .size(6.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF16A34A))
+                        .alpha(pulseAlpha)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                      text = "ACTIVE SESSION",
+                      fontSize = 8.5.sp,
+                      fontWeight = FontWeight.ExtraBold,
+                      color = Color(0xFF15803D)
+                    )
+                  }
+                }
+              }
+            }
             Text(text = staff.designation, fontSize = 11.sp, color = TextMuted)
           }
         }
@@ -1051,8 +1159,164 @@ fun StaffProfileItemCard(
           }
         }
       }
+
+      // Action Bar: QR Badge & Quick Session Switch
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+      ) {
+        Button(
+          onClick = onGenerateQrBadge,
+          colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0F172A)),
+          shape = RoundedCornerShape(6.dp),
+          contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+          modifier = Modifier.weight(1f)
+        ) {
+          Icon(Icons.Default.QrCode2, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color.White)
+          Spacer(modifier = Modifier.width(4.dp))
+          Text("QR Badge", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+        }
+
+        OutlinedButton(
+          onClick = onSwitchSession,
+          shape = RoundedCornerShape(6.dp),
+          contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+          modifier = Modifier.weight(1f)
+        ) {
+          Icon(Icons.Default.SwapHoriz, contentDescription = null, modifier = Modifier.size(14.dp), tint = RoyalNavy)
+          Spacer(modifier = Modifier.width(4.dp))
+          Text("Operate", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = RoyalNavy)
+        }
+      }
     }
   }
+}
+
+@Composable
+fun StaffQrBadgeDialog(
+  staff: StaffMember,
+  pharmacyName: String,
+  onDismiss: () -> Unit,
+  onSwitchSession: () -> Unit
+) {
+  val context = LocalContext.current
+  val payloadMap = mapOf(
+    "type" to "STAFF_SESSION",
+    "staffId" to staff.id,
+    "name" to staff.name,
+    "phone" to staff.phone,
+    "email" to staff.email,
+    "permission" to staff.permission,
+    "designation" to staff.designation
+  )
+  val payloadJson = org.json.JSONObject(payloadMap).toString()
+  val qrMatrix = remember(payloadJson) { QrCodeGeneratorUtil.generateQrMatrix(payloadJson, 25) }
+
+  AlertDialog(
+    onDismissRequest = onDismiss,
+    title = {
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Default.Badge, contentDescription = null, tint = RoyalNavy)
+        Spacer(modifier = Modifier.width(8.dp))
+        Text("Staff ID Badge & Session QR", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+      }
+    },
+    text = {
+      Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+      ) {
+        Card(
+          shape = RoundedCornerShape(14.dp),
+          colors = CardDefaults.cardColors(containerColor = Color(0xFF0F172A)),
+          modifier = Modifier.fillMaxWidth()
+        ) {
+          Column(
+            modifier = Modifier.padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+          ) {
+            Text(pharmacyName.ifBlank { "ROYAL PHARMACY" }.uppercase(), fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFFF472B6))
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(staff.name, fontSize = 16.sp, fontWeight = FontWeight.Black, color = Color.White)
+            Text(staff.designation, fontSize = 11.sp, color = Color(0xFF94A3B8))
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Render QR Matrix
+            Box(
+              modifier = Modifier
+                .size(140.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(Color.White)
+                .padding(8.dp),
+              contentAlignment = Alignment.Center
+            ) {
+              Canvas(modifier = Modifier.fillMaxSize()) {
+                val matrixLen = qrMatrix.size
+                val cellWidth = this.size.width / matrixLen
+                val cellHeight = this.size.height / matrixLen
+
+                for (r in 0 until matrixLen) {
+                  for (c in 0 until matrixLen) {
+                    if (qrMatrix[r][c]) {
+                      drawRect(
+                        color = Color(0xFF0F172A),
+                        topLeft = androidx.compose.ui.geometry.Offset(c * cellWidth, r * cellHeight),
+                        size = androidx.compose.ui.geometry.Size(cellWidth, cellHeight)
+                      )
+                    }
+                  }
+                }
+              }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Box(
+              modifier = Modifier
+                .clip(RoundedCornerShape(6.dp))
+                .background(Color(0xFF0284C7).copy(alpha = 0.2f))
+                .padding(horizontal = 10.dp, vertical = 4.dp)
+            ) {
+              Text(staff.permission, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFF38BDF8))
+            }
+          }
+        }
+
+        Text(
+          "Scanning this QR badge with the terminal scanner instantly authorizes and switches active session to ${staff.name}.",
+          fontSize = 11.sp,
+          color = TextMuted,
+          textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
+      }
+    },
+    confirmButton = {
+      Button(
+        onClick = {
+          Toast.makeText(context, "Printing Staff ID Badge for ${staff.name}...", Toast.LENGTH_SHORT).show()
+          onDismiss()
+        },
+        colors = ButtonDefaults.buttonColors(containerColor = RoyalNavy),
+        shape = RoundedCornerShape(8.dp)
+      ) {
+        Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(16.dp))
+        Spacer(modifier = Modifier.width(6.dp))
+        Text("Print Staff Badge", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+      }
+    },
+    dismissButton = {
+      TextButton(
+        onClick = {
+          onSwitchSession()
+          onDismiss()
+        }
+      ) {
+        Text("Switch Session Now", color = RoyalMagenta, fontWeight = FontWeight.Bold)
+      }
+    }
+  )
 }
 
 @Composable
