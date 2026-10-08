@@ -38,6 +38,9 @@ interface PharmacyDao {
   @Query("SELECT * FROM medicines WHERE id = :id LIMIT 1")
   suspend fun getMedicineById(id: Long): MedicineItem?
 
+  @Query("SELECT * FROM medicines WHERE LOWER(name) = LOWER(:name) LIMIT 1")
+  suspend fun getMedicineByName(name: String): MedicineItem?
+
   @Insert(onConflict = OnConflictStrategy.REPLACE)
   suspend fun insertMedicine(medicine: MedicineItem): Long
 

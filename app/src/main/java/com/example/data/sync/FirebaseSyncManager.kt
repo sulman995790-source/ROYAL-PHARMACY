@@ -87,10 +87,17 @@ class FirebaseSyncManager(
           if (data["_lastUpdatedBy"] == "WEB_PORTAL") {
             scope.launch(Dispatchers.IO) {
               try {
-                val medId = (data["id"] as? Number)?.toLong() ?: 0L
-                if (medId != 0L) {
-                  // Map Firestore data back to MedicineItem and update Room
-                  val item = mapToMedicineItem(data)
+                var item = mapToMedicineItem(data)
+                val existing = dao.getMedicineByName(item.name)
+                if (existing != null) {
+                  item = item.copy(
+                    id = existing.id,
+                    isEssential = existing.isEssential,
+                    isLifeSaving = existing.isLifeSaving
+                  )
+                  dao.insertMedicine(item)
+                  addLog("Cloud Sync: Updated ${item.name} from Web")
+                } else if (item.id != 0L) {
                   dao.insertMedicine(item)
                   addLog("Cloud Sync: Updated ${item.name} from Web")
                 }

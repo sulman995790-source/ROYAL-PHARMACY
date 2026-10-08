@@ -2158,7 +2158,8 @@
         { name: "Ondem 2mg/2ml IV/IM Injection", generic: "Ondansetron Hydrochloride", hsn: "300420", stock: 540, price: 22.0, purchasePrice: 12.0, category: "Injectable", safety: "A (Clinical Safe)", indication: "Post-operative and Chemotherapy Induced Nausea" },
         { name: "Deriphyllin 2ml IV/IM Injection", generic: "Etofylline 84.7mg + Theophylline 25.3mg", hsn: "300420", stock: 410, price: 15.0, purchasePrice: 8.0, category: "Injectable", safety: "B (Caution)", indication: "Acute Bronchial Asthma and COPD Exacerbation" },
         { name: "Insulin Regular (Human) 40IU/ml Vial", generic: "Human Soluble Insulin", hsn: "300490", stock: 280, price: 165.0, purchasePrice: 125.0, category: "Injectable", safety: "C (Cold Chain Required)", indication: "Emergency Hyperglycemia & Ketoacidosis" }
-      ]
+      ],
+      customReorderLevels: {}
     };
 
     // Load state from LocalStorage if present
@@ -2188,6 +2189,7 @@
         snapshot.docChanges().forEach(change => {
           const data = change.doc.data();
           if (data._lastUpdatedBy === 'WEB_PORTAL') return;
+          const reorderVal = data.minStockAlert !== undefined ? Number(data.minStockAlert) : 15;
           const med = {
             name: data.name,
             generic: data.genericName || data.generic || '',
@@ -2196,9 +2198,13 @@
             purchasePrice: data.purchasePrice || 0,
             category: data.category || 'General',
             safety: data.safetyCategory || data.safety || 'A',
-            indication: data.indication || ''
+            indication: data.indication || '',
+            reorderLevel: reorderVal,
+            minStock: reorderVal
           };
           if (change.type === 'added' || change.type === 'modified') {
+            state.customReorderLevels = state.customReorderLevels || {};
+            state.customReorderLevels[med.name] = reorderVal;
             const index = state.drugDatabase.findIndex(d => d.name === med.name);
             if (index !== -1) {
               state.drugDatabase[index] = med;
@@ -4470,6 +4476,15 @@
       }
 
       saveStateToLocal();
+
+      // Sync change to Firestore immediately so it updates on mobile app
+      if (typeof fbDb !== 'undefined' && fbDb) {
+        const docId = 'med_' + drugName.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+        syncWebChangeToFirestore('pharmacy_inventory', docId, {
+          name: drugName,
+          minStockAlert: parsedVal
+        });
+      }
 
       if (window.Swal) {
         const Toast = Swal.mixin({
