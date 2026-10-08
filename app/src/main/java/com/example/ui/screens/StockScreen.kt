@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -35,6 +36,7 @@ import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.EventBusy
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Print
@@ -117,6 +119,7 @@ fun StockScreen(
   var showManualAddDialog by remember { mutableStateOf(false) }
   var medicineToDelete by remember { mutableStateOf<MedicineItem?>(null) }
   var medicineToEditRack by remember { mutableStateOf<MedicineItem?>(null) }
+  var medicineToEditReorder by remember { mutableStateOf<MedicineItem?>(null) }
   var medicineForQrBatch by remember { mutableStateOf<MedicineItem?>(null) }
 
   val searchTokens = searchQuery.trim().split("\\s+".toRegex()).filter { it.isNotBlank() }
@@ -357,6 +360,9 @@ fun StockScreen(
             },
             onEditRack = {
               medicineToEditRack = med
+            },
+            onEditReorderLevel = {
+              medicineToEditReorder = med
             },
             onGenerateQrBatch = {
               medicineForQrBatch = med
@@ -610,6 +616,69 @@ fun StockScreen(
       )
     }
 
+    // 8b. Quick Edit Reorder Threshold Dialog
+    if (medicineToEditReorder != null) {
+      val med = medicineToEditReorder!!
+      var updatedThresholdText by remember { mutableStateOf(med.minStockAlert.toString()) }
+      val presetLevels = listOf(2, 5, 8, 10, 15, 20, 50, 100)
+
+      AlertDialog(
+        onDismissRequest = { medicineToEditReorder = null },
+        title = {
+          Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.NotificationsActive, contentDescription = null, tint = Color(0xFFB45309))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Customize Reorder Threshold", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+          }
+        },
+        text = {
+          Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(med.name, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextDark)
+            Text("Set the minimum stock level at which reorder alerts will trigger for this medicine.", fontSize = 12.sp, color = TextMuted)
+
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+              items(presetLevels) { preset ->
+                FilterChip(
+                  selected = updatedThresholdText == preset.toString(),
+                  onClick = { updatedThresholdText = preset.toString() },
+                  label = { Text("$preset units", fontSize = 11.sp) }
+                )
+              }
+            }
+
+            OutlinedTextField(
+              value = updatedThresholdText,
+              onValueChange = { updatedThresholdText = it.filter { char -> char.isDigit() } },
+              label = { Text("Reorder Level (packs / units)") },
+              singleLine = true,
+              keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+              modifier = Modifier.fillMaxWidth()
+            )
+          }
+        },
+        confirmButton = {
+          Button(
+            onClick = {
+              val newThreshold = updatedThresholdText.toIntOrNull() ?: med.minStockAlert
+              if (newThreshold >= 1) {
+                viewModel.updateMedicineSafetyThreshold(med.id, med.isEssential, med.isLifeSaving, newThreshold)
+                medicineToEditReorder = null
+                Toast.makeText(context, "Reorder level for ${med.name} set to $newThreshold packs!", Toast.LENGTH_SHORT).show()
+              }
+            },
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB45309))
+          ) {
+            Text("Save Threshold")
+          }
+        },
+        dismissButton = {
+          TextButton(onClick = { medicineToEditReorder = null }) {
+            Text("Cancel", color = TextMuted)
+          }
+        }
+      )
+    }
+
     // 9. Delete / Reduce Stock Dialog
     if (medicineToDelete != null) {
       val med = medicineToDelete!!
@@ -644,6 +713,7 @@ fun StockItemCard(
   onAddToCart: () -> Unit,
   onDeleteClick: () -> Unit,
   onEditRack: () -> Unit,
+  onEditReorderLevel: () -> Unit,
   onGenerateQrBatch: () -> Unit
 ) {
   val initials = item.name.take(2).uppercase()
@@ -748,6 +818,29 @@ fun StockItemCard(
                 fontWeight = FontWeight.ExtraBold,
                 color = Color(0xFF92400E)
               )
+            }
+          }
+
+          // Clickable REORDER THRESHOLD BADGE (Allows Editing Reorder Threshold directly from list)
+          Box(
+            modifier = Modifier
+              .clip(RoundedCornerShape(4.dp))
+              .background(if (isLowStock) Color(0xFFFEF3C7) else Color(0xFFF1F5F9))
+              .border(1.dp, if (isLowStock) Color(0xFFF59E0B) else Color(0xFFCBD5E1), RoundedCornerShape(4.dp))
+              .clickable { onEditReorderLevel() }
+              .padding(horizontal = 6.dp, vertical = 2.dp)
+          ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+              Icon(Icons.Default.NotificationsActive, contentDescription = null, tint = if (isLowStock) Color(0xFFB45309) else TextMuted, modifier = Modifier.size(10.dp))
+              Spacer(modifier = Modifier.width(3.dp))
+              Text(
+                text = "Min: ${item.minStockAlert}",
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (isLowStock) Color(0xFF78350F) else TextDark
+              )
+              Spacer(modifier = Modifier.width(3.dp))
+              Icon(Icons.Default.Edit, contentDescription = null, tint = if (isLowStock) Color(0xFFB45309) else TextMuted, modifier = Modifier.size(9.dp))
             }
           }
 

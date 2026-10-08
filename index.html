@@ -800,6 +800,9 @@
                   <th class="px-6 py-4 text-center cursor-pointer hover:bg-slate-100 transition" onclick="sortDrugs('stock')">
                     Available Stock <span id="sort-icon-stock" class="text-pink-600">↕</span>
                   </th>
+                  <th class="px-6 py-4 text-center cursor-pointer hover:bg-slate-100 transition" onclick="sortDrugs('reorderLevel')">
+                    Reorder Level <span id="sort-icon-reorderLevel" class="text-pink-600">↕</span>
+                  </th>
                   <th class="px-6 py-4 text-right cursor-pointer hover:bg-slate-100 transition" onclick="sortDrugs('price')">
                     Price / strip (₹) <span id="sort-icon-price" class="text-pink-600">↕</span>
                   </th>
@@ -2353,6 +2356,7 @@
           state.userName = parsed.userName || state.userName;
           state.userEmail = parsed.userEmail || state.userEmail;
           state.userPhone = parsed.userPhone || state.userPhone;
+          state.customReorderLevels = parsed.customReorderLevels || {};
           state.isLoggedIn = parsed.isLoggedIn !== undefined ? parsed.isLoggedIn : false;
         } catch (e) {
           console.error("Failed to restore local state", e);
@@ -2375,6 +2379,7 @@
         userName: state.userName,
         userEmail: state.userEmail,
         userPhone: state.userPhone,
+        customReorderLevels: state.customReorderLevels || {},
         isLoggedIn: state.isLoggedIn
       }));
     }
@@ -4401,7 +4406,7 @@
       }
 
       // Reset indicator icons
-      ['name', 'hsn', 'stock', 'price'].forEach(col => {
+      ['name', 'hsn', 'stock', 'reorderLevel', 'price'].forEach(col => {
         const el = document.getElementById(`sort-icon-${col}`);
         if (el) {
           if (col === currentSortColumn) {
@@ -4413,8 +4418,8 @@
       });
 
       state.drugDatabase.sort((a, b) => {
-        let valA = a[column];
-        let valB = b[column];
+        let valA = column === 'reorderLevel' ? (a.minStock || a.reorderLevel || 15) : a[column];
+        let valB = column === 'reorderLevel' ? (b.minStock || b.reorderLevel || 15) : b[column];
         if (typeof valA === 'string') {
           valA = valA.toLowerCase();
           valB = valB.toLowerCase();
@@ -4446,6 +4451,46 @@
       }
     }
 
+    function updateDrugReorderLevel(drugName, newLevel) {
+      const parsedVal = parseInt(newLevel, 10);
+      if (isNaN(parsedVal) || parsedVal < 1) {
+        if (window.Swal) {
+          Swal.fire('Invalid Input', 'Please enter a valid positive reorder threshold number.', 'warning');
+        }
+        return;
+      }
+
+      state.customReorderLevels = state.customReorderLevels || {};
+      state.customReorderLevels[drugName] = parsedVal;
+
+      const drug = state.drugDatabase.find(d => d.name === drugName);
+      if (drug) {
+        drug.reorderLevel = parsedVal;
+        drug.minStock = parsedVal;
+      }
+
+      saveStateToLocal();
+
+      if (window.Swal) {
+        const Toast = Swal.mixin({
+          toast: true,
+          position: 'top-end',
+          showConfirmButton: false,
+          timer: 1800,
+          timerProgressBar: true
+        });
+        Toast.fire({
+          icon: 'success',
+          title: `Reorder level updated to ${parsedVal} for ${drugName}`
+        });
+      }
+
+      searchDrugs();
+      if (typeof renderLowStockWidget === 'function') {
+        renderLowStockWidget();
+      }
+    }
+
     function searchDrugs() {
       const rawQuery = document.getElementById('drug-search').value.toLowerCase().trim();
       const filter = document.getElementById('drug-category-filter').value;
@@ -4455,8 +4500,18 @@
 
       const queryTokens = rawQuery.split(/\s+/).filter(Boolean);
 
-      // Reorder warning threshold (default 500 strips unless minStock specified)
-      const reorderItems = state.drugDatabase.filter(d => d.stock <= (d.minStock || d.reorderLevel || 500));
+      // Apply custom reorder levels if stored
+      if (state.customReorderLevels) {
+        state.drugDatabase.forEach(d => {
+          if (state.customReorderLevels[d.name] !== undefined) {
+            d.minStock = state.customReorderLevels[d.name];
+            d.reorderLevel = state.customReorderLevels[d.name];
+          }
+        });
+      }
+
+      // Reorder warning threshold (default 15 strips unless minStock specified)
+      const reorderItems = state.drugDatabase.filter(d => d.stock <= (d.minStock || d.reorderLevel || 15));
       const summaryBar = document.getElementById('drug-reorder-summary-bar');
       const countNum = document.getElementById('reorder-count-num');
       if (summaryBar && countNum) {
@@ -4474,7 +4529,7 @@
         
         let matchesCategory = true;
         if (filter === "REORDER_LOW") {
-          matchesCategory = d.stock <= (d.minStock || d.reorderLevel || 500);
+          matchesCategory = d.stock <= (d.minStock || d.reorderLevel || 15);
         } else if (filter !== "") {
           matchesCategory = d.category === filter;
         }
@@ -4483,7 +4538,7 @@
       });
 
       if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-6 text-center text-slate-400">No results match search queries.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="px-6 py-6 text-center text-slate-400">No results match search queries.</td></tr>`;
         return;
       }
 
@@ -4491,11 +4546,16 @@
       const limitedResults = filtered.slice(0, displayLimit);
 
       if (filtered.length > displayLimit) {
-        tbody.innerHTML += `<tr><td colspan="6" class="px-4 py-2 bg-pink-50 text-[11px] text-royal-magenta font-semibold text-center">Showing top ${displayLimit} matches of ${filtered.length.toLocaleString()} matching records (out of 500,000+ formulary catalog). Refine search for specific results.</td></tr>`;
+        tbody.innerHTML += `<tr><td colspan="7" class="px-4 py-2 bg-pink-50 text-[11px] text-royal-magenta font-semibold text-center">Showing top ${displayLimit} matches of ${filtered.length.toLocaleString()} matching records (out of 500,000+ formulary catalog). Refine search for specific results.</td></tr>`;
       }
 
       limitedResults.forEach(item => {
-        const minStockLevel = item.minStock || item.reorderLevel || 500;
+        const minStockLevel = (state.customReorderLevels && state.customReorderLevels[item.name]) !== undefined
+          ? state.customReorderLevels[item.name]
+          : (item.minStock || item.reorderLevel || 15);
+        item.minStock = minStockLevel;
+        item.reorderLevel = minStockLevel;
+
         const isLowStock = item.stock <= minStockLevel;
         const isOutStock = item.stock === 0;
 
@@ -4542,6 +4602,18 @@
             <td class="px-6 py-4 text-center text-xs font-mono">${escapeHtml(item.hsn || '')}</td>
             <td class="px-6 py-4 text-center">
               ${stockPill}
+            </td>
+            <td class="px-6 py-4 text-center">
+              <div class="inline-flex items-center space-x-1.5 bg-slate-100/90 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1 shadow-inner">
+                <i data-lucide="bell-ring" class="w-3.5 h-3.5 text-amber-600 shrink-0"></i>
+                <input type="number" 
+                       value="${minStockLevel}" 
+                       min="1" max="100000" 
+                       onchange="updateDrugReorderLevel('${escapeHtml(item.name)}', this.value)"
+                       class="w-16 text-center text-xs font-extrabold bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded py-1 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-pink-500 shadow-sm"
+                       title="Edit Reorder Threshold level for ${escapeHtml(item.name)}" />
+                <span class="text-[10px] text-slate-500 font-bold pr-0.5">units</span>
+              </div>
             </td>
             <td class="px-6 py-4 text-right font-semibold">₹${item.price.toFixed(2)}</td>
             <td class="px-6 py-4 text-center text-xs font-bold text-pink-600">${escapeHtml(item.safety || '')}</td>
