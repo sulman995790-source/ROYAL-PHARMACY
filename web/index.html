@@ -138,36 +138,60 @@
 
       <!-- Input Fields Card -->
       <div class="bg-slate-950/40 border border-slate-800/80 p-5 rounded-2xl space-y-4">
-        <h3 id="web-login-title" class="text-sm font-bold text-slate-200">Welcome Back</h3>
+        <div class="flex items-center justify-between">
+          <h3 id="web-login-title" class="text-sm font-bold text-slate-200">Welcome Back</h3>
+          <span id="web-login-role-indicator" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-500/10 text-pink-400 border border-pink-500/20">👑 Owner Mode</span>
+        </div>
         
         <!-- Role Selector -->
-        <div class="flex p-1 bg-slate-900 rounded-xl border border-slate-800">
-          <button id="web-login-role-owner" onclick="toggleWebLoginRole('OWNER')" class="flex-1 py-2 text-[10px] font-bold rounded-lg bg-pink-500/10 text-royal-magenta border border-pink-500/20 transition-all">👑 Owner Mode</button>
-          <button id="web-login-role-staff" onclick="toggleWebLoginRole('STAFF')" class="flex-1 py-2 text-[10px] font-bold rounded-lg text-slate-400 hover:text-slate-200 transition-all">💼 Staff Mode</button>
+        <div class="flex p-1 bg-slate-900 rounded-xl border border-slate-800 gap-1.5">
+          <button type="button" id="web-login-role-owner" onclick="toggleWebLoginRole('OWNER')" class="flex-1 py-2 text-[11px] font-bold rounded-lg bg-pink-500/20 text-pink-300 border border-pink-500/40 shadow-sm transition-all flex items-center justify-center space-x-1.5 cursor-pointer">
+            <span>👑</span>
+            <span>Owner Mode</span>
+          </button>
+          <button type="button" id="web-login-role-staff" onclick="toggleWebLoginRole('STAFF')" class="flex-1 py-2 text-[11px] font-bold rounded-lg text-slate-400 border border-transparent hover:text-slate-200 transition-all flex items-center justify-center space-x-1.5 cursor-pointer">
+            <span>💼</span>
+            <span>Staff Mode</span>
+          </button>
         </div>
 
         <div class="space-y-3.5">
           <!-- Secret Password Field (For Owners) -->
           <div id="web-owner-password-block" class="space-y-1.5">
-            <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Owner Secret Password</label>
+            <div class="flex items-center justify-between">
+              <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">Owner Secret Password</label>
+              <span class="text-[9px] text-pink-400/80">Default: @arifa1234SS</span>
+            </div>
             <input type="password" id="web-login-password-input" placeholder="••••••••" class="w-full px-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-pink-500 placeholder-slate-600">
+          </div>
+
+          <!-- Staff Helper Callout (Shows when Staff Mode active) -->
+          <div id="web-staff-helper-block" class="p-3 bg-sky-950/30 border border-sky-800/40 rounded-xl text-xs text-sky-300 space-y-1 hidden">
+            <div class="flex items-center space-x-1.5 font-bold text-[11px]">
+              <span>💼</span>
+              <span>Staff / Pharmacist Access</span>
+            </div>
+            <p class="text-[10px] text-sky-400/80 leading-relaxed">No owner password required. Staff members authenticate quickly via 10-digit mobile number & OTP (123456) or Google Account.</p>
           </div>
 
           <!-- Sign Up fields (Hidden by default) -->
           <div id="web-signup-fields" class="space-y-3 hidden">
             <div>
-              <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Owner / Partner Full Name</label>
+              <label id="web-signup-name-label" class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Owner / Partner Full Name</label>
               <input type="text" id="web-login-name-input" placeholder="e.g. Suleman Hoque" class="w-full px-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-pink-500 placeholder-slate-600">
             </div>
             <div>
-              <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Business Email Address</label>
+              <label id="web-signup-email-label" class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Business Email Address</label>
               <input type="email" id="web-login-email-input" placeholder="sulman995790@gmail.com" class="w-full px-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-pink-500 placeholder-slate-600">
             </div>
           </div>
 
           <!-- Phone Number Input -->
           <div>
-            <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">10-Digit Mobile Number</label>
+            <div class="flex items-center justify-between mb-1">
+              <label id="web-login-phone-label" class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">10-Digit Mobile Number</label>
+              <button type="button" id="web-login-quick-staff-phone" class="text-[9px] text-sky-400 hover:text-sky-300 underline cursor-pointer hidden" onclick="fillStaffDemoPhone()">Auto-fill: 9435078210</button>
+            </div>
             <div class="relative flex items-center">
               <span class="absolute left-4 text-xs font-bold text-slate-500">+91</span>
               <input type="text" id="web-login-phone-input" placeholder="9435078210" maxlength="10" class="w-full pl-12 pr-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-pink-500 placeholder-slate-600 font-bold tracking-wider">
@@ -183,7 +207,7 @@
         </div>
 
         <!-- Primary Action Button -->
-        <button onclick="handleWebPrimaryAuth()" id="web-login-auth-btn" class="w-full bg-royal-navy hover:bg-slate-800 text-white py-3 rounded-xl text-xs font-bold transition shadow-md mt-2 flex items-center justify-center space-x-1">
+        <button onclick="handleWebPrimaryAuth()" id="web-login-auth-btn" class="w-full bg-royal-navy hover:bg-slate-800 text-white py-3 rounded-xl text-xs font-bold transition shadow-md mt-2 flex items-center justify-center space-x-1 cursor-pointer">
           <span>Request 6-Digit OTP</span>
         </button>
       </div>
@@ -1982,7 +2006,10 @@
       if (profitInput) profitInput.checked = state.showProfitDetails;
 
       // Sync badges & Avatar elements
-      document.getElementById('current-role-badge').innerText = state.role === 'OWNER' ? 'Owner (Full Access)' : 'Staff (General)';
+      const roleBadge = document.getElementById('current-role-badge');
+      if (roleBadge) {
+        roleBadge.innerText = state.role === 'OWNER' ? '👑 Owner (Full Access)' : '💼 Staff (Billing & POS)';
+      }
       
       const avatarContainer = document.getElementById('user-avatar-container');
       if (avatarContainer) {
@@ -5700,56 +5727,118 @@
     // Web Portal Native Login and Sign Up Actions
     let isWebSignUp = false;
     let isOtpSent = false;
+    let webLoginRole = 'OWNER';
+
+    function updateLoginTitlesAndButtons() {
+      const title = document.getElementById('web-login-title');
+      const authBtn = document.getElementById('web-login-auth-btn');
+      if (isWebSignUp) {
+        if (title) title.innerText = webLoginRole === 'OWNER' ? "Create Pharmacy Owner Account" : "Register Pharmacy Staff Account";
+        if (authBtn) {
+          authBtn.innerHTML = isOtpSent 
+            ? "<span>Verify OTP & Complete Registration</span>" 
+            : `<span>${webLoginRole === 'OWNER' ? 'Sign Up as Owner' : 'Register Staff'} & Request OTP</span>`;
+        }
+      } else {
+        if (title) title.innerText = webLoginRole === 'OWNER' ? "Owner Portal Sign In" : "Staff Member Sign In";
+        if (authBtn) {
+          authBtn.innerHTML = isOtpSent 
+            ? "<span>Verify OTP & Access ERP</span>" 
+            : `<span>Request 6-Digit OTP (${webLoginRole === 'OWNER' ? 'Owner' : 'Staff'})</span>`;
+        }
+      }
+    }
 
     function setWebLoginTab(isSignUp) {
       isWebSignUp = isSignUp;
       isOtpSent = false;
-      document.getElementById('web-login-otp-block').classList.add('hidden');
+      const otpBlock = document.getElementById('web-login-otp-block');
+      if (otpBlock) otpBlock.classList.add('hidden');
       
       const signinBtn = document.getElementById('web-tab-btn-signin');
       const signupBtn = document.getElementById('web-tab-btn-signup');
-      const title = document.getElementById('web-login-title');
       const signupFields = document.getElementById('web-signup-fields');
-      const authBtn = document.getElementById('web-login-auth-btn');
 
       if (isSignUp) {
         signinBtn.classList.remove('bg-royal-navy', 'text-white');
         signinBtn.classList.add('text-slate-400');
         signupBtn.classList.add('bg-royal-navy', 'text-white');
         signupBtn.classList.remove('text-slate-400');
-        title.innerText = "Create Pharmacy Account";
-        signupFields.classList.remove('hidden');
-        authBtn.innerHTML = "<span>Sign Up & Request OTP</span>";
+        if (signupFields) signupFields.classList.remove('hidden');
       } else {
         signupBtn.classList.remove('bg-royal-navy', 'text-white');
         signupBtn.classList.add('text-slate-400');
         signinBtn.classList.add('bg-royal-navy', 'text-white');
         signinBtn.classList.remove('text-slate-400');
-        title.innerText = "Welcome Back";
-        signupFields.classList.add('hidden');
-        authBtn.innerHTML = "<span>Request 6-Digit OTP</span>";
+        if (signupFields) signupFields.classList.add('hidden');
       }
+
+      updateLoginTitlesAndButtons();
     }
 
-    let webLoginRole = 'OWNER';
     function toggleWebLoginRole(role) {
       webLoginRole = role;
       const ownerBtn = document.getElementById('web-login-role-owner');
       const staffBtn = document.getElementById('web-login-role-staff');
       const passwordBlock = document.getElementById('web-owner-password-block');
+      const staffHelper = document.getElementById('web-staff-helper-block');
+      const roleIndicator = document.getElementById('web-login-role-indicator');
+      const nameLabel = document.getElementById('web-signup-name-label');
+      const nameInput = document.getElementById('web-login-name-input');
+      const emailLabel = document.getElementById('web-signup-email-label');
+      const emailInput = document.getElementById('web-login-email-input');
+      const phoneInput = document.getElementById('web-login-phone-input');
+      const demoStaffBtn = document.getElementById('web-login-quick-staff-phone');
+
+      updateLoginTitlesAndButtons();
 
       if (role === 'OWNER') {
-        ownerBtn.classList.add('bg-pink-500/10', 'text-royal-magenta', 'border-pink-500/20');
-        ownerBtn.classList.remove('text-slate-400');
-        staffBtn.classList.remove('bg-royal-navy/10', 'text-royal-navy', 'border-royal-navy/20');
-        staffBtn.classList.add('text-slate-400');
-        passwordBlock.classList.remove('hidden');
+        if (ownerBtn) {
+          ownerBtn.className = "flex-1 py-2 text-[11px] font-bold rounded-lg bg-pink-500/20 text-pink-300 border border-pink-500/40 shadow-sm transition-all flex items-center justify-center space-x-1.5 cursor-pointer";
+        }
+        if (staffBtn) {
+          staffBtn.className = "flex-1 py-2 text-[11px] font-bold rounded-lg text-slate-400 border border-transparent hover:text-slate-200 transition-all flex items-center justify-center space-x-1.5 cursor-pointer";
+        }
+        if (passwordBlock) passwordBlock.classList.remove('hidden');
+        if (staffHelper) staffHelper.classList.add('hidden');
+        if (demoStaffBtn) demoStaffBtn.classList.add('hidden');
+        if (roleIndicator) {
+          roleIndicator.innerText = "👑 Owner Mode";
+          roleIndicator.className = "text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-500/10 text-pink-400 border border-pink-500/20";
+        }
+        if (nameLabel) nameLabel.innerText = "Owner / Partner Full Name";
+        if (nameInput) nameInput.placeholder = "e.g. Suleman Hoque";
+        if (emailLabel) emailLabel.innerText = "Business Email Address";
+        if (emailInput) emailInput.placeholder = "sulman995790@gmail.com";
       } else {
-        staffBtn.classList.add('bg-royal-navy/10', 'text-royal-navy', 'border-royal-navy/20');
-        staffBtn.classList.remove('text-slate-400');
-        ownerBtn.classList.remove('bg-pink-500/10', 'text-royal-magenta', 'border-pink-500/20');
-        ownerBtn.classList.add('text-slate-400');
-        passwordBlock.classList.add('hidden');
+        if (staffBtn) {
+          staffBtn.className = "flex-1 py-2 text-[11px] font-bold rounded-lg bg-sky-500/20 text-sky-300 border border-sky-500/40 shadow-sm transition-all flex items-center justify-center space-x-1.5 cursor-pointer";
+        }
+        if (ownerBtn) {
+          ownerBtn.className = "flex-1 py-2 text-[11px] font-bold rounded-lg text-slate-400 border border-transparent hover:text-slate-200 transition-all flex items-center justify-center space-x-1.5 cursor-pointer";
+        }
+        if (passwordBlock) passwordBlock.classList.add('hidden');
+        if (staffHelper) staffHelper.classList.remove('hidden');
+        if (demoStaffBtn) demoStaffBtn.classList.remove('hidden');
+        if (roleIndicator) {
+          roleIndicator.innerText = "💼 Staff Mode";
+          roleIndicator.className = "text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20";
+        }
+        if (nameLabel) nameLabel.innerText = "Staff / Pharmacist Full Name";
+        if (nameInput) nameInput.placeholder = "e.g. Nijamuddin Khan / Rahul Sharma";
+        if (emailLabel) emailLabel.innerText = "Staff Email Address";
+        if (emailInput) emailInput.placeholder = "khannijamuddin87275@gmail.com";
+        if (phoneInput && !phoneInput.value) {
+          phoneInput.value = "9435078210";
+        }
+      }
+    }
+
+    function fillStaffDemoPhone() {
+      const phoneInput = document.getElementById('web-login-phone-input');
+      if (phoneInput) {
+        phoneInput.value = "9435078210";
+        phoneInput.focus();
       }
     }
 
@@ -5761,16 +5850,31 @@
       const passwordInput = document.getElementById('web-login-password-input').value.trim();
 
       if (webLoginRole === 'OWNER' && passwordInput !== state.secretPassword) {
-        Swal.fire('Secret Password Required', 'The provided owner secret password is incorrect.', 'error');
+        Swal.fire({
+          title: 'Owner Password Required',
+          text: 'The provided owner secret password is incorrect (Default: @arifa1234SS).',
+          icon: 'error',
+          confirmButtonColor: '#9C1258'
+        });
         return;
       }
 
       if (isWebSignUp && (!nameInput || !emailInput)) {
-        Swal.fire('Form Incomplete', 'Please provide your name and email address to create a pharmacy portal.', 'error');
+        Swal.fire({
+          title: 'Form Incomplete',
+          text: `Please enter full name and email address to register ${webLoginRole === 'OWNER' ? 'the pharmacy owner' : 'the staff chemist'} account.`,
+          icon: 'error',
+          confirmButtonColor: '#9C1258'
+        });
         return;
       }
       if (!phoneInput || phoneInput.length < 10) {
-        Swal.fire('Invalid Number', 'Please enter a valid 10-digit mobile number.', 'error');
+        Swal.fire({
+          title: 'Invalid Number',
+          text: 'Please enter a valid 10-digit mobile number.',
+          icon: 'error',
+          confirmButtonColor: '#9C1258'
+        });
         return;
       }
 
@@ -5778,25 +5882,80 @@
         isOtpSent = true;
         document.getElementById('web-login-otp-block').classList.remove('hidden');
         document.getElementById('web-login-auth-btn').innerHTML = "<span>Verify OTP & Access ERP</span>";
-        Swal.fire('OTP Dispatched', 'A mock security code (123456) has been sent to +91 ' + phoneInput, 'info');
+        Swal.fire({
+          title: 'OTP Dispatched',
+          text: `Security code (123456) dispatched to +91 ${phoneInput} for ${webLoginRole === 'OWNER' ? 'Owner' : 'Staff'} login.`,
+          icon: 'info',
+          confirmButtonColor: '#9C1258'
+        });
       } else {
         if (otpInput === '123456' || otpInput === '') {
           state.isLoggedIn = true;
           state.userPhone = "+91 " + phoneInput;
           state.role = webLoginRole;
-          if (isWebSignUp) {
-            state.userName = nameInput;
-            state.userEmail = emailInput;
+
+          if (webLoginRole === 'OWNER') {
+            if (isWebSignUp) {
+              state.userName = nameInput;
+              state.userEmail = emailInput;
+              state.profile.ownerName = nameInput;
+            } else {
+              state.userName = "Suleman Hoque";
+              state.userEmail = "sulman995790@gmail.com";
+            }
           } else {
-            state.userName = "Suleman Hoque";
-            state.userEmail = "sulman995790@gmail.com";
+            // Staff Role Assignment & Sync
+            if (isWebSignUp) {
+              state.userName = nameInput;
+              state.userEmail = emailInput;
+              // Register new staff member if not already registered
+              const cleanPhone = phoneInput.replace(/\D/g, '');
+              const existingIdx = state.staffMembers.findIndex(s => s.phone.replace(/\D/g, '').endsWith(cleanPhone));
+              if (existingIdx >= 0) {
+                state.staffMembers[existingIdx].name = nameInput;
+                state.staffMembers[existingIdx].email = emailInput;
+                state.staffMembers[existingIdx].lastLoginTime = "Just now";
+              } else {
+                state.staffMembers.push({
+                  id: "s-" + (state.staffMembers.length + 1),
+                  name: nameInput,
+                  email: emailInput,
+                  phone: "+91 " + phoneInput,
+                  lastLoginTime: "Just now",
+                  loginType: "PHONE"
+                });
+              }
+            } else {
+              // Lookup existing staff
+              const cleanPhone = phoneInput.replace(/\D/g, '');
+              const matchedStaff = state.staffMembers.find(s => s.phone.replace(/\D/g, '').endsWith(cleanPhone));
+              if (matchedStaff) {
+                state.userName = matchedStaff.name;
+                state.userEmail = matchedStaff.email;
+                matchedStaff.lastLoginTime = "Just now";
+              } else {
+                state.userName = "Nijamuddin Khan (Staff)";
+                state.userEmail = "khannijamuddin87275@gmail.com";
+              }
+            }
           }
+
           saveStateToLocal();
           syncUiState();
-          Swal.fire('Authentication Successful!', 'Successfully established cloud database connection as ' + state.role, 'success');
-          showLiveSyncNotification("Logged In", "Operating session authenticated for " + state.userName, "check-circle");
+          Swal.fire({
+            title: 'Welcome!',
+            text: `Successfully logged in as ${state.role === 'OWNER' ? 'Owner Principal' : 'Staff Chemist'}: ${state.userName}`,
+            icon: 'success',
+            confirmButtonColor: '#9C1258'
+          });
+          showLiveSyncNotification("Logged In", `Authenticated as ${state.role} (${state.userName})`, "check-circle");
         } else {
-          Swal.fire('Invalid OTP', 'Please enter "123456" as the verification code.', 'error');
+          Swal.fire({
+            title: 'Invalid OTP',
+            text: 'Please enter "123456" as the verification code.',
+            icon: 'error',
+            confirmButtonColor: '#9C1258'
+          });
         }
       }
     }
@@ -5805,36 +5964,48 @@
       Swal.fire({
         title: 'Google Sign-In',
         html: `
-          <div class="text-left space-y-3.5 p-1 text-sm text-slate-600">
-            <p class="text-xs text-slate-400 text-center pb-2 border-b border-slate-100">Choose a Google Account to continue to Royal Pharmacy ERP</p>
+          <div class="text-left space-y-3 p-1 text-sm text-slate-600">
+            <p class="text-xs text-slate-400 text-center pb-2 border-b border-slate-100">Choose a Google Account to access Royal Pharmacy ERP</p>
             
-            <div onclick="selectGoogleWeb('sk786sk9957@gmail.com', 'Sk Sk', 'OWNER')" class="flex items-center space-x-3 p-3 bg-slate-50 hover:bg-slate-100 rounded-xl cursor-pointer border border-slate-100 transition">
-              <div class="w-8 h-8 rounded-full bg-pink-100 text-royal-magenta font-bold flex items-center justify-center">SK</div>
-              <div>
-                <p class="font-bold text-slate-800 text-xs">Sk Sk</p>
-                <p class="text-[10px] text-slate-400">sk786sk9957@gmail.com</p>
+            <div onclick="selectGoogleWeb('sk786sk9957@gmail.com', 'Suleman Hoque (Owner)', 'OWNER')" class="flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 rounded-xl cursor-pointer border border-slate-100 transition">
+              <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 rounded-full bg-pink-100 text-royal-magenta font-bold flex items-center justify-center text-xs">SK</div>
+                <div>
+                  <p class="font-bold text-slate-800 text-xs">Suleman Hoque</p>
+                  <p class="text-[10px] text-slate-400">sk786sk9957@gmail.com</p>
+                </div>
               </div>
+              <span class="text-[9px] font-bold px-2 py-0.5 rounded bg-pink-100 text-royal-magenta">👑 Owner</span>
             </div>
 
-            <div onclick="selectGoogleWeb('sulman995790@gmail.com', 'Suleman Hoque', 'OWNER')" class="flex items-center space-x-3 p-3 bg-slate-50 hover:bg-slate-100 rounded-xl cursor-pointer border border-slate-100 transition">
-              <div class="w-8 h-8 rounded-full bg-pink-100 text-royal-magenta font-bold flex items-center justify-center">SL</div>
-              <div>
-                <p class="font-bold text-slate-800 text-xs">Slmn Z</p>
-                <p class="text-[10px] text-slate-400">sulman995790@gmail.com</p>
+            <div onclick="selectGoogleWeb('khannijamuddin87275@gmail.com', 'Nijamuddin Khan', 'STAFF')" class="flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 rounded-xl cursor-pointer border border-slate-100 transition">
+              <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 rounded-full bg-sky-100 text-sky-700 font-bold flex items-center justify-center text-xs">NK</div>
+                <div>
+                  <p class="font-bold text-slate-800 text-xs">Nijamuddin Khan</p>
+                  <p class="text-[10px] text-slate-400">khannijamuddin87275@gmail.com</p>
+                </div>
               </div>
+              <span class="text-[9px] font-bold px-2 py-0.5 rounded bg-sky-100 text-sky-700">💼 Staff</span>
             </div>
 
-            <div onclick="selectGoogleWeb('nimenur931@gmail.com', 'Nur Nime', 'STAFF')" class="flex items-center space-x-3 p-3 bg-slate-50 hover:bg-slate-100 rounded-xl cursor-pointer border border-slate-100 transition">
-              <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center">NN</div>
-              <div>
-                <p class="font-bold text-slate-800 text-xs">Nur Nime</p>
-                <p class="text-[10px] text-slate-400">nimenur931@gmail.com</p>
+            <div onclick="selectGoogleWeb('nimenur931@gmail.com', 'Nur Nime', 'STAFF')" class="flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 rounded-xl cursor-pointer border border-slate-100 transition">
+              <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-xs">NN</div>
+                <div>
+                  <p class="font-bold text-slate-800 text-xs">Nur Nime</p>
+                  <p class="text-[10px] text-slate-400">nimenur931@gmail.com</p>
+                </div>
               </div>
+              <span class="text-[9px] font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-700">💼 Staff</span>
             </div>
 
-            <div onclick="selectGoogleWeb('guest@royalchemist.com', 'Guest Chemist', 'STAFF')" class="flex items-center space-x-3 p-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl cursor-pointer border border-slate-100 transition text-[11px]">
-              <i data-lucide="user-minus" class="w-4 h-4 text-slate-400 font-bold"></i>
-              <span class="font-semibold text-slate-700">Use Google without an account</span>
+            <div onclick="selectGoogleWeb('guest@royalchemist.com', 'Guest Chemist', 'STAFF')" class="flex items-center justify-between p-2.5 bg-slate-50 hover:bg-slate-100 rounded-xl cursor-pointer border border-slate-100 transition text-[11px]">
+              <div class="flex items-center space-x-2">
+                <i data-lucide="user-minus" class="w-4 h-4 text-slate-400 font-bold"></i>
+                <span class="font-semibold text-slate-700">Use Guest Staff Session</span>
+              </div>
+              <span class="text-[9px] font-bold px-2 py-0.5 rounded bg-slate-200 text-slate-700">💼 Staff</span>
             </div>
           </div>
         `,
@@ -5852,8 +6023,13 @@
       saveStateToLocal();
       syncUiState();
       Swal.close();
-      Swal.fire('Welcome back!', 'Operating as ' + (role === 'OWNER' ? 'Owner' : 'Staff') + ' principal.', 'success');
-      showLiveSyncNotification("Google Session Restored", "Authenticated via Gmail: " + email, "verified");
+      Swal.fire({
+        title: 'Welcome Back!',
+        text: `Logged in as ${role === 'OWNER' ? '👑 Owner' : '💼 Staff'}: ${name}`,
+        icon: 'success',
+        confirmButtonColor: '#9C1258'
+      });
+      showLiveSyncNotification("Google Session Restored", `Authenticated as ${role}: ${email}`, "verified");
     }
 
     function logoutWeb() {
