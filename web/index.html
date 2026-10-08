@@ -4651,10 +4651,11 @@
                 <input type="number" 
                        value="${minStockLevel}" 
                        min="1" max="100000" 
-                       onchange="updateDrugReorderLevel('${escapeHtml(escapeJsParam(item.name))}', this.value)"
+                       id="reorder-input-${escapeHtml(escapeJsParam(item.name))}"
                        class="w-16 text-center text-xs font-extrabold bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded py-1 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-pink-500 shadow-sm"
                        title="Edit Reorder Threshold level for ${escapeHtml(item.name)}" />
                 <span class="text-[10px] text-slate-500 font-bold pr-0.5">units</span>
+                <button onclick="updateDrugReorderLevel('${escapeHtml(escapeJsParam(item.name))}', document.getElementById('reorder-input-${escapeHtml(escapeJsParam(item.name))}').value)" class="bg-royal-magenta text-white px-2 py-0.5 rounded text-[10px] font-bold hover:bg-royal-accent transition shadow-sm" title="Save reorder threshold level to Firestore database">Save</button>
               </div>
             </td>
             <td class="px-6 py-4 text-right font-semibold">₹${item.price.toFixed(2)}</td>
@@ -4665,6 +4666,10 @@
                 <button onclick="openQrBatchModalWeb('${escapeHtml(escapeJsParam(item.name))}')" class="bg-slate-800 text-white hover:bg-slate-900 px-2 py-1 rounded text-xs font-semibold flex items-center space-x-1 transition shadow-sm border border-slate-700" title="Generate printable batch QR label">
                   <i data-lucide="qr-code" class="w-3.5 h-3.5"></i>
                   <span>QR Batch</span>
+                </button>
+                <button onclick="downloadThermalLabelPdf('${escapeHtml(escapeJsParam(item.name))}')" class="bg-amber-600 hover:bg-amber-700 text-white px-2.5 py-1 rounded text-xs font-semibold flex items-center space-x-1 transition shadow-sm border border-amber-700" title="Download thermal label PDF">
+                  <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+                  <span>Thermal PDF</span>
                 </button>
               </div>
             </td>
@@ -4838,6 +4843,68 @@
         </html>
       `);
       printWindow.document.close();
+    }
+
+    function downloadThermalLabelPdf(medicineName) {
+      const drug = state.drugDatabase.find(d => d.name === medicineName);
+      if (!drug) {
+        if (window.Swal) Swal.fire('Error', 'Medicine details not found in database.', 'error');
+        return;
+      }
+
+      const batchNum = (drug.batch && drug.batch !== 'CAT-REQ') ? drug.batch : 'RX' + Math.floor(1000 + Math.random() * 9000);
+      const expDate = drug.expiry || '12/2027';
+      const pharmacyName = state.profile.businessName || 'ROYAL PHARMACY';
+
+      const { jsPDF } = window.jspdf ? window.jspdf : { jsPDF: null };
+      if (!jsPDF) {
+        if (window.Swal) Swal.fire('Error', 'PDF library not loaded.', 'error');
+        return;
+      }
+
+      // Thermal label format (60mm x 40mm landscape thermal sticker)
+      const doc = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: [60, 40]
+      });
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.text(pharmacyName.toUpperCase(), 3, 5);
+
+      doc.setFontSize(10);
+      doc.text(drug.name, 3, 11, { maxWidth: 54 });
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.text(`Generic: ${drug.generic || 'N/A'}`, 3, 16, { maxWidth: 54 });
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      doc.text(`Batch: ${batchNum}  |  Exp: ${expDate}`, 3, 23);
+      doc.text(`MRP: Rs. ${drug.price.toFixed(2)} (Inc. GST)`, 3, 28);
+      
+      doc.setFontSize(7);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`HSN: ${drug.hsn || '3004'} | Rack: A-1 | Qty: ${drug.stock}`, 3, 35);
+
+      const filename = `Thermal_Label_${drug.name.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+      doc.save(filename);
+
+      if (window.Swal) {
+        const Toast = Swal.mixin({
+          toast: true,
+          position: 'top-end',
+          showConfirmButton: false,
+          timer: 2000,
+          timerProgressBar: true
+        });
+        Toast.fire({
+          icon: 'success',
+          title: `Thermal label PDF generated & downloaded for ${drug.name}`
+        });
+      }
     }
 
     // Sync Inventory Function: forces a real-time push of all current medicine stock levels to Firestore & Google Drive
