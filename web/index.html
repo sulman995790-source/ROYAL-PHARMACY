@@ -95,6 +95,21 @@
     html.dark .custom-scrollbar::-webkit-scrollbar-thumb {
       background: #475569;
     }
+
+    @keyframes lowStockBreathing {
+      0%, 100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4);
+      }
+      50% {
+        transform: scale(1.035);
+        box-shadow: 0 0 12px 2px rgba(220, 38, 38, 0.35);
+      }
+    }
+    .low-stock-breathing {
+      animation: lowStockBreathing 1.8s ease-in-out infinite;
+      will-change: transform, box-shadow;
+    }
   </style>
 </head>
 <body class="overflow-hidden h-screen flex flex-col">
@@ -510,6 +525,35 @@
             <div class="relative h-60">
               <canvas id="chartMonthlyRevenue"></canvas>
             </div>
+          </div>
+        </div>
+
+        <!-- Real-Time 'Recent Activity' Feed Component -->
+        <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-3">
+          <div class="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-700">
+            <div class="flex items-center space-x-2.5">
+              <div class="w-8 h-8 rounded-xl bg-pink-50 dark:bg-pink-950/40 text-royal-magenta flex items-center justify-center font-bold text-sm">
+                <i class="ph ph-clock-counter-clockwise"></i>
+              </div>
+              <div>
+                <div class="flex items-center space-x-2">
+                  <h3 class="font-bold text-slate-800 dark:text-white text-sm">Recent Activity Feed</h3>
+                  <span class="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span>Live Updates</span>
+                  </span>
+                </div>
+                <p class="text-[11px] text-slate-400">Real-time log of billing transactions, inventory adjustments & stock movements</p>
+              </div>
+            </div>
+            <button onclick="switchTab('staff-activity')" class="text-xs text-royal-magenta font-semibold hover:underline flex items-center space-x-1">
+              <span>Detailed Audit Log</span>
+              <i class="ph ph-arrow-right text-xs"></i>
+            </button>
+          </div>
+
+          <div id="web-recent-activity-feed-list" class="space-y-2">
+            <!-- Dynamically populated by renderRecentActivityFeedWeb() -->
           </div>
         </div>
       </section>
@@ -2480,6 +2524,7 @@
       if (tabId === 'dashboard') {
         setTimeout(initDashboardCharts, 100);
         renderLowStockWidget();
+        renderRecentActivityFeedWeb();
       } else if (tabId === 'udharkhata') {
         renderUdharCustomerList();
       } else if (tabId === 'expiry') {
@@ -3350,6 +3395,7 @@
       saveStateToLocal();
       renderStaffActivityViewWeb();
       renderStaffActivityBadgeWeb();
+      if (typeof renderRecentActivityFeedWeb === 'function') renderRecentActivityFeedWeb();
     }
 
     function renderStaffActivityBadgeWeb() {
@@ -6512,16 +6558,21 @@
         return;
       }
 
-      container.innerHTML = lowStockItems.slice(0, 8).map(drug => `
-        <div class="bg-white dark:bg-slate-800 p-3 rounded-xl border border-red-200 dark:border-red-900/40 shadow-sm flex flex-col justify-between">
+      container.innerHTML = lowStockItems.slice(0, 8).map(drug => {
+        const isUrgent = drug.stock < 5;
+        return `
+        <div class="bg-white dark:bg-slate-800 p-3 rounded-xl border ${isUrgent ? 'border-red-500 shadow-md ring-2 ring-red-500/30 low-stock-breathing' : 'border-red-200 dark:border-red-900/40 shadow-sm'} flex flex-col justify-between transition-all">
           <div>
-            <div class="flex items-center justify-between">
+            <div class="flex items-center justify-between gap-1">
               <h4 class="font-bold text-xs text-slate-900 dark:text-white truncate">${escapeHtml(drug.name)}</h4>
-              <span class="text-[10px] font-bold text-red-600 bg-red-100 dark:bg-red-900/50 dark:text-red-300 px-1.5 py-0.5 rounded">Min: ${drug.reorderLevel || 15}</span>
+              <div class="flex items-center gap-1 shrink-0">
+                ${isUrgent ? '<span class="text-[9px] font-extrabold text-white bg-red-600 px-1.5 py-0.5 rounded shadow-sm animate-pulse">&lt;5 CRITICAL</span>' : ''}
+                <span class="text-[10px] font-bold text-red-600 bg-red-100 dark:bg-red-900/50 dark:text-red-300 px-1.5 py-0.5 rounded">Min: ${drug.reorderLevel || 15}</span>
+              </div>
             </div>
-            <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Stock: <strong class="text-red-600 dark:text-red-400">${drug.stock} units</strong></p>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Stock: <strong class="${isUrgent ? 'text-red-600 font-extrabold text-xs' : 'text-red-600 dark:text-red-400'}">${drug.stock} units</strong></p>
             <div class="w-full bg-red-100 dark:bg-red-950 h-1.5 rounded-full overflow-hidden mt-2">
-              <div class="bg-red-600 h-full" style="width: ${Math.min(100, (drug.stock / (drug.reorderLevel || 15)) * 100)}%"></div>
+              <div class="${isUrgent ? 'bg-red-600' : 'bg-red-500'} h-full" style="width: ${Math.min(100, (drug.stock / (drug.reorderLevel || 15)) * 100)}%"></div>
             </div>
           </div>
           <button onclick="addLowStockToPurchaseOrder('${escapeHtml(drug.name)}')" class="mt-2.5 w-full bg-royal-magenta text-white py-1.5 rounded-lg text-[11px] font-bold hover:bg-royal-accent transition flex items-center justify-center space-x-1 shadow-sm">
@@ -6529,7 +6580,8 @@
             <span>1-Click + PO</span>
           </button>
         </div>
-      `).join('');
+      `;
+      }).join('');
     }
 
     function addLowStockToPurchaseOrder(drugName) {
@@ -6576,6 +6628,49 @@
         text: `Added all ${lowStockItems.length} low stock medicines to your Purchase Orders cart.`,
         confirmButtonColor: '#9C1258'
       });
+    }
+
+    // --- Real-time Recent Activity Feed Component (Web Dashboard) ---
+    function renderRecentActivityFeedWeb() {
+      const container = document.getElementById('web-recent-activity-feed-list');
+      if (!container) return;
+
+      const logs = (state.staffActivityLogs || []);
+      if (logs.length === 0) {
+        container.innerHTML = `
+          <div class="p-4 text-center text-xs text-slate-400 bg-slate-50 dark:bg-slate-900/40 rounded-xl">
+            No recent billing or stock events recorded yet.
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = logs.slice(0, 6).map(log => {
+        const isBill = log.actionType === 'BILL_GENERATED';
+        const isStock = log.actionType.indexOf('STOCK') >= 0;
+        const iconClass = isBill ? 'ph ph-receipt' : (isStock ? 'ph ph-package' : 'ph ph-clock');
+        const badgeBg = isBill ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300' : 
+                         (isStock ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300' : 'bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300');
+        const actionLabel = isBill ? 'BILLING' : (isStock ? 'INVENTORY' : log.actionType);
+
+        return `
+          <div class="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/80 hover:bg-slate-100/60 transition gap-3">
+            <div class="flex items-center space-x-3 min-w-0">
+              <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 font-bold text-sm ${badgeBg}">
+                <i class="${iconClass}"></i>
+              </div>
+              <div class="min-w-0">
+                <div class="flex items-center space-x-1.5 flex-wrap">
+                  <span class="text-xs font-bold text-slate-900 dark:text-white truncate">${escapeHtml(log.staffName || 'Operator')}</span>
+                  <span class="text-[9px] font-bold px-1.5 py-0.2 rounded ${badgeBg}">${actionLabel}</span>
+                </div>
+                <p class="text-[11px] text-slate-600 dark:text-slate-300 truncate mt-0.5">${escapeHtml(log.description)}</p>
+              </div>
+            </div>
+            <span class="text-[10px] text-slate-400 font-medium shrink-0 whitespace-nowrap">${escapeHtml(log.timestamp || 'Just now')}</span>
+          </div>
+        `;
+      }).join('');
     }
 
     function openPosBatchQrModal() {
@@ -7117,13 +7212,15 @@
       Swal.fire('Signed Out', 'You have been securely logged out.', 'success');
     }
 
-    // Trigger initial low stock widget render
+    // Trigger initial low stock widget and activity feed render
     window.addEventListener('DOMContentLoaded', () => {
       loadSavedState();
       initializeFirebaseWeb();
       setTimeout(renderLowStockWidget, 300);
+      setTimeout(renderRecentActivityFeedWeb, 350);
     });
     setTimeout(renderLowStockWidget, 500);
+    setTimeout(renderRecentActivityFeedWeb, 550);
   </script>
 </body>
 </html>

@@ -1,6 +1,12 @@
 package com.example.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -52,6 +58,7 @@ import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
@@ -79,6 +86,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -124,6 +132,7 @@ fun HomeScreen(
     ?: "royalchemist@okaxis"
 
   val expiringCount = batchItems.count { it.daysRemaining in 1..60 || it.daysRemaining <= 0 }
+  val recentActivityLogs by viewModel.staffActivityLogs.collectAsState()
 
   val isDarkMode by viewModel.isDarkMode.collectAsState()
   val userRole by viewModel.currentUserRole.collectAsState()
@@ -346,30 +355,88 @@ fun HomeScreen(
               Spacer(modifier = Modifier.height(10.dp))
 
               // Horizontal Scrollable Cards of Low Stock Items with 1-Click PO addition
+              val infiniteTransition = rememberInfiniteTransition(label = "lowStockPulse")
+              val breathingScale by infiniteTransition.animateFloat(
+                initialValue = 1.0f,
+                targetValue = 1.045f,
+                animationSpec = infiniteRepeatable(
+                  animation = tween(durationMillis = 900, easing = FastOutSlowInEasing),
+                  repeatMode = RepeatMode.Reverse
+                ),
+                label = "breathingScale"
+              )
+              val breathingAlpha by infiniteTransition.animateFloat(
+                initialValue = 0.5f,
+                targetValue = 1.0f,
+                animationSpec = infiniteRepeatable(
+                  animation = tween(durationMillis = 900, easing = FastOutSlowInEasing),
+                  repeatMode = RepeatMode.Reverse
+                ),
+                label = "breathingAlpha"
+              )
+
               LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(vertical = 2.dp)
+                contentPadding = PaddingValues(vertical = 4.dp)
               ) {
                 items(criticalMedicines.take(8)) { med ->
+                  val isUrgentLow = med.stockPacks < 5
                   Card(
                     shape = RoundedCornerShape(10.dp),
                     colors = CardDefaults.cardColors(
-                      containerColor = if (isDarkMode) Color(0xFF2D1B22) else Color.White
+                      containerColor = if (isDarkMode) {
+                        if (isUrgentLow) Color(0xFF381520) else Color(0xFF2D1B22)
+                      } else {
+                        if (isUrgentLow) Color(0xFFFFF5F5) else Color.White
+                      }
                     ),
                     border = androidx.compose.foundation.BorderStroke(
-                      1.dp,
-                      if (isDarkMode) Color(0xFF991B1B) else Color(0xFFFECACA)
+                      if (isUrgentLow) 1.5.dp else 1.dp,
+                      if (isUrgentLow) {
+                        Color(0xFFDC2626).copy(alpha = breathingAlpha)
+                      } else {
+                        if (isDarkMode) Color(0xFF991B1B) else Color(0xFFFECACA)
+                      }
                     ),
-                    modifier = Modifier.width(170.dp)
+                    modifier = Modifier
+                      .width(170.dp)
+                      .graphicsLayer {
+                        if (isUrgentLow) {
+                          scaleX = breathingScale
+                          scaleY = breathingScale
+                        }
+                      }
                   ) {
                     Column(modifier = Modifier.padding(10.dp)) {
-                      Text(
-                        text = med.name,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        color = if (isDarkMode) Color.White else TextDark
-                      )
+                      Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                      ) {
+                        Text(
+                          text = med.name,
+                          fontSize = 12.sp,
+                          fontWeight = FontWeight.Bold,
+                          maxLines = 1,
+                          modifier = Modifier.weight(1f),
+                          color = if (isDarkMode) Color.White else TextDark
+                        )
+                        if (isUrgentLow) {
+                          Box(
+                            modifier = Modifier
+                              .clip(RoundedCornerShape(3.dp))
+                              .background(Color(0xFFDC2626))
+                              .padding(horizontal = 3.dp, vertical = 1.dp)
+                          ) {
+                            Text(
+                              text = "<5 CRITICAL",
+                              fontSize = 7.5.sp,
+                              fontWeight = FontWeight.ExtraBold,
+                              color = Color.White
+                            )
+                          }
+                        }
+                      }
                       Text(
                         text = med.manufacturer.ifBlank { "Generic" },
                         fontSize = 10.sp,
@@ -388,12 +455,12 @@ fun HomeScreen(
                           text = "Stock: ${med.stockPacks}",
                           fontSize = 11.sp,
                           fontWeight = FontWeight.ExtraBold,
-                          color = StatusRed
+                          color = if (isUrgentLow) Color(0xFFDC2626) else StatusRed
                         )
                         Box(
                           modifier = Modifier
                             .clip(RoundedCornerShape(4.dp))
-                            .background(Color(0xFFFEF2F2))
+                            .background(if (isUrgentLow) Color(0xFFFEE2E2) else Color(0xFFFEF2F2))
                             .padding(horizontal = 4.dp, vertical = 2.dp)
                         ) {
                           Text(
@@ -420,7 +487,7 @@ fun HomeScreen(
                           modifier = Modifier
                             .fillMaxWidth(fillRatio)
                             .height(4.dp)
-                            .background(StatusRed)
+                            .background(if (isUrgentLow) Color(0xFFDC2626) else StatusRed)
                         )
                       }
 
@@ -719,6 +786,178 @@ fun HomeScreen(
             ) {
               Text("Weekly Avg: ₹20.5k / day", fontSize = 10.5.sp, color = TextMuted)
               Text("Peak Day: Saturday (₹24.8k)", fontSize = 10.5.sp, fontWeight = FontWeight.Medium, color = RoyalNavy)
+            }
+          }
+        }
+      }
+
+      // 6.5 Real-Time Recent Activity Feed (Supplementing Charts with Detailed Log)
+      item {
+        Card(
+          shape = RoundedCornerShape(12.dp),
+          colors = CardDefaults.cardColors(
+            containerColor = if (isDarkMode) Color(0xFF1E293B) else Color.White
+          ),
+          border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder),
+          modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .testTag("card_home_recent_activity_feed")
+        ) {
+          Column(modifier = Modifier.padding(14.dp)) {
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              horizontalArrangement = Arrangement.SpaceBetween,
+              verticalAlignment = Alignment.CenterVertically
+            ) {
+              Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                  modifier = Modifier
+                    .size(24.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFFE0E7FF)),
+                  contentAlignment = Alignment.Center
+                ) {
+                  Icon(
+                    imageVector = Icons.Default.Sync,
+                    contentDescription = null,
+                    tint = RoyalNavy,
+                    modifier = Modifier.size(14.dp)
+                  )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Column {
+                  Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                      text = "Recent Activity Feed",
+                      fontWeight = FontWeight.Bold,
+                      fontSize = 13.5.sp,
+                      color = if (isDarkMode) Color.White else TextDark
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Box(
+                      modifier = Modifier
+                        .size(6.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF10B981))
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                      text = "Live Log",
+                      fontSize = 9.sp,
+                      fontWeight = FontWeight.Bold,
+                      color = Color(0xFF10B981)
+                    )
+                  }
+                  Text(
+                    text = "Real-time updates for billing, sales & inventory adjustments",
+                    fontSize = 10.5.sp,
+                    color = TextMuted
+                  )
+                }
+              }
+
+              Text(
+                text = "Audit Log >",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = RoyalMagenta,
+                modifier = Modifier.clickable { viewModel.navigateTo(Screen.STAFF_ACTIVITY) }
+              )
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+            HorizontalDivider(color = if (isDarkMode) Color(0xFF334155) else Color(0xFFF1F5F9))
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (recentActivityLogs.isEmpty()) {
+              Box(
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .padding(vertical = 16.dp),
+                contentAlignment = Alignment.Center
+              ) {
+                Text(
+                  text = "No recent billing or stock events recorded yet.",
+                  fontSize = 11.sp,
+                  color = TextMuted
+                )
+              }
+            } else {
+              Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                recentActivityLogs.take(5).forEach { log ->
+                  val isBilling = log.actionType == "BILL_GENERATED"
+                  val isStock = log.actionType.contains("STOCK")
+                  val actionIcon = when {
+                    isBilling -> Icons.Default.PointOfSale
+                    isStock -> Icons.Default.Inventory2
+                    else -> Icons.Default.Sync
+                  }
+                  val badgeBg = when {
+                    isBilling -> Color(0xFFDCFCE7)
+                    isStock -> Color(0xFFFEF3C7)
+                    else -> Color(0xFFE0E7FF)
+                  }
+                  val badgeFg = when {
+                    isBilling -> Color(0xFF15803D)
+                    isStock -> Color(0xFFB45309)
+                    else -> RoyalNavy
+                  }
+
+                  Row(
+                    modifier = Modifier
+                      .fillMaxWidth()
+                      .clip(RoundedCornerShape(8.dp))
+                      .background(if (isDarkMode) Color(0xFF0F172A) else Color(0xFFF8FAFC))
+                      .padding(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                  ) {
+                    Box(
+                      modifier = Modifier
+                        .size(32.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(badgeBg),
+                      contentAlignment = Alignment.Center
+                    ) {
+                      Icon(
+                        imageVector = actionIcon,
+                        contentDescription = null,
+                        tint = badgeFg,
+                        modifier = Modifier.size(16.dp)
+                      )
+                    }
+
+                    Spacer(modifier = Modifier.width(10.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                      Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                      ) {
+                        Text(
+                          text = log.staffName,
+                          fontSize = 11.5.sp,
+                          fontWeight = FontWeight.Bold,
+                          color = if (isDarkMode) Color.White else TextDark
+                        )
+                        Text(
+                          text = log.timestamp,
+                          fontSize = 9.5.sp,
+                          color = TextMuted
+                        )
+                      }
+                      Spacer(modifier = Modifier.height(2.dp))
+                      Text(
+                        text = log.description,
+                        fontSize = 10.5.sp,
+                        color = if (isDarkMode) Color(0xFFCBD5E1) else Color(0xFF475569),
+                        maxLines = 2
+                      )
+                    }
+                  }
+                }
+              }
             }
           }
         }
