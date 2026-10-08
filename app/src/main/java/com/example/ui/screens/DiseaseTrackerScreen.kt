@@ -624,7 +624,7 @@ suspend fun analyzeSymptomsAndTrackDisease(
   if (isApiKeyValid(apiKey)) {
     try {
       val client = OkHttpClient()
-      val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=$apiKey"
+      val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey"
       val prompt = """
         You are a senior clinical pharmacologist and physician.
         Patient Symptoms: $symptoms

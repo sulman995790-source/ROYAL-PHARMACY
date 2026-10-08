@@ -422,20 +422,47 @@ fun SmartDosageCalculatorScreen(
                 value = searchQuery,
                 onValueChange = {
                   searchQuery = it
-                  if (it.isNotBlank()) {
-                    // Create dynamic custom preset for searched drug
-                    selectedDrug = DrugDosePreset(
-                      drugName = it.trim(),
-                      formulation = "Custom Formulation / Injection",
-                      concentrationMgPerMl = if (it.lowercase().contains("drop")) 100.0 else if (it.lowercase().contains("syrup")) 24.0 else 50.0,
-                      standardDoseMgPerKg = if (it.lowercase().contains("ceftriaxone")) 50.0 else if (it.lowercase().contains("ondansetron")) 0.15 else 15.0,
-                      frequencyDescription = "As prescribed by physician (OD / BD / TDS)",
-                      defaultInstructions = "Verify weight-based dosing for $it"
-                    )
+                  val q = it.trim()
+                  if (q.isNotBlank()) {
+                    val matchedPreset = drugPresets.firstOrNull { preset ->
+                      preset.drugName.contains(q, ignoreCase = true)
+                    }
+                    if (matchedPreset != null) {
+                      selectedDrug = matchedPreset
+                    } else {
+                      // Create dynamic custom preset for searched drug with clinical estimation
+                      val conc = when {
+                        q.contains("drop", ignoreCase = true) -> 100.0
+                        q.contains("syrup", ignoreCase = true) -> 24.0
+                        q.contains("infusion", ignoreCase = true) -> 10.0
+                        q.contains("ceftriaxone", ignoreCase = true) -> 100.0
+                        q.contains("ondansetron", ignoreCase = true) -> 0.4
+                        q.contains("augmentin", ignoreCase = true) || q.contains("amox", ignoreCase = true) -> 45.7
+                        q.contains("azithro", ignoreCase = true) -> 20.0
+                        else -> 50.0
+                      }
+                      val doseFactor = when {
+                        q.contains("ondansetron", ignoreCase = true) -> 0.15
+                        q.contains("ceftriaxone", ignoreCase = true) -> 50.0
+                        q.contains("augmentin", ignoreCase = true) || q.contains("amox", ignoreCase = true) -> 20.0
+                        q.contains("azithro", ignoreCase = true) -> 10.0
+                        q.contains("cetirizine", ignoreCase = true) -> 0.25
+                        q.contains("ibuprofen", ignoreCase = true) -> 10.0
+                        else -> 15.0
+                      }
+                      selectedDrug = DrugDosePreset(
+                        drugName = q,
+                        formulation = if (conc == 100.0) "Concentrated Drops ($conc mg/ml)" else "Clinical Formulation ($conc mg/ml)",
+                        concentrationMgPerMl = conc,
+                        standardDoseMgPerKg = doseFactor,
+                        frequencyDescription = "As prescribed by physician (OD / BD / TDS)",
+                        defaultInstructions = "Weight-adjusted dose for $q. Administer with calibrated measuring device."
+                      )
+                    }
                   }
                 },
                 label = { Text("Search Medicine, Salt, or Injectable Name...") },
-                placeholder = { Text("e.g. Ceftriaxone IV, Meropenem, Dolo 650, Ondansetron") },
+                placeholder = { Text("e.g. Paracetamol, Augmentin, Ondansetron, Ceftriaxone") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().testTag("input_search_500k_medicines")
               )

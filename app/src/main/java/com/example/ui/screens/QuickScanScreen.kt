@@ -108,6 +108,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -205,6 +206,14 @@ fun QuickScanScreen(
         camManager?.cameraIdList?.firstOrNull()?.let { camManager.setTorchMode(it, false) }
       } catch (_: Exception) {}
     }
+  }
+
+  LaunchedEffect(isTorchOn, cameraInstance) {
+    try {
+      if (cameraInstance != null && cameraInstance?.cameraInfo?.hasFlashUnit() == true) {
+        cameraInstance?.cameraControl?.enableTorch(isTorchOn)
+      }
+    } catch (_: Exception) {}
   }
 
   // OCR Verification Dialog State
@@ -583,15 +592,6 @@ fun QuickScanScreen(
       drawLine(Color.White, Offset(left + reticleWidth, top + reticleHeight - cornerLength), Offset(left + reticleWidth, top + reticleHeight + 2), strokeW)
     }
 
-    // High-visibility Flashlight Screen Illumination
-    if (isTorchOn) {
-      Box(
-        modifier = Modifier
-          .fillMaxSize()
-          .background(Color.White.copy(alpha = 0.35f))
-      )
-    }
-
     // 2. Top Header & Mode Tabs
     Column(
       modifier = Modifier
@@ -601,83 +601,89 @@ fun QuickScanScreen(
       Row(
         modifier = Modifier
           .fillMaxWidth()
-          .background(Color.Black.copy(alpha = 0.70f))
-          .padding(horizontal = 8.dp, vertical = 8.dp),
+          .background(Color.Black.copy(alpha = 0.85f))
+          .padding(horizontal = 8.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
       ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-          IconButton(onClick = { viewModel.navigateTo(Screen.HOME) }) {
+        Row(
+          modifier = Modifier.weight(1f, fill = false),
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          IconButton(onClick = { viewModel.navigateTo(Screen.HOME) }, modifier = Modifier.size(40.dp)) {
             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
           }
+          Spacer(modifier = Modifier.width(4.dp))
           Column {
             Text(
               text = when (scanMode) {
                 0 -> "QuikScan Barcode"
-                1 -> "Multi-Photo Strip / Box OCR"
-                else -> "Doctor Prescription (Rx) OCR"
+                1 -> "Multi-Photo Strip OCR"
+                else -> "Doctor Prescription Rx"
               },
-              fontSize = 15.sp,
+              fontSize = 13.5.sp,
               fontWeight = FontWeight.Bold,
-              color = Color.White
+              color = Color.White,
+              maxLines = 1,
+              overflow = TextOverflow.Ellipsis
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
               Box(
                 modifier = Modifier
-                  .size(8.dp)
+                  .size(7.dp)
                   .clip(CircleShape)
                   .background(if (scanMode == 0) Color(0xFFE91E63) else Color(0xFF10B981))
               )
-              Spacer(modifier = Modifier.width(6.dp))
+              Spacer(modifier = Modifier.width(4.dp))
               Text(
-                text = if (scanMode == 0) "Barcode Active ($scanCount items)"
-                       else "Multi-Photo Mode (${capturedPhotos.size} photos ready)",
-                fontSize = 10.5.sp,
-                color = Color.LightGray
+                text = if (scanMode == 0) "Barcode ($scanCount items)"
+                       else "Photos (${capturedPhotos.size} ready)",
+                fontSize = 10.sp,
+                color = Color.LightGray,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
               )
             }
           }
         }
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
-          if (isTorchOn) {
-            Box(
-              modifier = Modifier
-                .clip(RoundedCornerShape(12.dp))
-                .background(Color(0xFFFFD54F))
-                .padding(horizontal = 8.dp, vertical = 4.dp)
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+          // Camera Photo Capture Launcher (for OCR modes)
+          if (scanMode != 0) {
+            IconButton(
+              onClick = { cameraCaptureLauncher.launch(null) },
+              modifier = Modifier.size(36.dp)
             ) {
-              Text("FLASH ON", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+              Icon(Icons.Default.AddAPhoto, contentDescription = "Take Photo", tint = Color.White, modifier = Modifier.size(18.dp))
             }
-            Spacer(modifier = Modifier.width(4.dp))
+
+            // Multi Photo Gallery Picker
+            IconButton(
+              onClick = { multiPhotoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+              modifier = Modifier.size(36.dp)
+            ) {
+              Icon(Icons.Default.PhotoLibrary, contentDescription = "Pick Photos", tint = Color.White, modifier = Modifier.size(18.dp))
+            }
           }
 
-          // Camera Photo Capture Launcher
-          IconButton(onClick = {
-            cameraCaptureLauncher.launch(null)
-          }) {
-            Icon(Icons.Default.AddAPhoto, contentDescription = "Take Photo with Camera", tint = Color.White)
-          }
-
-          // Multi Photo Gallery Picker
-          IconButton(onClick = {
-            multiPhotoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-          }) {
-            Icon(Icons.Default.PhotoLibrary, contentDescription = "Pick Multiple Photos from Gallery", tint = Color.White)
-          }
-
-          // Torch Flashlight Toggle
+          // Dedicated Flashlight Torch Toggle (Accessible & prominent in ALL modes)
           IconButton(
             onClick = {
               val nextState = !isTorchOn
               isTorchOn = nextState
               triggerVibration()
 
+              var torchApplied = false
               if (cameraInstance != null) {
                 try {
                   cameraInstance?.cameraControl?.enableTorch(nextState)
+                  torchApplied = true
                 } catch (_: Exception) {}
-              } else {
+              }
+              if (!torchApplied) {
                 try {
                   val camManager = context.getSystemService(Context.CAMERA_SERVICE) as? CameraManager
                   val cameraId = camManager?.cameraIdList?.firstOrNull()
@@ -694,12 +700,16 @@ fun QuickScanScreen(
               ).show()
             },
             modifier = Modifier
-              .background(if (isTorchOn) Color(0xFFFFD54F).copy(alpha = 0.25f) else Color.Transparent, CircleShape)
+              .size(38.dp)
+              .clip(CircleShape)
+              .background(if (isTorchOn) Color(0xFFFFD54F) else Color(0xFF334155))
+              .testTag("btn_toggle_flashlight")
           ) {
             Icon(
               imageVector = if (isTorchOn) Icons.Default.FlashOn else Icons.Default.FlashOff,
-              contentDescription = if (isTorchOn) "Turn Off Flashlight" else "Turn On Flashlight",
-              tint = if (isTorchOn) Color(0xFFFFD54F) else Color.White
+              contentDescription = "Flashlight Toggle",
+              tint = if (isTorchOn) Color.Black else Color.White,
+              modifier = Modifier.size(18.dp)
             )
           }
         }

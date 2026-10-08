@@ -1586,6 +1586,13 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
     }
   }
 
+  fun updateSupplier(supplier: Supplier) {
+    viewModelScope.launch {
+      repository.updateSupplier(supplier)
+      scanFeedbackMessage.value = "Supplier ${supplier.name} updated!"
+    }
+  }
+
   fun deleteSupplier(supplier: Supplier) {
     viewModelScope.launch {
       repository.deleteSupplier(supplier)
@@ -1633,6 +1640,13 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
     }
   }
 
+  fun deletePurchaseOrder(po: PurchaseOrder) {
+    viewModelScope.launch {
+      repository.deletePurchaseOrder(po)
+      scanFeedbackMessage.value = "Purchase Order ${po.poNumber} deleted successfully"
+    }
+  }
+
   fun addNewPurchase(
     distributorName: String,
     gstin: String,
@@ -1640,7 +1654,10 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
     itemCount: Int,
     invoiceNo: String,
     status: String = "Paid",
-    paymentMode: String = "Cash"
+    paymentMode: String = "Cash",
+    medicineName: String = "",
+    medicineQuantity: Int = 0,
+    medicineCostPrice: Double = 0.0
   ) {
     viewModelScope.launch {
       val dateStr = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()).format(Date())
@@ -1699,6 +1716,37 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
         )
       }
 
+      // If medicine details were specified, update or insert into Medicine inventory stock!
+      val cleanMed = medicineName.trim()
+      if (cleanMed.isNotBlank() && medicineQuantity > 0) {
+        val existingMed = allMedicines.value.firstOrNull { it.name.equals(cleanMed, ignoreCase = true) }
+        if (existingMed != null) {
+          repository.updateMedicine(
+            existingMed.copy(
+              stockPacks = existingMed.stockPacks + medicineQuantity,
+              purchaseRate = if (medicineCostPrice > 0.0) medicineCostPrice else existingMed.purchaseRate
+            )
+          )
+        } else {
+          val cost = if (medicineCostPrice > 0.0) medicineCostPrice else (amount / medicineQuantity).coerceAtLeast(10.0)
+          repository.insertMedicine(
+            com.example.data.model.MedicineItem(
+              name = cleanMed,
+              manufacturer = trimmedDist,
+              composition = "$cleanMed Pharma Formulation",
+              stockPacks = medicineQuantity,
+              mrp = cost * 1.35,
+              saleRate = cost * 1.25,
+              purchaseRate = cost,
+              category = "Tablet",
+              batchNumber = "B-${(1000..9999).random()}",
+              expiryDate = "12/28",
+              barcode = "890${(100000000..999999999).random()}"
+            )
+          )
+        }
+      }
+
       scanFeedbackMessage.value = "Purchase of ₹$amount recorded as $status for $trimmedDist"
     }
   }
@@ -1731,6 +1779,68 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
         }
       }
       scanFeedbackMessage.value = "Purchase invoice deleted"
+    }
+  }
+
+  fun updatePurchaseInvoice(
+    invoice: PurchaseInvoice,
+    newDistributorName: String,
+    newGstin: String,
+    newAmount: Double,
+    newItemsCount: Int,
+    newInvoiceNo: String,
+    newStatus: String,
+    newDate: String
+  ) {
+    viewModelScope.launch {
+      val oldAmt = invoice.totalAmount
+      val oldStatus = invoice.status
+      val oldDistName = invoice.distributorName.trim()
+
+      val updatedInvoice = invoice.copy(
+        invoiceNumber = newInvoiceNo,
+        distributorName = newDistributorName.trim(),
+        distributorGstin = newGstin.trim(),
+        totalAmount = newAmount,
+        itemsCount = newItemsCount,
+        status = newStatus,
+        invoiceDate = newDate
+      )
+      repository.updatePurchase(updatedInvoice)
+
+      // Reconcile balance on distributor
+      val oldDist = repository.getDistributorByName(oldDistName)
+      if (oldDist != null && oldStatus == "Unpaid") {
+        val revertedBal = (oldDist.balancePayable - oldAmt).coerceAtLeast(0.0)
+        repository.updateDistributor(oldDist.copy(balancePayable = revertedBal))
+      }
+      val newDist = repository.getDistributorByName(newDistributorName.trim())
+      if (newDist != null && newStatus == "Unpaid") {
+        val updatedBal = newDist.balancePayable + newAmount
+        repository.updateDistributor(newDist.copy(balancePayable = updatedBal, lastTxnDate = newDate))
+      }
+      scanFeedbackMessage.value = "Invoice $newInvoiceNo updated successfully"
+    }
+  }
+
+  fun updateDistributor(distributor: Distributor) {
+    viewModelScope.launch {
+      repository.updateDistributor(distributor)
+      scanFeedbackMessage.value = "Distributor ${distributor.name} updated successfully"
+    }
+  }
+
+  fun deleteDistributor(distributor: Distributor) {
+    viewModelScope.launch {
+      repository.deleteDistributor(distributor)
+      scanFeedbackMessage.value = "Distributor ${distributor.name} removed"
+    }
+  }
+
+  fun updatePurchaseOrder(po: PurchaseOrder) {
+    viewModelScope.launch {
+      repository.updatePurchaseOrder(po)
+      scanFeedbackMessage.value = "Purchase order ${po.poNumber} updated"
     }
   }
 

@@ -225,15 +225,28 @@ class DrugInteractionService {
     "calpol" to listOf("paracetamol"),
     "pacimol" to listOf("paracetamol"),
     "crocin" to listOf("paracetamol"),
+    "t-98" to listOf("paracetamol"),
+    "paracip" to listOf("paracetamol"),
+    "febrex" to listOf("paracetamol"),
     "combiflam" to listOf("ibuprofen", "paracetamol"),
+    "brufen" to listOf("ibuprofen"),
+    "zerodol-p" to listOf("aceclofenac", "paracetamol"),
+    "zerodol" to listOf("aceclofenac"),
+    "voveran" to listOf("diclofenac"),
+    "volini" to listOf("diclofenac"),
     "augmentin" to listOf("amoxicillin", "clavulanate"),
     "clavam" to listOf("amoxicillin", "clavulanate"),
+    "moxikind" to listOf("amoxicillin", "clavulanate"),
     "amoxyclav" to listOf("amoxicillin", "clavulanate"),
     "pan 40" to listOf("pantoprazole"),
+    "pan" to listOf("pantoprazole"),
     "pantocid" to listOf("pantoprazole"),
     "pantosec" to listOf("pantoprazole"),
+    "pan-d" to listOf("pantoprazole", "domperidone"),
     "omeprazole" to listOf("omeprazole"),
     "omez" to listOf("omeprazole"),
+    "razo" to listOf("rabeprazole"),
+    "rablet" to listOf("rabeprazole"),
     "clopidogrel" to listOf("clopidogrel"),
     "clopilet" to listOf("clopidogrel"),
     "ecosprin" to listOf("aspirin"),
@@ -248,24 +261,29 @@ class DrugInteractionService {
     "azithral" to listOf("azithromycin"),
     "azee" to listOf("azithromycin"),
     "ciplox" to listOf("ciprofloxacin"),
+    "cifran" to listOf("ciprofloxacin"),
     "ciprofloxacin" to listOf("ciprofloxacin"),
+    "monocef" to listOf("ceftriaxone"),
+    "taxim-o" to listOf("cefixime"),
     "telma" to listOf("telmisartan"),
     "telmisartan" to listOf("telmisartan"),
     "spironolactone" to listOf("spironolactone"),
     "aldactone" to listOf("spironolactone"),
     "digoxin" to listOf("digoxin"),
+    "lanoxin" to listOf("digoxin"),
     "amiodarone" to listOf("amiodarone"),
+    "cordarone" to listOf("amiodarone"),
     "flagyl" to listOf("metronidazole"),
+    "metrogyl" to listOf("metronidazole"),
     "metronidazole" to listOf("metronidazole"),
     "shelcal" to listOf("calcium", "vitamin d3"),
     "asthalin" to listOf("salbutamol"),
-    "volini" to listOf("diclofenac"),
     "clarithromycin" to listOf("clarithromycin"),
     "atorvastatin" to listOf("atorvastatin"),
     "lipitor" to listOf("atorvastatin"),
     "doxycycline" to listOf("doxycycline"),
     "methotrexate" to listOf("methotrexate"),
-    "deriphyllin" to listOf("theophylline"),
+    "deriphyllin" to listOf("theophylline", "etofylline"),
     "alcohol" to listOf("alcohol", "ethanol"),
     "antacid" to listOf("antacids", "digene")
   )
@@ -309,6 +327,29 @@ class DrugInteractionService {
       for (j in (i + 1) until medicines.size) {
         val molsA = resolveMolecules(medicines[i])
         val molsB = resolveMolecules(medicines[j])
+
+        // 1. CRITICAL DUPLICATE ACTIVE THERAPY / SAME INGREDIENT OVERDOSE CHECK
+        val ignoredTokens = setOf("drops", "syrup", "tablet", "tablets", "inj", "injection", "capsule", "suspension", "drops 15 ml", "drops 15ml", "650", "500", "40", "625", "pediatric", "infant")
+        val activeIngredientsA = molsA.filter { it !in ignoredTokens && it.length > 3 }
+        val activeIngredientsB = molsB.filter { it !in ignoredTokens && it.length > 3 }
+        val commonActive = activeIngredientsA.firstOrNull { a ->
+          activeIngredientsB.any { b -> b == a || (b.contains(a) && a.length > 4) || (a.contains(b) && b.length > 4) }
+        }
+
+        if (commonActive != null) {
+          val saltCapitalized = commonActive.replaceFirstChar { it.uppercase() }
+          localMatches.add(
+            DrugPairInteraction(
+              drug1 = medicines[i],
+              drug2 = medicines[j],
+              severity = InteractionSeverity.SEVERE_CONTRAINDICATED,
+              riskTitle = "DUPLICATE ACTIVE INGREDIENT ($saltCapitalized) - TOXIC OVERDOSE HAZARD",
+              mechanism = "Both '${medicines[i]}' and '${medicines[j]}' contain the active salt $saltCapitalized. Co-administration results in duplicate dosing and severe toxicity (e.g. acute Paracetamol poisoning leading to hepatic necrosis / liver failure; NSAID GI hemorrhage).",
+              clinicalAdvice = "ABSOLUTELY CONTRAINDICATED TO DISPENSE TOGETHER. Dispense only ONE single preparation and warn the patient against taking multiple brand names of $saltCapitalized.",
+              alternativeSuggestion = "Select either ${medicines[i]} OR ${medicines[j]}. Do not dispense concurrent brand duplicates."
+            )
+          )
+        }
 
         val found = offlineInteractions.firstOrNull { rule ->
           val r1Parts = rule.drug1.lowercase().split("/").map { it.trim() }
@@ -385,7 +426,7 @@ class DrugInteractionService {
     if (!isApiKeyValid(apiKey)) return@withContext null
 
     try {
-      val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=$apiKey"
+      val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey"
       val prompt = """
         You are a clinical pharmacologist. Check drug-drug interactions between these medicines: ${medicines.joinToString(", ")}.
         Return ONLY valid JSON in this exact structure:
@@ -444,7 +485,8 @@ class DrugInteractionService {
         ?.optJSONObject(0)
         ?.optString("text") ?: return@withContext null
 
-      val parsed = JSONObject(textContent)
+      val cleanJson = textContent.trim().removePrefix("```json").removePrefix("```").removeSuffix("```").trim()
+      val parsed = JSONObject(cleanJson)
       val interactionsArray = parsed.optJSONArray("interactions") ?: JSONArray()
       val interactionsList = mutableListOf<DrugPairInteraction>()
 

@@ -437,13 +437,6 @@ fun MoreScreen(
         onClick = { viewModel.navigateTo(Screen.UNIT_CONVERTER) }
       )
       MoreMenuRow(
-        icon = Icons.Default.AutoAwesome,
-        title = "Gemini AI Pharmacist Copilot",
-        subtitle = "Clinical Q&A, contraindications & CDSCO search",
-        hasGemTag = true,
-        onClick = { viewModel.navigateTo(Screen.AI_CHATBOT) }
-      )
-      MoreMenuRow(
         icon = Icons.Default.HealthAndSafety,
         title = "Drug Interaction Checker",
         subtitle = "Multi-drug contraindications, risk severity & food warnings",

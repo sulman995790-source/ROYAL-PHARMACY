@@ -47,8 +47,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -61,6 +64,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -83,13 +87,19 @@ fun SubstitutesScreen(
 ) {
   val context = LocalContext.current
   val currentQuery by viewModel.substituteQuery.collectAsState()
-  var searchQuery by remember(currentQuery) { mutableStateOf(currentQuery) }
+  var searchQuery by remember(currentQuery) { mutableStateOf(currentQuery.ifBlank { "Paracetamol" }) }
 
   val localSubstitutes by viewModel.availableSubstitutes.collectAsState()
   val onlineSubstitutes by viewModel.onlineSubstitutes.collectAsState()
   val isSearchingOnline by viewModel.isSearchingOnlineSubstitutes.collectAsState()
   val cartItems by viewModel.distributorCart.collectAsState()
   var inAppSearchQuery by remember { mutableStateOf<String?>(null) }
+
+  LaunchedEffect(Unit) {
+    if (onlineSubstitutes.isEmpty()) {
+      viewModel.searchSubstitutesWithGemini("Paracetamol 650mg")
+    }
+  }
 
   var selectedBrandFilter by remember { mutableStateOf("All") } // "All", "IPCA", "GSK", "Cipla", "SUN PHARMA", "ALKEM", "Generic"
   var selectedCategoryFilter by remember { mutableStateOf("All") } // "All", "Injectable", "Tablet", "Syrup", "Generic"
@@ -258,10 +268,16 @@ fun SubstitutesScreen(
         onValueChange = {
           searchQuery = it
           viewModel.setSubstituteQuery(it)
+          val trimmed = it.trim()
+          if (trimmed.length >= 2) {
+            viewModel.searchSubstitutesWithGemini(trimmed)
+          } else if (trimmed.isEmpty()) {
+            viewModel.searchSubstitutesWithGemini("Paracetamol 650mg")
+          }
         },
         placeholder = {
           Text(
-            "Search salt, generic, or brand (e.g. Paracetamol, Augmentin, IPCA)",
+            "Search salt, generic, or brand (e.g. Paracetamol drops, Augmentin, IPCA)",
             color = Color(0xFF64748B),
             fontSize = 13.sp
           )
@@ -270,15 +286,29 @@ fun SubstitutesScreen(
           Icon(Icons.Default.Search, contentDescription = null, tint = Color(0xFF2DD4BF))
         },
         trailingIcon = {
-          if (searchQuery.isNotEmpty()) {
-            IconButton(onClick = {
-              searchQuery = ""
-              viewModel.setSubstituteQuery("")
-            }) {
-              Icon(Icons.Default.Close, contentDescription = "Clear", tint = Color(0xFF94A3B8))
+          Row(verticalAlignment = Alignment.CenterVertically) {
+            if (searchQuery.isNotEmpty()) {
+              IconButton(onClick = {
+                searchQuery = ""
+                viewModel.setSubstituteQuery("")
+              }) {
+                Icon(Icons.Default.Close, contentDescription = "Clear", tint = Color(0xFF94A3B8))
+              }
+            }
+            IconButton(
+              onClick = {
+                if (searchQuery.isNotBlank()) viewModel.searchSubstitutesWithGemini(searchQuery)
+              },
+              modifier = Modifier.testTag("btn_search_substitutes_inline")
+            ) {
+              Icon(Icons.Default.AutoAwesome, contentDescription = "Find Substitutes", tint = Color(0xFF2DD4BF))
             }
           }
         },
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        keyboardActions = KeyboardActions(onSearch = {
+          if (searchQuery.isNotBlank()) viewModel.searchSubstitutesWithGemini(searchQuery)
+        }),
         shape = RoundedCornerShape(10.dp),
         colors = OutlinedTextFieldDefaults.colors(
           focusedContainerColor = Color(0xFF1E293B),

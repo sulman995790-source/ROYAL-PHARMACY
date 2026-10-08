@@ -259,6 +259,8 @@ fun DrugInteractionCheckerScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
               ) {
                 listOf(
+                  "Dolo 650 + Calpol (Overdose Risk)" to listOf("Dolo 650mg", "Calpol 650mg"),
+                  "Combiflam + Brufen (NSAID Duplicate)" to listOf("Combiflam", "Brufen 400mg"),
                   "Clopidogrel + Omeprazole" to listOf("Clopidogrel 75mg", "Omeprazole 20mg"),
                   "Nitroglycerin + Sildenafil" to listOf("Nitroglycerin 2.6mg", "Sildenafil 50mg"),
                   "Warfarin + Aspirin" to listOf("Warfarin 5mg", "Aspirin 75mg"),

@@ -24,7 +24,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Directions
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.Phone
@@ -91,7 +92,11 @@ fun SupplierManagementScreen(
 
   var selectedTab by remember { mutableIntStateOf(0) } // 0: Suppliers, 1: Purchase Orders, 2: Receive Stock
   var showAddSupplierDialog by remember { mutableStateOf(false) }
+  var supplierToEdit by remember { mutableStateOf<Supplier?>(null) }
+  var supplierToDelete by remember { mutableStateOf<Supplier?>(null) }
   var showCreatePoDialog by remember { mutableStateOf(false) }
+  var poToEdit by remember { mutableStateOf<PurchaseOrder?>(null) }
+  var poToDelete by remember { mutableStateOf<PurchaseOrder?>(null) }
   var poToReceive by remember { mutableStateOf<PurchaseOrder?>(null) }
 
   Box(
@@ -192,7 +197,8 @@ fun SupplierManagementScreen(
 
                   Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
                   ) {
                     // Call button
                     OutlinedButton(
@@ -203,8 +209,8 @@ fun SupplierManagementScreen(
                       shape = RoundedCornerShape(8.dp),
                       modifier = Modifier.weight(1f).height(36.dp)
                     ) {
-                      Icon(Icons.Default.Phone, contentDescription = null, tint = RoyalNavy, modifier = Modifier.size(14.dp))
-                      Spacer(modifier = Modifier.width(4.dp))
+                      Icon(Icons.Default.Phone, contentDescription = null, tint = RoyalNavy, modifier = Modifier.size(13.dp))
+                      Spacer(modifier = Modifier.width(3.dp))
                       Text("Call", fontSize = 11.sp, color = RoyalNavy)
                     }
 
@@ -218,18 +224,33 @@ fun SupplierManagementScreen(
                         try {
                           context.startActivity(mapIntent)
                         } catch (e: Exception) {
-                          // Fallback to general browser maps intent
                           val webMap = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/maps/search/?api=1&query=${Uri.encode(sup.address)}"))
                           context.startActivity(webMap)
                         }
                       },
                       shape = RoundedCornerShape(8.dp),
                       colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0F766E)),
-                      modifier = Modifier.weight(1f).height(36.dp).testTag("btn_map_route_${sup.id}")
+                      modifier = Modifier.weight(1.2f).height(36.dp).testTag("btn_map_route_${sup.id}")
                     ) {
-                      Icon(Icons.Default.Directions, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
-                      Spacer(modifier = Modifier.width(4.dp))
-                      Text("Maps Route", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                      Icon(Icons.Default.LocalShipping, contentDescription = null, tint = Color.White, modifier = Modifier.size(13.dp))
+                      Spacer(modifier = Modifier.width(3.dp))
+                      Text("Route", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                    }
+
+                    // Edit Supplier Button
+                    IconButton(
+                      onClick = { supplierToEdit = sup },
+                      modifier = Modifier.size(36.dp).testTag("btn_edit_supplier_${sup.id}")
+                    ) {
+                      Icon(Icons.Default.Edit, contentDescription = "Edit Supplier", tint = RoyalNavy, modifier = Modifier.size(16.dp))
+                    }
+
+                    // Delete Supplier Button
+                    IconButton(
+                      onClick = { supplierToDelete = sup },
+                      modifier = Modifier.size(36.dp).testTag("btn_delete_supplier_${sup.id}")
+                    ) {
+                      Icon(Icons.Default.Delete, contentDescription = "Delete Supplier", tint = StatusRed, modifier = Modifier.size(16.dp))
                     }
                   }
                 }
@@ -302,17 +323,33 @@ fun SupplierManagementScreen(
                       color = RoyalMagenta
                     )
 
-                    if (po.status == "ORDERED") {
-                      Button(
-                        onClick = { poToReceive = po },
-                        shape = RoundedCornerShape(6.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = RoyalNavy),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
-                      ) {
-                        Text("Record Stock", fontSize = 11.sp, color = Color.White)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                      if (po.status == "ORDERED") {
+                        Button(
+                          onClick = { poToReceive = po },
+                          shape = RoundedCornerShape(6.dp),
+                          colors = ButtonDefaults.buttonColors(containerColor = RoyalNavy),
+                          contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                          Text("Record Stock", fontSize = 11.sp, color = Color.White)
+                        }
+                      } else {
+                        Text("Received on ${po.receivedDate}", fontSize = 11.sp, color = StatusGreen, fontWeight = FontWeight.Medium)
                       }
-                    } else {
-                      Text("Received on ${po.receivedDate}", fontSize = 11.sp, color = StatusGreen, fontWeight = FontWeight.Medium)
+
+                      IconButton(
+                        onClick = { poToEdit = po },
+                        modifier = Modifier.size(32.dp).testTag("btn_edit_po_${po.id}")
+                      ) {
+                        Icon(Icons.Default.Edit, contentDescription = "Edit PO", tint = RoyalNavy, modifier = Modifier.size(15.dp))
+                      }
+
+                      IconButton(
+                        onClick = { poToDelete = po },
+                        modifier = Modifier.size(32.dp).testTag("btn_delete_po_${po.id}")
+                      ) {
+                        Icon(Icons.Default.Delete, contentDescription = "Delete PO", tint = StatusRed, modifier = Modifier.size(15.dp))
+                      }
                     }
                   }
                 }
@@ -448,6 +485,96 @@ fun SupplierManagementScreen(
         onConfirm = { invoiceNo, itemsToReceive ->
           viewModel.recordReceivedStockFromPO(po, invoiceNo, itemsToReceive)
           poToReceive = null
+        }
+      )
+    }
+
+    // Edit Supplier Dialog
+    supplierToEdit?.let { sup ->
+      EditSupplierDialog(
+        supplier = sup,
+        onDismiss = { supplierToEdit = null },
+        onSave = { updated ->
+          viewModel.updateSupplier(updated)
+          supplierToEdit = null
+        }
+      )
+    }
+
+    // Delete Supplier Confirmation
+    supplierToDelete?.let { sup ->
+      AlertDialog(
+        onDismissRequest = { supplierToDelete = null },
+        title = {
+          Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.Delete, contentDescription = null, tint = StatusRed)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Delete Supplier?", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+          }
+        },
+        text = {
+          Text("Are you sure you want to delete supplier '${sup.name}'? Their contact details and order links will be removed.")
+        },
+        confirmButton = {
+          Button(
+            onClick = {
+              viewModel.deleteSupplier(sup)
+              supplierToDelete = null
+            },
+            colors = ButtonDefaults.buttonColors(containerColor = StatusRed)
+          ) {
+            Text("Delete Supplier", color = Color.White)
+          }
+        },
+        dismissButton = {
+          TextButton(onClick = { supplierToDelete = null }) {
+            Text("Cancel", color = TextMuted)
+          }
+        }
+      )
+    }
+
+    // Edit PO Dialog
+    poToEdit?.let { po ->
+      EditPoDialog(
+        po = po,
+        onDismiss = { poToEdit = null },
+        onSave = { updated ->
+          viewModel.updatePurchaseOrder(updated)
+          poToEdit = null
+        }
+      )
+    }
+
+    // Delete PO Confirmation
+    poToDelete?.let { po ->
+      AlertDialog(
+        onDismissRequest = { poToDelete = null },
+        title = {
+          Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.Delete, contentDescription = null, tint = StatusRed)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Delete Purchase Order?", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+          }
+        },
+        text = {
+          Text("Are you sure you want to delete purchase order ${po.poNumber} for '${po.supplierName}' with valuation ₹${String.format(Locale.getDefault(), "%,.2f", po.totalAmount)}?")
+        },
+        confirmButton = {
+          Button(
+            onClick = {
+              viewModel.deletePurchaseOrder(po)
+              poToDelete = null
+            },
+            colors = ButtonDefaults.buttonColors(containerColor = StatusRed)
+          ) {
+            Text("Delete PO", color = Color.White)
+          }
+        },
+        dismissButton = {
+          TextButton(onClick = { poToDelete = null }) {
+            Text("Cancel", color = TextMuted)
+          }
         }
       )
     }
@@ -650,6 +777,114 @@ fun ReceiveStockDialog(
         modifier = Modifier.testTag("btn_confirm_receive_stock")
       ) {
         Text("Reconcile & Update Inventory")
+      }
+    },
+    dismissButton = {
+      TextButton(onClick = onDismiss) { Text("Cancel", color = TextMuted) }
+    }
+  )
+}
+
+@Composable
+fun EditSupplierDialog(
+  supplier: Supplier,
+  onDismiss: () -> Unit,
+  onSave: (Supplier) -> Unit
+) {
+  var name by remember { mutableStateOf(supplier.name) }
+  var contact by remember { mutableStateOf(supplier.contactPerson) }
+  var phone by remember { mutableStateOf(supplier.phone) }
+  var gstin by remember { mutableStateOf(supplier.gstin) }
+  var dlNo by remember { mutableStateOf(supplier.drugLicenseNo) }
+  var address by remember { mutableStateOf(supplier.address) }
+  var payableText by remember { mutableStateOf(supplier.outstandingPayable.toString()) }
+
+  AlertDialog(
+    onDismissRequest = onDismiss,
+    title = { Text("Edit Supplier Details", fontWeight = FontWeight.Bold) },
+    text = {
+      Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Agency / Company Name*") }, modifier = Modifier.fillMaxWidth().testTag("input_edit_supplier_name"))
+        OutlinedTextField(value = contact, onValueChange = { contact = it }, label = { Text("Contact Person") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("Phone Number*") }, modifier = Modifier.fillMaxWidth().testTag("input_edit_supplier_phone"))
+        OutlinedTextField(value = gstin, onValueChange = { gstin = it }, label = { Text("GSTIN") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(value = dlNo, onValueChange = { dlNo = it }, label = { Text("Drug License Number") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(value = address, onValueChange = { address = it }, label = { Text("Warehouse Address") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(value = payableText, onValueChange = { payableText = it }, label = { Text("Outstanding Payable (₹)") }, modifier = Modifier.fillMaxWidth())
+      }
+    },
+    confirmButton = {
+      Button(
+        onClick = {
+          if (name.isNotBlank()) {
+            val payable = payableText.toDoubleOrNull() ?: supplier.outstandingPayable
+            onSave(
+              supplier.copy(
+                name = name.trim(),
+                companyName = name.trim(),
+                contactPerson = contact.trim(),
+                phone = phone.trim(),
+                gstin = gstin.trim(),
+                drugLicenseNo = dlNo.trim(),
+                address = address.trim(),
+                outstandingPayable = payable
+              )
+            )
+          }
+        },
+        colors = ButtonDefaults.buttonColors(containerColor = RoyalNavy),
+        modifier = Modifier.testTag("btn_save_edit_supplier")
+      ) {
+        Text("Update Supplier")
+      }
+    },
+    dismissButton = {
+      TextButton(onClick = onDismiss) { Text("Cancel", color = TextMuted) }
+    }
+  )
+}
+
+@Composable
+fun EditPoDialog(
+  po: PurchaseOrder,
+  onDismiss: () -> Unit,
+  onSave: (PurchaseOrder) -> Unit
+) {
+  var supplierName by remember { mutableStateOf(po.supplierName) }
+  var itemsJson by remember { mutableStateOf(po.itemsJson) }
+  var totalAmountText by remember { mutableStateOf(po.totalAmount.toString()) }
+  var expectedDate by remember { mutableStateOf(po.expectedDeliveryDate) }
+  var status by remember { mutableStateOf(po.status) }
+
+  AlertDialog(
+    onDismissRequest = onDismiss,
+    title = { Text("Edit Purchase Order ${po.poNumber}", fontWeight = FontWeight.Bold) },
+    text = {
+      Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedTextField(value = supplierName, onValueChange = { supplierName = it }, label = { Text("Supplier Name*") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(value = itemsJson, onValueChange = { itemsJson = it }, label = { Text("Ordered Items Summary") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(value = totalAmountText, onValueChange = { totalAmountText = it }, label = { Text("Total Valuation (₹)*") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(value = expectedDate, onValueChange = { expectedDate = it }, label = { Text("Expected Delivery Date") }, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(value = status, onValueChange = { status = it }, label = { Text("Status (ORDERED / RECEIVED)") }, modifier = Modifier.fillMaxWidth())
+      }
+    },
+    confirmButton = {
+      Button(
+        onClick = {
+          val amt = totalAmountText.toDoubleOrNull() ?: po.totalAmount
+          onSave(
+            po.copy(
+              supplierName = supplierName.trim(),
+              itemsJson = itemsJson.trim(),
+              totalAmount = amt,
+              expectedDeliveryDate = expectedDate.trim(),
+              status = status.trim().uppercase()
+            )
+          )
+        },
+        colors = ButtonDefaults.buttonColors(containerColor = RoyalNavy)
+      ) {
+        Text("Update PO")
       }
     },
     dismissButton = {

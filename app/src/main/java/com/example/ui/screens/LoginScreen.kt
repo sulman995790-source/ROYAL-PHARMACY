@@ -1,5 +1,7 @@
 package com.example.ui.screens
 
+import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
@@ -53,6 +55,7 @@ fun LoginScreen(
 
   var showGoogleChooser by remember { mutableStateOf(false) }
   var showOtpField by remember { mutableStateOf(false) }
+  var generatedOtp by remember { mutableStateOf("123456") }
   var showResetPasswordDialog by remember { mutableStateOf(false) }
   var isAuthenticating by remember { mutableStateOf(false) }
 
@@ -264,15 +267,133 @@ fun LoginScreen(
               modifier = Modifier.fillMaxWidth().testTag("login_phone_field")
             )
 
-            // OTP Entrance Fields (if requested)
+            // OTP Entrance Fields & Multi-channel Dispatch
             AnimatedVisibility(visible = showOtpField) {
               Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Spacer(modifier = Modifier.height(4.dp))
+
+                Card(
+                  shape = RoundedCornerShape(12.dp),
+                  colors = CardDefaults.cardColors(containerColor = if (isDarkMode) Color(0xFF0F172A) else Color(0xFFF1F5F9)),
+                  border = BorderStroke(1.dp, CardBorder),
+                  modifier = Modifier.fillMaxWidth()
+                ) {
+                  Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                      modifier = Modifier.fillMaxWidth(),
+                      horizontalArrangement = Arrangement.SpaceBetween,
+                      verticalAlignment = Alignment.CenterVertically
+                    ) {
+                      Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Verified, contentDescription = null, tint = StatusGreen, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Active Security OTP: ", fontSize = 12.sp, color = TextMuted)
+                        Text(generatedOtp, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = RoyalMagenta)
+                      }
+                      TextButton(
+                        onClick = {
+                          generatedOtp = ((100000..999999).random()).toString()
+                          otpInput = generatedOtp
+                          Toast.makeText(context, "New OTP generated: $generatedOtp", Toast.LENGTH_SHORT).show()
+                        },
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                      ) {
+                        Text("Regenerate", fontSize = 11.sp, color = RoyalMagenta)
+                      }
+                    }
+
+                    Text(
+                      text = "Send this verification OTP to recipient via:",
+                      fontSize = 11.sp,
+                      color = TextMuted
+                    )
+
+                    // Dispatch Buttons: SMS (Text Message), WhatsApp, Email
+                    Row(
+                      modifier = Modifier.fillMaxWidth(),
+                      horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                      // 1. Text Message (SMS)
+                      OutlinedButton(
+                        onClick = {
+                          val intent = Intent(Intent.ACTION_SENDTO).apply {
+                            data = Uri.parse("smsto:+91$phoneInput")
+                            putExtra("sms_body", "Your ROYAL PHARMACY security OTP is $generatedOtp. Valid for 10 minutes.")
+                          }
+                          try {
+                            context.startActivity(intent)
+                          } catch (_: Exception) {
+                            Toast.makeText(context, "Messaging app not available", Toast.LENGTH_SHORT).show()
+                          }
+                        },
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
+                        modifier = Modifier.weight(1f).testTag("btn_send_otp_sms")
+                      ) {
+                        Text("💬 SMS", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = RoyalNavy)
+                      }
+
+                      // 2. WhatsApp
+                      OutlinedButton(
+                        onClick = {
+                          val cleanPhone = if (phoneInput.startsWith("91")) phoneInput else "91$phoneInput"
+                          val textMsg = Uri.encode("Your ROYAL PHARMACY security OTP is: $generatedOtp. Valid for 10 minutes.")
+                          val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://api.whatsapp.com/send?phone=$cleanPhone&text=$textMsg"))
+                          try {
+                            context.startActivity(intent)
+                          } catch (_: Exception) {
+                            Toast.makeText(context, "WhatsApp not installed", Toast.LENGTH_SHORT).show()
+                          }
+                        },
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
+                        modifier = Modifier.weight(1f).testTag("btn_send_otp_whatsapp")
+                      ) {
+                        Text("📱 WhatsApp", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = StatusGreen)
+                      }
+
+                      // 3. Email
+                      OutlinedButton(
+                        onClick = {
+                          val emailTo = if (emailInput.isNotBlank()) emailInput else "sulman995790@gmail.com"
+                          val mailIntent = Intent(Intent.ACTION_SENDTO).apply {
+                            data = Uri.parse("mailto:$emailTo?subject=" + Uri.encode("Royal Pharmacy Verification OTP") + "&body=" + Uri.encode("Your security OTP is: $generatedOtp. Valid for 10 minutes."))
+                          }
+                          try {
+                            context.startActivity(mailIntent)
+                          } catch (_: Exception) {
+                            Toast.makeText(context, "Email app not available", Toast.LENGTH_SHORT).show()
+                          }
+                        },
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
+                        modifier = Modifier.weight(1f).testTag("btn_send_otp_email")
+                      ) {
+                        Text("✉️ Email", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = RoyalMagenta)
+                      }
+                    }
+                  }
+                }
+
                 OutlinedTextField(
                   value = otpInput,
                   onValueChange = { if (it.all { char -> char.isDigit() } && it.length <= 6) otpInput = it },
                   label = { Text("Enter 6-Digit OTP Code") },
-                  supportingText = { Text("Default verification code is: 123456") },
+                  supportingText = {
+                    Row(
+                      modifier = Modifier.fillMaxWidth(),
+                      horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                      Text("Code: $generatedOtp (or 123456)", fontSize = 11.sp, color = TextMuted)
+                      Text(
+                        "Auto-Fill OTP",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = RoyalMagenta,
+                        modifier = Modifier.clickable { otpInput = generatedOtp }
+                      )
+                    }
+                  },
                   leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = TextMuted) },
                   keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                   singleLine = true,
@@ -291,10 +412,12 @@ fun LoginScreen(
                 } else if (!isSignUpMode && phoneInput.length != 10) {
                   Toast.makeText(context, "Please enter a valid 10-digit phone number.", Toast.LENGTH_SHORT).show()
                 } else if (!showOtpField) {
+                  generatedOtp = ((100000..999999).random()).toString()
+                  otpInput = generatedOtp
                   showOtpField = true
-                  Toast.makeText(context, "OTP Code (123456) successfully generated to +91 $phoneInput", Toast.LENGTH_LONG).show()
+                  Toast.makeText(context, "OTP $generatedOtp generated! Select SMS, WhatsApp, or Email to send.", Toast.LENGTH_LONG).show()
                 } else {
-                  if (otpInput == "123456" || otpInput.isBlank()) {
+                  if (otpInput == generatedOtp || otpInput == "123456" || otpInput.isBlank()) {
                     isAuthenticating = true
                     viewModel.loginWithPhone(
                       phone = "+91 $phoneInput",
@@ -303,7 +426,7 @@ fun LoginScreen(
                     )
                     Toast.makeText(context, "Sign In Successful as ${selectedLoginRole.label}!", Toast.LENGTH_SHORT).show()
                   } else {
-                    Toast.makeText(context, "Invalid Security Code! Please enter '123456'", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Invalid OTP Code! Please enter '$generatedOtp' or '123456'", Toast.LENGTH_SHORT).show()
                   }
                 }
               },

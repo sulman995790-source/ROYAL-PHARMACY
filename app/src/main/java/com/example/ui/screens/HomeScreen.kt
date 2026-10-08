@@ -57,6 +57,7 @@ import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Restore
+import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.TrendingUp
@@ -1046,14 +1047,14 @@ fun HomeScreen(
             )
 
             HomeFeatureTile(
-              icon = Icons.Default.AutoAwesome,
-              iconBg = Color(0xFF4C1D95),
-              title = "Gemini Ask Anything",
-              subtitle = "Clinical Q&A & CDSCO Search",
-              badge = "Gemini",
-              badgeColor = Color(0xFFF59E0B),
-              onClick = { viewModel.navigateTo(Screen.AI_CHATBOT) },
-              modifier = Modifier.weight(1f).testTag("tile_gemini_ai")
+              icon = Icons.Default.Science,
+              iconBg = Color(0xFF0F766E),
+              title = "Clinical Unit Converter",
+              subtitle = "Insulin (IU), Dilution & Drops",
+              badge = "Clinical",
+              badgeColor = Color(0xFF14B8A6),
+              onClick = { viewModel.navigateTo(Screen.UNIT_CONVERTER) },
+              modifier = Modifier.weight(1f).testTag("tile_unit_converter")
             )
           }
 

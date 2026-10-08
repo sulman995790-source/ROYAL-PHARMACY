@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Directions
 import androidx.compose.material.icons.filled.Download
@@ -118,6 +119,7 @@ fun PurchaseOrdersScreen(
   var searchQuery by remember { mutableStateOf("") }
   var showCreatePoDialog by remember { mutableStateOf(false) }
   var poToReceive by remember { mutableStateOf<PurchaseOrder?>(null) }
+  var poToDelete by remember { mutableStateOf<PurchaseOrder?>(null) }
 
   val orderedPos = purchaseOrders.filter { it.status == "ORDERED" }
   val receivedPos = purchaseOrders.filter { it.status == "RECEIVED" }
@@ -504,12 +506,64 @@ fun PurchaseOrdersScreen(
                       Text("Receive Stock (GRN)", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
                     }
                   }
+
+                  // Delete Purchase Order Button
+                  IconButton(
+                    onClick = { poToDelete = po },
+                    modifier = Modifier.size(38.dp).testTag("btn_delete_po_${po.poNumber}")
+                  ) {
+                    Icon(
+                      Icons.Default.Delete,
+                      contentDescription = "Delete Purchase Order",
+                      tint = StatusRed,
+                      modifier = Modifier.size(18.dp)
+                    )
+                  }
                 }
               }
             }
           }
         }
       }
+    }
+
+    // Delete PO Confirmation Dialog
+    poToDelete?.let { order ->
+      AlertDialog(
+        onDismissRequest = { poToDelete = null },
+        title = {
+          Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.Delete, contentDescription = null, tint = StatusRed)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Delete Purchase Order?", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+          }
+        },
+        text = {
+          Text(
+            "Are you sure you want to delete purchase order ${order.poNumber} (${order.supplierName}) with valuation ₹${String.format(Locale.getDefault(), "%,.2f", order.totalAmount)}? This action cannot be undone.",
+            fontSize = 13.sp,
+            color = TextDark
+          )
+        },
+        confirmButton = {
+          Button(
+            onClick = {
+              viewModel.deletePurchaseOrder(order)
+              poToDelete = null
+              Toast.makeText(context, "Purchase order ${order.poNumber} deleted", Toast.LENGTH_SHORT).show()
+            },
+            colors = ButtonDefaults.buttonColors(containerColor = StatusRed),
+            modifier = Modifier.testTag("btn_confirm_delete_po")
+          ) {
+            Text("Delete PO", color = Color.White)
+          }
+        },
+        dismissButton = {
+          TextButton(onClick = { poToDelete = null }) {
+            Text("Cancel", color = TextMuted)
+          }
+        }
+      )
     }
 
     // Floating Action Button to Create PO

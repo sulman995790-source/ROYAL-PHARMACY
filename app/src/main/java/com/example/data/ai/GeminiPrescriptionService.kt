@@ -145,7 +145,7 @@ object GeminiPrescriptionService {
     // Step 2: If Gemini API Key is available, perform Multimodal AI Vision inference
     if (isApiKeyValid(apiKey)) {
       try {
-        val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=$apiKey"
+        val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey"
 
         val prompt = """
           You are an expert AI clinical pharmacist assistant for ROYAL PHARMACY.

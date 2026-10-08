@@ -246,11 +246,26 @@
             </div>
           </div>
 
-          <!-- OTP Code Input (Hidden by default) -->
-          <div id="web-login-otp-block" class="space-y-1.5 hidden">
-            <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Enter 6-Digit Verification Code</label>
+          <!-- OTP Code Input & Multi-Channel Dispatch -->
+          <div id="web-login-otp-block" class="space-y-2 hidden">
+            <div class="flex items-center justify-between">
+              <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">6-Digit Verification Code</label>
+              <span id="web-otp-badge" class="px-2 py-0.5 rounded text-[10px] font-bold bg-pink-900/60 text-pink-300 border border-pink-700/50">OTP: 123456</span>
+            </div>
             <input type="text" id="web-login-otp-input" placeholder="Enter '123456'" maxlength="6" class="w-full px-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-pink-500 placeholder-slate-600 text-center font-bold tracking-widest">
-            <span class="text-[10px] text-amber-500 font-medium block">We simulated sending security code: 123456</span>
+            
+            <p class="text-[10px] text-slate-400 font-medium">Send verification code to phone/email via:</p>
+            <div class="grid grid-cols-3 gap-1.5 pt-0.5">
+              <button type="button" onclick="sendWebOtpViaSms()" class="py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-sky-400 border border-slate-700 rounded-lg text-[10px] font-bold flex items-center justify-center space-x-1 transition">
+                <span>💬 SMS</span>
+              </button>
+              <button type="button" onclick="sendWebOtpViaWhatsApp()" class="py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 rounded-lg text-[10px] font-bold flex items-center justify-center space-x-1 transition">
+                <span>📱 WhatsApp</span>
+              </button>
+              <button type="button" onclick="sendWebOtpViaEmail()" class="py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-purple-400 border border-slate-700 rounded-lg text-[10px] font-bold flex items-center justify-center space-x-1 transition">
+                <span>✉️ Email</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -380,11 +395,7 @@
 
         <p class="text-[10px] font-bold text-slate-400 px-3 uppercase tracking-wider pt-3 mb-1.5">Clinical Intelligence</p>
 
-        <button onclick="switchTab('gemini')" id="tab-btn-gemini" class="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 transition">
-          <i data-lucide="sparkles" class="w-4 h-4 text-purple-600"></i>
-          <span>Gemini Pharmacist AI</span>
-          <span class="ml-auto bg-purple-100 text-purple-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full">3.5 Flash</span>
-        </button>
+        <!-- Gemini AI Copilot removed per request -->
 
         <button onclick="switchTab('interactions')" id="tab-btn-interactions" class="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 transition">
           <i data-lucide="shield-alert" class="w-4 h-4 text-rose-500"></i>
@@ -826,9 +837,13 @@
             <p class="text-sm text-slate-500">Order from distributors. Export direct purchase lists to easily supply products.</p>
           </div>
           <div class="flex items-center space-x-2">
-            <button onclick="addCustomCartItem()" class="flex items-center space-x-2 bg-royal-magenta text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-royal-accent transition">
+            <button onclick="openRecordPurchaseModal()" class="flex items-center space-x-1.5 bg-royal-navy text-white px-3.5 py-2 rounded-xl text-xs font-bold hover:bg-slate-800 transition shadow-sm">
+              <i data-lucide="file-plus" class="w-4 h-4 text-pink-400"></i>
+              <span>+ Record Inward Purchase</span>
+            </button>
+            <button onclick="addCustomCartItem()" class="flex items-center space-x-1.5 bg-royal-magenta text-white px-3.5 py-2 rounded-xl text-xs font-bold hover:bg-royal-accent transition">
               <i data-lucide="plus" class="w-4 h-4"></i>
-              <span>Add custom request</span>
+              <span>Order Request</span>
             </button>
           </div>
         </div>
@@ -902,6 +917,35 @@
             </div>
           </div>
         </div>
+
+        <!-- Recorded Inward Purchase Invoices Table -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+            <div>
+              <h3 class="font-bold text-slate-800">Inward Purchase Invoices (GRN Inward Log)</h3>
+              <p class="text-xs text-slate-400">Record stock received from distributors with GSTIN, invoice value, and payment status.</p>
+            </div>
+            <button onclick="openRecordPurchaseModal()" class="text-xs bg-pink-50 text-royal-magenta font-bold px-3 py-1.5 rounded-lg border border-pink-200 hover:bg-pink-100 transition">+ New Purchase</button>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-600">
+              <thead class="bg-slate-50 font-bold text-slate-500 uppercase">
+                <tr>
+                  <th class="px-5 py-3">Invoice No</th>
+                  <th class="px-5 py-3">Distributor Name</th>
+                  <th class="px-5 py-3">Date</th>
+                  <th class="px-5 py-3 text-center">Items</th>
+                  <th class="px-5 py-3 text-right">Total Amount (₹)</th>
+                  <th class="px-5 py-3 text-center">Status</th>
+                  <th class="px-5 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="purchases-table-body">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
       </section>
 
       <!-- ================= SECTION: DOSAGE CALCULATOR ================= -->
@@ -920,31 +964,39 @@
               <div>
                 <label class="block text-xs font-semibold text-slate-500 mb-1">Select Formulation</label>
                 <select id="calc-drug" onchange="onDosageDrugChange()" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-royal-magenta bg-white">
-                  <option value="paracetamol">Paracetamol 120mg/5ml Suspension</option>
-                  <option value="ibuprofen">Ibuprofen 100mg/5ml Suspension</option>
-                  <option value="amoxicillin">Amoxicillin (Pediatric Drops) 125mg/5ml</option>
-                  <option value="cetirizine">Cetirizine 5mg/5ml Syrup</option>
+                  <option value="paracetamol_drops">Paracetamol Infant Drops (100mg/ml - Calibrated Dropper)</option>
+                  <option value="paracetamol_120">Paracetamol 120mg/5ml Syrup (24 mg/ml)</option>
+                  <option value="paracetamol_250">Paracetamol 250mg/5ml Pead Suspension (50 mg/ml)</option>
+                  <option value="augmentin_duo">Augmentin Duo 228.5mg/5ml (Amoxyclav 45.7 mg/ml)</option>
+                  <option value="augmentin_forte">Augmentin Forte 457mg/5ml (Amoxyclav 91.4 mg/ml)</option>
+                  <option value="ondansetron">Ondansetron Drops/Syrup 2mg/5ml (0.4 mg/ml)</option>
+                  <option value="azithromycin">Azithromycin 200mg/5ml Pead Suspension (40 mg/ml)</option>
+                  <option value="ibuprofen">Ibuprofen 100mg/5ml Suspension (20 mg/ml)</option>
+                  <option value="amoxicillin">Amoxicillin Drops 125mg/5ml (25 mg/ml)</option>
+                  <option value="cetirizine">Cetirizine 5mg/5ml Syrup (1 mg/ml)</option>
+                  <option value="ceftriaxone">Ceftriaxone IV Reconstitution (100 mg/ml)</option>
+                  <option value="zincovit">Zincovit Pediatric Drops (10 mg/ml Zinc)</option>
                 </select>
               </div>
 
               <div class="grid grid-cols-2 gap-3">
                 <div>
                   <label class="block text-xs font-semibold text-slate-500 mb-1">Body Weight (kg)</label>
-                  <input type="number" id="calc-weight" value="15" min="2" onkeyup="calculateDosage()" onchange="calculateDosage()" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm text-center focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-royal-magenta">
+                  <input type="number" id="calc-weight" value="15" min="1" step="0.5" oninput="calculateDosage()" onkeyup="calculateDosage()" onchange="calculateDosage()" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm text-center focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-royal-magenta font-bold">
                 </div>
                 <div>
                   <label class="block text-xs font-semibold text-slate-500 mb-1">Age Bracket</label>
                   <select id="calc-age" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20 bg-white" onchange="calculateDosage()">
-                    <option value="pediatric">Pediatric (Child)</option>
-                    <option value="infant">Infant (Baby)</option>
-                    <option value="adult">Adult</option>
+                    <option value="pediatric">Pediatric (Child 1-12y)</option>
+                    <option value="infant">Infant (Baby 0-1y)</option>
+                    <option value="adult">Adult (>12y)</option>
                   </select>
                 </div>
               </div>
 
               <div>
                 <label class="block text-xs font-semibold text-slate-500 mb-1">Base Dose Factor (mg/kg/dose)</label>
-                <input type="number" id="calc-factor" value="15" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20" onkeyup="calculateDosage()">
+                <input type="number" id="calc-factor" value="15" step="0.1" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20 font-bold" oninput="calculateDosage()" onkeyup="calculateDosage()">
               </div>
             </div>
           </div>
@@ -959,27 +1011,37 @@
               <p class="text-xs text-slate-500">Based on dynamic body weight parameters, recommended intervals and chemist standards.</p>
             </div>
 
-            <div class="py-6 space-y-4">
-              <div class="flex items-baseline justify-between border-b border-slate-100 pb-3">
-                <span class="text-xs font-semibold text-slate-500">Recommended Liquid Volume:</span>
-                <span class="text-2xl font-black text-emerald-600" id="calc-volume-result">9.38 ml</span>
+            <div class="py-4 space-y-3">
+              <div class="flex items-baseline justify-between border-b border-slate-100 pb-2.5">
+                <span class="text-xs font-semibold text-slate-500">Single Liquid Dose Volume:</span>
+                <span class="text-2xl font-black text-emerald-600" id="calc-volume-result">2.25 ml</span>
               </div>
-              <div class="flex justify-between text-xs border-b border-slate-100 pb-3">
-                <span class="text-slate-500">Single Active Substance Dose:</span>
+              <div class="flex justify-between text-xs border-b border-slate-100 pb-2">
+                <span class="text-slate-500">Dropper Count Equivalent:</span>
+                <span class="font-extrabold text-royal-magenta" id="calc-drops-result">~45 drops (20 gtt/ml)</span>
+              </div>
+              <div class="flex justify-between text-xs border-b border-slate-100 pb-2">
+                <span class="text-slate-500">Active Substance Dose:</span>
                 <span class="font-bold text-slate-700" id="calc-substance-result">225.00 mg</span>
               </div>
-              <div class="flex justify-between text-xs border-b border-slate-100 pb-3">
+              <div class="flex justify-between text-xs border-b border-slate-100 pb-2">
                 <span class="text-slate-500">Dosing Frequency Interval:</span>
                 <span class="font-bold text-slate-700" id="calc-interval-result">Every 4 to 6 hours as needed</span>
               </div>
               <div class="flex justify-between text-xs">
-                <span class="text-slate-500">Max Dosage in 24 Hours:</span>
+                <span class="text-slate-500">Max Safe Doses in 24 Hours:</span>
                 <span class="font-bold text-rose-600" id="calc-max24-result">4 Doses Max</span>
               </div>
             </div>
 
-            <div class="bg-amber-50 p-3.5 rounded-xl border border-amber-100 text-[11px] text-amber-800">
-              <span class="font-bold">Heads up:</span> Ensure you measure strictly with a marked syringe or dosing cup. Never guess based on household spoons.
+            <div class="space-y-2">
+              <button type="button" onclick="shareWebDosageWhatsApp()" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition flex items-center justify-center space-x-1.5 shadow-sm">
+                <i data-lucide="phone" class="w-4 h-4"></i>
+                <span>Share Dosage Schedule on WhatsApp</span>
+              </button>
+              <div class="bg-amber-50 p-2.5 rounded-xl border border-amber-100 text-[11px] text-amber-800">
+                <span class="font-bold">Chemist Note:</span> Use calibrated dropper or oral syringe. Never use kitchen spoons.
+              </div>
             </div>
           </div>
         </div>
@@ -1999,6 +2061,92 @@
               </div>
             </div>
           </div>
+
+          <!-- Insulin Syringe & Biological Dose Calculator (Requested Feature) -->
+          <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4">
+            <h3 class="text-sm font-bold text-pink-700 uppercase tracking-wider flex items-center gap-2">
+              <i data-lucide="syringe" class="w-4 h-4"></i> Insulin Units (IU) & Syringe Calculator
+            </h3>
+            <div class="space-y-3 text-xs">
+              <div>
+                <label class="block text-slate-600 font-medium mb-1">Prescribed Dose (International Units / IU)</label>
+                <div class="flex items-center space-x-2">
+                  <input type="number" id="web-insulin-iu" value="40" min="1" max="500" oninput="calculateWebInsulinDose()" class="flex-1 p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-pink-500 font-bold">
+                  <span class="text-xs font-bold text-slate-500 px-2">IU</span>
+                </div>
+              </div>
+              <div>
+                <label class="block text-slate-600 font-medium mb-1">Patient Body Weight (kg) - Optional Dose Estimator</label>
+                <input type="number" id="web-insulin-weight" value="60" oninput="calculateWebInsulinDose()" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-pink-500">
+              </div>
+              <button onclick="calculateWebInsulinDose()" class="w-full py-2.5 bg-pink-600 hover:bg-pink-700 text-white font-bold rounded-xl transition">Calculate Syringe Volumes</button>
+              
+              <div id="web-insulin-result" class="space-y-2 p-3 bg-pink-50 rounded-xl text-slate-800 text-xs">
+                <div class="flex justify-between items-center py-1 border-b border-pink-200/60">
+                  <span class="font-medium">U-100 Syringe (Standard Orange Cap):</span>
+                  <span class="font-bold text-pink-800" id="res-u100-ml">0.40 mL (40 markings)</span>
+                </div>
+                <div class="flex justify-between items-center py-1 border-b border-pink-200/60">
+                  <span class="font-medium">U-40 Syringe (Red Cap - Retail):</span>
+                  <span class="font-bold text-pink-800" id="res-u40-ml">1.00 mL (40 markings)</span>
+                </div>
+                <div class="flex justify-between items-center py-1">
+                  <span class="font-medium">T1DM Daily Estimate (0.5 IU/kg):</span>
+                  <span class="font-bold text-slate-700" id="res-tdd-est">30 IU / day (15 Basal / 15 Bolus)</span>
+                </div>
+              </div>
+              <p class="text-[10px] text-red-600 font-medium">⚠️ Safety Alert: Never mix U-40 and U-100 syringe calibrations without recalculating volume to prevent fatal hypoglycemia.</p>
+            </div>
+          </div>
+
+          <!-- Dry Powder Reconstitution Calculator (Requested Feature) -->
+          <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4">
+            <h3 class="text-sm font-bold text-indigo-700 uppercase tracking-wider flex items-center gap-2">
+              <i data-lucide="flask-conical" class="w-4 h-4"></i> Dry Powder Reconstitution & Injection Dilution
+            </h3>
+            <div class="space-y-3 text-xs">
+              <div>
+                <label class="block text-slate-600 font-medium mb-1">Quick Clinical Preset</label>
+                <select id="web-powder-preset" onchange="applyWebPowderPreset(this.value)" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none">
+                  <option value="1000,9.6,0.4,500">Ceftriaxone 1g (Monocef) IV</option>
+                  <option value="500,4.8,0.2,250">Ceftriaxone 500mg IV/IM</option>
+                  <option value="1200,20.0,0.8,600">Amoxicillin-Clav 1.2g (Augmentin) IV</option>
+                  <option value="1000,20.0,0.5,500">Meropenem 1g IV</option>
+                  <option value="40,10.0,0.0,40">Pantoprazole 40mg IV</option>
+                  <option value="100,2.0,0.0,50">Hydrocortisone 100mg IV</option>
+                </select>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-slate-600 font-medium mb-1">Vial Strength (mg)</label>
+                  <input type="number" id="web-vial-mg" value="1000" oninput="calculateWebPowderReconstitution()" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold">
+                </div>
+                <div>
+                  <label class="block text-slate-600 font-medium mb-1">Diluent Added (mL)</label>
+                  <input type="number" step="0.1" id="web-diluent-ml" value="9.6" oninput="calculateWebPowderReconstitution()" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold">
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-slate-600 font-medium mb-1">Powder Displacement (mL)</label>
+                  <input type="number" step="0.1" id="web-displace-ml" value="0.4" oninput="calculateWebPowderReconstitution()" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none">
+                </div>
+                <div>
+                  <label class="block text-slate-600 font-medium mb-1">Prescribed Dose (mg)</label>
+                  <input type="number" id="web-prescribed-mg" value="500" oninput="calculateWebPowderReconstitution()" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold">
+                </div>
+              </div>
+
+              <button onclick="calculateWebPowderReconstitution()" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition">Calculate Concentration & Draw Volume</button>
+
+              <div id="web-powder-result" class="p-3 bg-indigo-50 rounded-xl text-indigo-950 font-semibold space-y-1">
+                <div>Reconstituted Concentration: <span class="font-bold text-indigo-800" id="res-powder-conc">100.0 mg/mL</span></div>
+                <div>Volume to Withdraw: <span class="text-base font-extrabold text-indigo-900" id="res-powder-withdraw">5.00 mL</span> (for 500 mg dose)</div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -2128,6 +2276,11 @@
         items: []
       },
       distributorCart: [],
+      purchases: [
+        { id: "PUR-101", invoiceNo: "INV-SP-8821", distributor: "Sun Pharma Distribution Hub", date: "15/03/2026", itemsCount: 12, totalAmount: 18450.0, status: "Paid" },
+        { id: "PUR-102", invoiceNo: "INV-CIP-3319", distributor: "Cipla Regional Agency", date: "10/03/2026", itemsCount: 8, totalAmount: 12200.0, status: "Paid" },
+        { id: "PUR-103", invoiceNo: "INV-GSK-4491", distributor: "GSK North Depot", date: "02/03/2026", itemsCount: 6, totalAmount: 9800.0, status: "Unpaid" }
+      ],
       syncQueue: [],
       showProfitDetails: false,
       drugDatabase: [
@@ -2379,6 +2532,7 @@
           const parsed = JSON.parse(saved);
           state.profile = parsed.profile || state.profile;
           state.distributorCart = parsed.distributorCart || state.distributorCart;
+          state.purchases = parsed.purchases || state.purchases;
           state.pin = parsed.pin || state.pin;
           state.secretPassword = parsed.secretPassword || state.secretPassword;
           state.role = parsed.role || state.role;
@@ -2402,6 +2556,7 @@
       localStorage.setItem('royal_pharmacy_state', JSON.stringify({
         profile: state.profile,
         distributorCart: state.distributorCart,
+        purchases: state.purchases,
         pin: state.pin,
         secretPassword: state.secretPassword,
         role: state.role,
@@ -2521,6 +2676,7 @@
       loadMedicineDropdown();
       renderBillItems();
       renderCartTable();
+      renderPurchasesTable();
       renderInvoicePreview();
     }
 
@@ -4352,6 +4508,233 @@
       });
     }
 
+    // Inward Purchase Invoices Management
+    function renderPurchasesTable() {
+      const tbody = document.getElementById('purchases-table-body');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+
+      if (!state.purchases || state.purchases.length === 0) {
+        state.purchases = [
+          { id: "PUR-101", invoiceNo: "INV-SP-8821", distributor: "Sun Pharma Distribution Hub", date: "15/03/2026", itemsCount: 12, totalAmount: 18450.0, status: "Paid" },
+          { id: "PUR-102", invoiceNo: "INV-CIP-3319", distributor: "Cipla Regional Agency", date: "10/03/2026", itemsCount: 8, totalAmount: 12200.0, status: "Paid" },
+          { id: "PUR-103", invoiceNo: "INV-GSK-4491", distributor: "GSK North Depot", date: "02/03/2026", itemsCount: 6, totalAmount: 9800.0, status: "Unpaid" }
+        ];
+      }
+
+      state.purchases.forEach((p) => {
+        const isPaid = p.status === 'Paid';
+        tbody.innerHTML += `
+          <tr class="hover:bg-slate-50 border-b border-slate-100 transition">
+            <td class="px-5 py-3.5 font-bold font-mono text-royal-navy">${escapeHtml(p.invoiceNo)}</td>
+            <td class="px-5 py-3.5 font-medium text-slate-800">${escapeHtml(p.distributor)}</td>
+            <td class="px-5 py-3.5 text-slate-500">${escapeHtml(p.date)}</td>
+            <td class="px-5 py-3.5 text-center font-bold text-slate-700">${p.itemsCount}</td>
+            <td class="px-5 py-3.5 text-right font-bold text-slate-900">₹${p.totalAmount.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+            <td class="px-5 py-3.5 text-center">
+              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${isPaid ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
+                ${p.status}
+              </span>
+            </td>
+            <td class="px-5 py-3.5 text-right space-x-1.5 whitespace-nowrap">
+              <button onclick="editPurchaseInvoice('${p.id}')" title="Edit Purchase Invoice" class="p-1.5 text-slate-600 hover:bg-slate-100 rounded-lg transition inline-flex items-center">
+                <i data-lucide="edit-3" class="w-4 h-4"></i>
+              </button>
+              <button onclick="deletePurchaseInvoice('${p.id}')" title="Delete Purchase Invoice" class="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition inline-flex items-center">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+              </button>
+            </td>
+          </tr>
+        `;
+      });
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function openRecordPurchaseModal() {
+      Swal.fire({
+        title: 'Record Inward Purchase',
+        html: `
+          <div class="space-y-3 text-left text-xs">
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Distributor / Supplier Name*</label>
+              <input type="text" id="swal-dist-name" value="Sun Pharma Distribution Hub" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold">
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">GSTIN</label>
+                <input type="text" id="swal-dist-gstin" value="18AABCS9988K1Z3" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none">
+              </div>
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">Invoice Number*</label>
+                <input type="text" id="swal-inv-no" value="PUR-${Math.floor(1000 + Math.random() * 9000)}" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold">
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">Total Amount (₹)*</label>
+                <input type="number" id="swal-pur-amt" value="9500.00" step="0.01" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-emerald-700">
+              </div>
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">Items Count</label>
+                <input type="number" id="swal-pur-items" value="4" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none">
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">Payment Status</label>
+                <select id="swal-pur-status" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold">
+                  <option value="Paid">Paid</option>
+                  <option value="Unpaid">Unpaid (Credit)</option>
+                </select>
+              </div>
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">Medicine Restock (Optional)</label>
+                <input type="text" id="swal-pur-med" placeholder="e.g. Paracetamol 650mg" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none">
+              </div>
+            </div>
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Save Purchase',
+        confirmButtonColor: '#9C1258',
+        preConfirm: () => {
+          const dist = document.getElementById('swal-dist-name')?.value?.trim();
+          const invNo = document.getElementById('swal-inv-no')?.value?.trim();
+          const amt = parseFloat(document.getElementById('swal-pur-amt')?.value) || 0;
+          const items = parseInt(document.getElementById('swal-pur-items')?.value) || 1;
+          const status = document.getElementById('swal-pur-status')?.value || 'Paid';
+          const medName = document.getElementById('swal-pur-med')?.value?.trim();
+
+          if (!dist || !invNo || amt <= 0) {
+            Swal.showValidationMessage('Please provide Distributor Name, Invoice Number, and Amount.');
+            return false;
+          }
+          return { dist, invNo, amt, items, status, medName };
+        }
+      }).then((result) => {
+        if (result.isConfirmed && result.value) {
+          const val = result.value;
+          const today = new Date().toLocaleDateString('en-GB');
+          const newPurchase = {
+            id: 'PUR-' + Date.now(),
+            invoiceNo: val.invNo,
+            distributor: val.dist,
+            date: today,
+            itemsCount: val.items,
+            totalAmount: val.amt,
+            status: val.status
+          };
+          if (!state.purchases) state.purchases = [];
+          state.purchases.unshift(newPurchase);
+
+          if (val.medName) {
+            const found = state.drugDatabase?.find(d => d.name.toLowerCase().includes(val.medName.toLowerCase()));
+            if (found) {
+              found.stock += (val.items * 10);
+            }
+          }
+
+          saveStateToLocal();
+          renderPurchasesTable();
+          Swal.fire('Saved!', `Inward purchase ${val.invNo} of ₹${val.amt.toFixed(2)} recorded successfully.`, 'success');
+        }
+      });
+    }
+
+    function editPurchaseInvoice(id) {
+      const p = (state.purchases || []).find(item => item.id === id);
+      if (!p) return;
+
+      Swal.fire({
+        title: 'Edit Inward Purchase Invoice',
+        html: `
+          <div class="space-y-3 text-left text-xs">
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Distributor / Supplier Name*</label>
+              <input type="text" id="swal-edit-dist-name" value="${escapeHtml(p.distributor || '')}" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold">
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">Invoice Date</label>
+                <input type="text" id="swal-edit-inv-date" value="${escapeHtml(p.date || '')}" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none">
+              </div>
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">Invoice Number*</label>
+                <input type="text" id="swal-edit-inv-no" value="${escapeHtml(p.invoiceNo || '')}" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold">
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">Total Amount (₹)*</label>
+                <input type="number" id="swal-edit-pur-amt" value="${p.totalAmount}" step="0.01" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-emerald-700">
+              </div>
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">Items Count</label>
+                <input type="number" id="swal-edit-pur-items" value="${p.itemsCount}" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none">
+              </div>
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Payment Status</label>
+              <select id="swal-edit-pur-status" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold">
+                <option value="Paid" ${p.status === 'Paid' ? 'selected' : ''}>Paid</option>
+                <option value="Unpaid" ${p.status === 'Unpaid' ? 'selected' : ''}>Unpaid (Credit)</option>
+              </select>
+            </div>
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Update Purchase',
+        confirmButtonColor: '#9C1258',
+        preConfirm: () => {
+          const dist = document.getElementById('swal-edit-dist-name')?.value?.trim();
+          const invNo = document.getElementById('swal-edit-inv-no')?.value?.trim();
+          const date = document.getElementById('swal-edit-inv-date')?.value?.trim();
+          const amt = parseFloat(document.getElementById('swal-edit-pur-amt')?.value) || 0;
+          const items = parseInt(document.getElementById('swal-edit-pur-items')?.value) || 1;
+          const status = document.getElementById('swal-edit-pur-status')?.value || 'Paid';
+
+          if (!dist || !invNo || amt <= 0) {
+            Swal.showValidationMessage('Please provide Distributor Name, Invoice Number, and Amount.');
+            return false;
+          }
+          return { dist, invNo, date, amt, items, status };
+        }
+      }).then((result) => {
+        if (result.isConfirmed && result.value) {
+          const val = result.value;
+          p.distributor = val.dist;
+          p.invoiceNo = val.invNo;
+          p.date = val.date || p.date;
+          p.totalAmount = val.amt;
+          p.itemsCount = val.items;
+          p.status = val.status;
+
+          saveStateToLocal();
+          renderPurchasesTable();
+          Swal.fire('Updated!', `Invoice ${val.invNo} updated successfully.`, 'success');
+        }
+      });
+    }
+
+    function deletePurchaseInvoice(id) {
+      Swal.fire({
+        title: 'Delete Purchase Invoice?',
+        text: 'Are you sure you want to delete this recorded inward purchase invoice? This cannot be undone.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, Delete',
+        confirmButtonColor: '#E11D48'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          state.purchases = (state.purchases || []).filter(p => p.id !== id);
+          saveStateToLocal();
+          renderPurchasesTable();
+          Swal.fire('Deleted', 'Purchase invoice record deleted.', 'success');
+        }
+      });
+    }
+
     // SheetJS Batch Excel/CSV/PDF Export Logic (NETLIFY STANDARDS)
     function exportCart(format) {
       if (state.distributorCart.length === 0) {
@@ -5016,42 +5399,128 @@
     function onDosageDrugChange() {
       const drug = document.getElementById('calc-drug').value;
       const factor = document.getElementById('calc-factor');
-      if (drug === 'paracetamol') factor.value = '15';
+      if (drug === 'paracetamol_drops' || drug === 'paracetamol_120' || drug === 'paracetamol_250') factor.value = '15';
+      else if (drug === 'augmentin_duo' || drug === 'augmentin_forte') factor.value = '20';
+      else if (drug === 'ondansetron') factor.value = '0.15';
+      else if (drug === 'azithromycin') factor.value = '10';
       else if (drug === 'ibuprofen') factor.value = '10';
       else if (drug === 'amoxicillin') factor.value = '25';
       else if (drug === 'cetirizine') factor.value = '0.25';
+      else if (drug === 'ceftriaxone') factor.value = '50';
+      else if (drug === 'zincovit') factor.value = '1';
+      else factor.value = '15';
       calculateDosage();
     }
 
     function calculateDosage() {
-      const weight = parseFloat(document.getElementById('calc-weight').value) || 15;
-      const age = document.getElementById('calc-age').value;
-      const drug = document.getElementById('calc-drug').value;
-      const factor = parseFloat(document.getElementById('calc-factor').value) || 15;
+      const weight = parseFloat(document.getElementById('calc-weight')?.value) || 15;
+      const age = document.getElementById('calc-age')?.value || 'pediatric';
+      const drug = document.getElementById('calc-drug')?.value || 'paracetamol_120';
+      const factor = parseFloat(document.getElementById('calc-factor')?.value) || 15;
 
       let mgResult = weight * factor;
       let mlResult = 0.0;
-      let interval = "Every 4 to 6 hours";
+      let interval = "Every 4 to 6 hours as needed";
+      let maxDoses = "4 Doses Max";
 
-      if (drug === 'paracetamol') {
+      if (drug === 'paracetamol_drops') {
+        // 100mg/ml infant drops
+        mlResult = mgResult / 100.0;
+        interval = "Every 4 to 6 hours as needed (TDS / QDS)";
+        maxDoses = "4 Doses Max in 24 hours";
+      } else if (drug === 'paracetamol_120') {
         // 120mg/5ml => 1ml = 24mg
-        mlResult = mgResult / 24;
+        mlResult = mgResult / 24.0;
+        interval = "Every 4 to 6 hours as needed";
+        maxDoses = "4 Doses Max";
+      } else if (drug === 'paracetamol_250') {
+        // 250mg/5ml => 1ml = 50mg
+        mlResult = mgResult / 50.0;
+        interval = "Every 4 to 6 hours as needed";
+        maxDoses = "4 Doses Max";
+      } else if (drug === 'augmentin_duo') {
+        // 228.5mg/5ml => 45.7 mg/ml
+        mlResult = mgResult / 45.7;
+        interval = "Twice daily (BD) with meals for 5-7 days";
+        maxDoses = "2 Doses per day";
+      } else if (drug === 'augmentin_forte') {
+        // 457mg/5ml => 91.4 mg/ml
+        mlResult = mgResult / 91.4;
+        interval = "Twice daily (BD) with meals for 5-7 days";
+        maxDoses = "2 Doses per day";
+      } else if (drug === 'ondansetron') {
+        // 2mg/5ml => 0.4 mg/ml
+        mlResult = mgResult / 0.4;
+        interval = "Give 30 mins before feeding / oral fluids (Max TDS)";
+        maxDoses = "3 Doses Max";
+      } else if (drug === 'azithromycin') {
+        // 200mg/5ml => 40 mg/ml
+        mlResult = mgResult / 40.0;
+        interval = "Once daily (OD) for 3 to 5 days";
+        maxDoses = "1 Dose daily (OD)";
       } else if (drug === 'ibuprofen') {
         // 100mg/5ml => 1ml = 20mg
-        mlResult = mgResult / 20;
+        mlResult = mgResult / 20.0;
+        interval = "Every 6 to 8 hours after food";
+        maxDoses = "3 Doses Max";
       } else if (drug === 'amoxicillin') {
         // 125mg/5ml => 1ml = 25mg
-        mlResult = mgResult / 25;
+        mlResult = mgResult / 25.0;
         interval = "Every 8 hours (3 times daily)";
+        maxDoses = "3 Doses daily";
       } else if (drug === 'cetirizine') {
-        // 5mg/5ml syrup
-        mlResult = mgResult / 1;
-        interval = "Once daily (at night)";
+        // 5mg/5ml syrup => 1 mg/ml
+        mlResult = mgResult / 1.0;
+        interval = "Once daily at bedtime (at night)";
+        maxDoses = "1 Dose daily";
+      } else if (drug === 'ceftriaxone') {
+        // 1000mg/10ml => 100 mg/ml
+        mlResult = mgResult / 100.0;
+        interval = "Slow IV / IM once or twice daily";
+        maxDoses = "2 Doses Max";
+      } else if (drug === 'zincovit') {
+        // 10mg/ml
+        mlResult = mgResult / 10.0;
+        interval = "Once daily for 14 days";
+        maxDoses = "1 Dose daily";
+      } else {
+        mlResult = mgResult / 24.0;
       }
 
-      document.getElementById('calc-volume-result').innerText = `${mlResult.toFixed(2)} ml`;
-      document.getElementById('calc-substance-result').innerText = `${mgResult.toFixed(2)} mg`;
-      document.getElementById('calc-interval-result').innerText = interval;
+      const drops = Math.round(mlResult * 20);
+
+      const volEl = document.getElementById('calc-volume-result');
+      const dropEl = document.getElementById('calc-drops-result');
+      const subEl = document.getElementById('calc-substance-result');
+      const intEl = document.getElementById('calc-interval-result');
+      const maxEl = document.getElementById('calc-max24-result');
+
+      if (volEl) volEl.innerText = `${mlResult.toFixed(2)} ml`;
+      if (dropEl) dropEl.innerText = `~${drops} drops (Calibrated dropper: 20 gtt/ml)`;
+      if (subEl) subEl.innerText = `${mgResult.toFixed(2)} mg`;
+      if (intEl) intEl.innerText = interval;
+      if (maxEl) maxEl.innerText = maxDoses;
+    }
+
+    function shareWebDosageWhatsApp() {
+      const drugEl = document.getElementById('calc-drug');
+      const drugName = drugEl ? drugEl.options[drugEl.selectedIndex].text : "Medication";
+      const weight = document.getElementById('calc-weight')?.value || '15';
+      const vol = document.getElementById('calc-volume-result')?.innerText || '';
+      const drops = document.getElementById('calc-drops-result')?.innerText || '';
+      const sub = document.getElementById('calc-substance-result')?.innerText || '';
+      const int = document.getElementById('calc-interval-result')?.innerText || '';
+
+      const msg = `*ROYAL PHARMACY CLINICAL DOSAGE SCHEDULE*\n` +
+        `Patient Weight: ${weight} kg\n` +
+        `Medicine: ${drugName}\n` +
+        `Single Dose: *${vol}* (${sub})\n` +
+        `Dropper Count: *${drops}*\n` +
+        `Frequency: ${int}\n\n` +
+        `Safety Note: Please measure with calibrated dropper/syringe. Administer as prescribed.\n` +
+        `Royal Pharmacy POS System`;
+
+      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
     }
 
     // Symptom Triage Checker
@@ -7640,6 +8109,114 @@
     let isWebSignUp = false;
     let isOtpSent = false;
     let webLoginRole = 'OWNER';
+    let currentWebGeneratedOtp = "123456";
+
+    function generateNewWebOtp() {
+      currentWebGeneratedOtp = Math.floor(100000 + Math.random() * 900000).toString();
+      const badge = document.getElementById('web-otp-badge');
+      if (badge) badge.innerText = `OTP: ${currentWebGeneratedOtp}`;
+      const input = document.getElementById('web-login-otp-input');
+      if (input) input.value = currentWebGeneratedOtp;
+      return currentWebGeneratedOtp;
+    }
+
+    function sendWebOtpViaSms() {
+      const phone = (document.getElementById('web-login-phone-input')?.value || '').trim();
+      const otp = currentWebGeneratedOtp || '123456';
+      if (!phone) {
+        Swal.fire('Mobile Required', 'Please enter your 10-digit mobile number first.', 'warning');
+        return;
+      }
+      const msg = encodeURIComponent(`Your ROYAL PHARMACY security OTP is ${otp}. Valid for 10 minutes.`);
+      window.open(`sms:+91${phone}?body=${msg}`, '_blank');
+      Swal.fire({
+        title: 'SMS Message App Opened',
+        text: `Pre-filled SMS with OTP ${otp} launched for +91 ${phone}`,
+        icon: 'success',
+        timer: 3000
+      });
+    }
+
+    function sendWebOtpViaWhatsApp() {
+      const phone = (document.getElementById('web-login-phone-input')?.value || '').trim();
+      const otp = currentWebGeneratedOtp || '123456';
+      if (!phone) {
+        Swal.fire('Mobile Required', 'Please enter your 10-digit mobile number first.', 'warning');
+        return;
+      }
+      const cleanPhone = phone.startsWith('91') ? phone : ('91' + phone);
+      const msg = encodeURIComponent(`Your ROYAL PHARMACY security OTP is: ${otp}. Valid for 10 minutes.`);
+      window.open(`https://api.whatsapp.com/send?phone=${cleanPhone}&text=${msg}`, '_blank');
+      Swal.fire({
+        title: 'WhatsApp Opened',
+        text: `WhatsApp chat launched with security OTP ${otp}`,
+        icon: 'success',
+        timer: 3000
+      });
+    }
+
+    function sendWebOtpViaEmail() {
+      const email = (document.getElementById('web-signup-email')?.value || 'sulman995790@gmail.com').trim();
+      const otp = currentWebGeneratedOtp || '123456';
+      const subject = encodeURIComponent('Royal Pharmacy Security Verification OTP');
+      const body = encodeURIComponent(`Your security OTP is: ${otp}.\n\nValid for 10 minutes.`);
+      window.open(`mailto:${email}?subject=${subject}&body=${body}`, '_blank');
+      Swal.fire({
+        title: 'Email Client Opened',
+        text: `Email composer opened with security OTP ${otp}`,
+        icon: 'success',
+        timer: 3000
+      });
+    }
+
+    // Clinical Unit Converter: Insulin Dose Calculator
+    function calculateWebInsulinDose() {
+      const iu = parseFloat(document.getElementById('web-insulin-iu')?.value) || 40.0;
+      const weight = parseFloat(document.getElementById('web-insulin-weight')?.value) || 60.0;
+
+      const u100Ml = (iu / 100.0).toFixed(2);
+      const u40Ml = (iu / 40.0).toFixed(3);
+      const tdd = (weight * 0.5).toFixed(0);
+      const basal = (tdd * 0.5).toFixed(0);
+      const bolus = (tdd * 0.5).toFixed(0);
+
+      const resU100 = document.getElementById('res-u100-ml');
+      const resU40 = document.getElementById('res-u40-ml');
+      const resTdd = document.getElementById('res-tdd-est');
+
+      if (resU100) resU100.innerText = `${u100Ml} mL (${Math.round(iu)} markings)`;
+      if (resU40) resU40.innerText = `${u40Ml} mL (${Math.round(iu)} markings)`;
+      if (resTdd) resTdd.innerText = `${tdd} IU / day (${basal} Basal / ${bolus} Bolus)`;
+    }
+
+    // Clinical Unit Converter: Dry Powder Reconstitution
+    function applyWebPowderPreset(presetStr) {
+      const parts = presetStr.split(',');
+      if (parts.length === 4) {
+        document.getElementById('web-vial-mg').value = parts[0];
+        document.getElementById('web-diluent-ml').value = parts[1];
+        document.getElementById('web-displace-ml').value = parts[2];
+        document.getElementById('web-prescribed-mg').value = parts[3];
+        calculateWebPowderReconstitution();
+      }
+    }
+
+    function calculateWebPowderReconstitution() {
+      const vialMg = parseFloat(document.getElementById('web-vial-mg')?.value) || 1000.0;
+      const diluentMl = parseFloat(document.getElementById('web-diluent-ml')?.value) || 9.6;
+      const displaceMl = parseFloat(document.getElementById('web-displace-ml')?.value) || 0.4;
+      const prescribedMg = parseFloat(document.getElementById('web-prescribed-mg')?.value) || 500.0;
+
+      const totalMl = diluentMl + displaceMl;
+      const concMgPerMl = totalMl > 0 ? (vialMg / totalMl) : 0.0;
+      const withdrawMl = concMgPerMl > 0 ? (prescribedMg / concMgPerMl) : 0.0;
+
+      const resConc = document.getElementById('res-powder-conc');
+      const resWithdraw = document.getElementById('res-powder-withdraw');
+
+      if (resConc) resConc.innerText = `${concMgPerMl.toFixed(1)} mg/mL`;
+      if (resWithdraw) resWithdraw.innerText = `${withdrawMl.toFixed(2)} mL (for ${prescribedMg} mg dose)`;
+    }
 
     function updateLoginTitlesAndButtons() {
       const title = document.getElementById('web-login-title');
@@ -7785,16 +8362,17 @@
 
       if (!isOtpSent) {
         isOtpSent = true;
+        generateNewWebOtp();
         document.getElementById('web-login-otp-block').classList.remove('hidden');
         document.getElementById('web-login-auth-btn').innerHTML = "<span>Verify OTP & Access ERP</span>";
         Swal.fire({
           title: 'OTP Dispatched',
-          text: `Security code (123456) dispatched to +91 ${phoneInput} for ${webLoginRole === 'OWNER' ? 'Owner' : 'Staff'} login.`,
+          text: `Security code (${currentWebGeneratedOtp}) generated for +91 ${phoneInput}. Choose SMS, WhatsApp, or Email to send.`,
           icon: 'info',
           confirmButtonColor: '#9C1258'
         });
       } else {
-        if (otpInput === '123456' || otpInput === '') {
+        if (otpInput === currentWebGeneratedOtp || otpInput === '123456' || otpInput === '') {
           state.isLoggedIn = true;
           state.userPhone = "+91 " + phoneInput;
           state.role = webLoginRole;
