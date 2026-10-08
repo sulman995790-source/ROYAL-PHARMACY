@@ -31,7 +31,10 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.ReceiptLong
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EventBusy
 import androidx.compose.material.icons.filled.FilterList
@@ -58,6 +61,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -78,6 +82,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.CartItem
+import com.example.data.model.MedicineBatchDetail
 import com.example.data.model.MedicineItem
 import com.example.service.DistributorExportService
 import com.example.ui.theme.CardBorder
@@ -93,23 +98,6 @@ import com.example.viewmodel.PharmacyViewModel
 import com.example.viewmodel.Screen
 import java.util.Locale
 
-data class MedicineBatchDetail(
-  val id: String,
-  val medicine: MedicineItem,
-  val batchNumber: String,
-  val mfgDate: String = "01/2024",
-  val expiryDate: String,
-  val stockAvailable: Int,
-  val initialPacks: Int,
-  val purchaseRate: Double,
-  val mrp: Double,
-  val saleRate: Double,
-  val rackLocation: String,
-  val supplierName: String,
-  val isQuarantined: Boolean = false,
-  val barcode: String = ""
-)
-
 @Composable
 fun BatchTrackingScreen(
   viewModel: PharmacyViewModel,
@@ -119,13 +107,19 @@ fun BatchTrackingScreen(
   val clipboardManager = LocalClipboardManager.current
   val medicines by viewModel.allMedicines.collectAsState()
   val profile by viewModel.businessProfile.collectAsState()
+  
+  val batchToReturn by viewModel.batchToReturn.collectAsState()
+  val scannedBarcode by viewModel.scannedBarcodeForReturn.collectAsState()
 
   var searchQuery by remember { mutableStateOf("") }
-  var selectedTab by remember { mutableIntStateOf(0) } // 0: All Batches, 1: Active In-Stock, 2: Critical Low, 3: Near Expiry, 4: Quarantined
+  var selectedTab by remember { mutableIntStateOf(0) } // 0: All Batches, 1: Active In-Stock, 2: Critical Low, 3: Near Expiry, 4: Quarantined, 5: Clearance Priority
   var showAddBatchDialog by remember { mutableStateOf(false) }
   var batchToEdit by remember { mutableStateOf<MedicineBatchDetail?>(null) }
   var showQrForBatch by remember { mutableStateOf<MedicineBatchDetail?>(null) }
   var quarantinedBatchIds by remember { mutableStateOf(setOf<String>()) }
+  var batchToDelete by remember { mutableStateOf<MedicineBatchDetail?>(null) }
+  // var batchToReturn by remember { mutableStateOf<MedicineBatchDetail?>(null) } // Replaced by viewModel
+  var generatedCreditNote by remember { mutableStateOf<com.example.viewmodel.DistributorCreditNote?>(null) }
 
   // Synthesize rich batch items from catalog
   val allBatches = remember(medicines, quarantinedBatchIds) {
@@ -151,16 +145,30 @@ fun BatchTrackingScreen(
     }
   }
 
+  LaunchedEffect(scannedBarcode) {
+      if (scannedBarcode != null) {
+          val batch = allBatches.firstOrNull { it.barcode == scannedBarcode }
+          if (batch != null) {
+              viewModel.batchToReturn.value = batch
+          } else {
+              Toast.makeText(context, "Batch with barcode $scannedBarcode not found!", Toast.LENGTH_SHORT).show()
+          }
+          viewModel.scannedBarcodeForReturn.value = null
+      }
+  }
+
   val activeBatches = allBatches.filter { !it.isQuarantined && it.stockAvailable > 0 }
   val lowStockBatches = allBatches.filter { it.stockAvailable in 1..it.medicine.minStockAlert }
   val nearExpiryBatches = allBatches.filter { it.expiryDate.contains("26") || it.medicine.isExpired }
   val quarantinedBatches = allBatches.filter { it.isQuarantined }
+  val clearanceBatches = allBatches.filter { it.expiryDate.contains("26") && it.mrp > 100 }
 
   val displayedBatches = when (selectedTab) {
     1 -> activeBatches
     2 -> lowStockBatches
     3 -> nearExpiryBatches
     4 -> quarantinedBatches
+    5 -> clearanceBatches
     else -> allBatches
   }.filter {
     searchQuery.isBlank() ||
@@ -336,7 +344,8 @@ fun BatchTrackingScreen(
             "In Stock (${activeBatches.size})",
             "Critical Low (${lowStockBatches.size})",
             "Near Expiry (${nearExpiryBatches.size})",
-            "Quarantined (${quarantinedBatches.size})"
+            "Quarantined (${quarantinedBatches.size})",
+            "Clearance Priority"
           ).forEachIndexed { idx, title ->
             FilterChip(
               selected = selectedTab == idx,
@@ -378,6 +387,9 @@ fun BatchTrackingScreen(
         }
       } else {
         items(displayedBatches) { batch ->
+          val isExpiredBatch = batch.medicine.isExpired || batch.expiryDate.contains("24") || batch.expiryDate.contains("25")
+          val isNearExpiryBatch = batch.expiryDate.contains("26")
+
           Card(
             shape = RoundedCornerShape(12.dp),
             colors = CardDefaults.cardColors(
@@ -424,33 +436,51 @@ fun BatchTrackingScreen(
                   }
                 }
 
-                // Expiry or Quarantine Badge
-                if (batch.isQuarantined) {
-                  Box(
-                    modifier = Modifier
-                      .clip(RoundedCornerShape(6.dp))
-                      .background(Color(0xFFDC2626))
-                      .padding(horizontal = 8.dp, vertical = 3.dp)
-                  ) {
-                    Text("QUARANTINED", fontSize = 9.5.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                // Color-coded Status Pill
+                when {
+                  batch.isQuarantined -> {
+                    Box(
+                      modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(Color(0xFFF3E8FF))
+                        .border(1.dp, Color(0xFFC084FC), RoundedCornerShape(6.dp))
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                    ) {
+                      Text("QUARANTINED", fontSize = 9.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFF7E22CE))
+                    }
                   }
-                } else if (batch.expiryDate.contains("26")) {
-                  Box(
-                    modifier = Modifier
-                      .clip(RoundedCornerShape(6.dp))
-                      .background(Color(0xFFFEF3C7))
-                      .padding(horizontal = 8.dp, vertical = 3.dp)
-                  ) {
-                    Text("EXP: ${batch.expiryDate}", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD97706))
+                  isExpiredBatch -> {
+                    Box(
+                      modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(Color(0xFFFEE2E2))
+                        .border(1.dp, Color(0xFFFCA5A5), RoundedCornerShape(6.dp))
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                    ) {
+                      Text("EXPIRED", fontSize = 9.5.sp, fontWeight = FontWeight.Bold, color = StatusRed)
+                    }
                   }
-                } else {
-                  Box(
-                    modifier = Modifier
-                      .clip(RoundedCornerShape(6.dp))
-                      .background(Color(0xFFDCFCE7))
-                      .padding(horizontal = 8.dp, vertical = 3.dp)
-                  ) {
-                    Text("EXP: ${batch.expiryDate}", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = StatusGreen)
+                  isNearExpiryBatch -> {
+                    Box(
+                      modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(Color(0xFFFEF3C7))
+                        .border(1.dp, Color(0xFFFDE68A), RoundedCornerShape(6.dp))
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                    ) {
+                      Text("< 30 DAYS (NEAR EXP)", fontSize = 9.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFFB45309))
+                    }
+                  }
+                  else -> {
+                    Box(
+                      modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(Color(0xFFDCFCE7))
+                        .border(1.dp, Color(0xFF86EFAC), RoundedCornerShape(6.dp))
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                    ) {
+                      Text("ACTIVE (${batch.expiryDate})", fontSize = 9.5.sp, fontWeight = FontWeight.Bold, color = StatusGreen)
+                    }
                   }
                 }
               }
@@ -505,20 +535,51 @@ fun BatchTrackingScreen(
               }
 
               Spacer(modifier = Modifier.height(12.dp))
+              
+              // Batch Timeline
+              Text("BATCH LIFECYCLE", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = TextMuted)
+              Spacer(modifier = Modifier.height(4.dp))
+              Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                  listOf("Received", "Stocked", "Quarantined", "Returned").forEachIndexed { idx, label ->
+                      Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                          Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(if (idx <= 1) StatusGreen else Color.LightGray))
+                          Text(label, fontSize = 8.sp, color = TextMuted)
+                      }
+                  }
+              }
+
+              Spacer(modifier = Modifier.height(12.dp))
 
               // Action Buttons Row
               Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
               ) {
                 OutlinedButton(
                   onClick = { batchToEdit = batch },
                   shape = RoundedCornerShape(8.dp),
+                  contentPadding = PaddingValues(horizontal = 8.dp),
                   modifier = Modifier.weight(1f).height(38.dp).testTag("btn_adjust_batch_${batch.batchNumber}")
                 ) {
-                  Icon(Icons.Default.Edit, contentDescription = null, tint = RoyalNavy, modifier = Modifier.size(14.dp))
-                  Spacer(modifier = Modifier.width(4.dp))
-                  Text("Adjust Qty", fontSize = 11.sp, color = RoyalNavy)
+                  Icon(Icons.Default.Edit, contentDescription = null, tint = RoyalNavy, modifier = Modifier.size(13.dp))
+                  Spacer(modifier = Modifier.width(3.dp))
+                  Text("Qty", fontSize = 11.sp, color = RoyalNavy)
+                }
+
+                // Return to Distributor Button for Expired/Near-Expiry Batches
+                if (isExpiredBatch || isNearExpiryBatch) {
+                  Button(
+                    onClick = { viewModel.batchToReturn.value = batch },
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = RoyalMagenta),
+                    contentPadding = PaddingValues(horizontal = 8.dp),
+                    modifier = Modifier.weight(1.2f).height(38.dp).testTag("btn_return_distributor_${batch.batchNumber}")
+                  ) {
+                    Icon(Icons.Default.SwapHoriz, contentDescription = null, tint = Color.White, modifier = Modifier.size(13.dp))
+                    Spacer(modifier = Modifier.width(3.dp))
+                    Text("Return", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                  }
                 }
 
                 // Batch QR Button
@@ -526,7 +587,15 @@ fun BatchTrackingScreen(
                   onClick = { showQrForBatch = batch },
                   modifier = Modifier.size(38.dp).border(1.dp, CardBorder, RoundedCornerShape(8.dp))
                 ) {
-                  Icon(Icons.Default.QrCode, contentDescription = "Batch QR", tint = RoyalMagenta, modifier = Modifier.size(18.8.dp))
+                  Icon(Icons.Default.QrCode, contentDescription = "Batch QR", tint = RoyalMagenta, modifier = Modifier.size(18.dp))
+                }
+
+                // Quick Delete Icon Button
+                IconButton(
+                  onClick = { batchToDelete = batch },
+                  modifier = Modifier.size(38.dp).border(1.dp, CardBorder, RoundedCornerShape(8.dp)).testTag("btn_delete_batch_${batch.batchNumber}")
+                ) {
+                  Icon(Icons.Default.Delete, contentDescription = "Delete Batch", tint = StatusRed, modifier = Modifier.size(18.dp))
                 }
 
                 if (batch.isQuarantined) {
@@ -537,10 +606,11 @@ fun BatchTrackingScreen(
                     },
                     shape = RoundedCornerShape(8.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = StatusGreen),
-                    modifier = Modifier.weight(1f).height(38.dp)
+                    contentPadding = PaddingValues(horizontal = 8.dp),
+                    modifier = Modifier.height(38.dp)
                   ) {
-                    Icon(Icons.Default.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
+                    Icon(Icons.Default.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(13.dp))
+                    Spacer(modifier = Modifier.width(3.dp))
                     Text("Release", fontSize = 11.sp, color = Color.White)
                   }
                 } else {
@@ -550,12 +620,13 @@ fun BatchTrackingScreen(
                       Toast.makeText(context, "Batch #${batch.batchNumber} quarantined & stopped from billing", Toast.LENGTH_LONG).show()
                     },
                     shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = StatusRed),
-                    modifier = Modifier.weight(1f).height(38.dp).testTag("btn_quarantine_${batch.batchNumber}")
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF64748B)),
+                    contentPadding = PaddingValues(horizontal = 8.dp),
+                    modifier = Modifier.height(38.dp).testTag("btn_quarantine_${batch.batchNumber}")
                   ) {
-                    Icon(Icons.Default.Block, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Quarantine", fontSize = 11.sp, color = Color.White)
+                    Icon(Icons.Default.Block, contentDescription = null, tint = Color.White, modifier = Modifier.size(13.dp))
+                    Spacer(modifier = Modifier.width(3.dp))
+                    Text("Hold", fontSize = 11.sp, color = Color.White)
                   }
                 }
               }
@@ -657,6 +728,200 @@ fun BatchTrackingScreen(
       confirmButton = {
         TextButton(onClick = { showQrForBatch = null }) {
           Text("Close", color = RoyalNavy, fontWeight = FontWeight.Bold)
+        }
+      }
+    )
+  }
+
+  // Delete Batch Confirmation Dialog
+  if (batchToDelete != null) {
+    val b = batchToDelete!!
+    AlertDialog(
+      onDismissRequest = { batchToDelete = null },
+      title = {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Icon(Icons.Default.Delete, contentDescription = null, tint = StatusRed)
+          Spacer(modifier = Modifier.width(8.dp))
+          Text("Delete Batch #${b.batchNumber}?", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        }
+      },
+      text = {
+        Text("Are you sure you want to permanently remove batch '${b.batchNumber}' for '${b.medicine.name}' from active batch records?", fontSize = 13.sp, color = TextDark)
+      },
+      confirmButton = {
+        Button(
+          onClick = {
+            viewModel.deleteMedicineBatch(b.medicine.id, b.batchNumber)
+            Toast.makeText(context, "Batch #${b.batchNumber} deleted", Toast.LENGTH_SHORT).show()
+            batchToDelete = null
+          },
+          colors = ButtonDefaults.buttonColors(containerColor = StatusRed)
+        ) {
+          Text("Delete Record", color = Color.White)
+        }
+      },
+      dismissButton = {
+        TextButton(onClick = { batchToDelete = null }) {
+          Text("Cancel")
+        }
+      }
+    )
+  }
+
+  // Return to Distributor & Credit Note Dialog
+  if (batchToReturn != null) {
+    val b = batchToReturn!!
+    var returnQtyInput by remember { mutableStateOf("${b.stockAvailable}") }
+    var supplierInput by remember { mutableStateOf(b.supplierName) }
+    var returnReasonInput by remember { mutableStateOf("Expired Stock Return") }
+
+    val qty = returnQtyInput.toIntOrNull() ?: b.stockAvailable
+    val totalCredit = qty * b.purchaseRate
+
+    AlertDialog(
+      onDismissRequest = { viewModel.batchToReturn.value = null },
+      title = {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Icon(Icons.Default.SwapHoriz, contentDescription = null, tint = RoyalMagenta)
+          Spacer(modifier = Modifier.width(8.dp))
+          Text("Return Batch #${b.batchNumber} to Supplier", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+        }
+      },
+      text = {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+          Text("Medicine: ${b.medicine.name} (Exp: ${b.expiryDate})", fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = TextDark)
+
+          OutlinedTextField(
+            value = supplierInput,
+            onValueChange = { supplierInput = it },
+            label = { Text("Distributor / Supplier Name*") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth().testTag("input_return_distributor")
+          )
+
+          OutlinedTextField(
+            value = returnQtyInput,
+            onValueChange = { returnQtyInput = it.filter { char -> char.isDigit() } },
+            label = { Text("Return Quantity (Packs)*") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth().testTag("input_return_qty")
+          )
+
+          OutlinedTextField(
+            value = returnReasonInput,
+            onValueChange = { returnReasonInput = it },
+            label = { Text("Return Reason") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+          )
+
+          Box(
+            modifier = Modifier
+              .fillMaxWidth()
+              .clip(RoundedCornerShape(8.dp))
+              .background(Color(0xFFFEF2F2))
+              .border(1.dp, Color(0xFFFCA5A5), RoundedCornerShape(8.dp))
+              .padding(10.dp)
+          ) {
+            Column {
+              Text("CREDIT NOTE REFUND AMOUNT", fontSize = 9.5.sp, fontWeight = FontWeight.Bold, color = StatusRed)
+              Text("₹${String.format(Locale.getDefault(), "%,.2f", totalCredit)}", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = StatusRed)
+              Text("Calculated at purchase cost ₹${b.purchaseRate} / pack", fontSize = 10.sp, color = TextMuted)
+            }
+          }
+        }
+      },
+      confirmButton = {
+        Button(
+          onClick = {
+            if (supplierInput.isBlank() || qty <= 0) {
+              Toast.makeText(context, "Please enter valid distributor name and return quantity", Toast.LENGTH_SHORT).show()
+              return@Button
+            }
+            val creditNote = viewModel.returnBatchToDistributor(
+              medicineId = b.medicine.id,
+              batchNumber = b.batchNumber,
+              distributorName = supplierInput,
+              returnQty = qty,
+              reason = returnReasonInput,
+              creditAmount = totalCredit
+            )
+            viewModel.batchToReturn.value = null
+            generatedCreditNote = creditNote
+            Toast.makeText(context, "Return logged & Credit Note #${creditNote.creditNoteNumber} issued!", Toast.LENGTH_LONG).show()
+          },
+          colors = ButtonDefaults.buttonColors(containerColor = RoyalMagenta),
+          modifier = Modifier.testTag("btn_confirm_batch_return")
+        ) {
+          Icon(Icons.Default.ReceiptLong, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+          Spacer(modifier = Modifier.width(4.dp))
+          Text("Generate Credit Note")
+        }
+      },
+      dismissButton = {
+        TextButton(onClick = { viewModel.batchToReturn.value = null }) {
+          Text("Cancel")
+        }
+      }
+    )
+  }
+
+  // Credit Note Voucher Modal
+  if (generatedCreditNote != null) {
+    val cn = generatedCreditNote!!
+    AlertDialog(
+      onDismissRequest = { generatedCreditNote = null },
+      title = {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Icon(Icons.Default.ReceiptLong, contentDescription = null, tint = StatusGreen)
+          Spacer(modifier = Modifier.width(8.dp))
+          Text("Credit Note Voucher", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        }
+      },
+      text = {
+        Column(
+          modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .background(Color(0xFFF8FAFC))
+            .border(1.dp, CardBorder, RoundedCornerShape(10.dp))
+            .padding(14.dp),
+          verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+          Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("Voucher #: ${cn.creditNoteNumber}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = RoyalNavy)
+            Text(cn.dateCreated, fontSize = 10.sp, color = TextMuted)
+          }
+          Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(CardBorder))
+          Text("Supplier: ${cn.distributorName}", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextDark)
+          Text("Returned Item: ${cn.medicineName} (Batch #${cn.batchNumber})", fontSize = 12.sp, color = TextDark)
+          Text("Quantity Returned: ${cn.returnedPacks} Packs @ ₹${cn.purchaseRate}/pack", fontSize = 12.sp, color = TextMuted)
+          Text("Reason: ${cn.returnReason}", fontSize = 11.sp, color = TextMuted)
+          Spacer(modifier = Modifier.height(4.dp))
+          Row(
+            modifier = Modifier
+              .fillMaxWidth()
+              .clip(RoundedCornerShape(6.dp))
+              .background(Color(0xFFECFDF5))
+              .padding(8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            Text("CREDIT REFUND TOTAL", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = StatusGreen)
+            Text("₹${String.format(Locale.getDefault(), "%,.2f", cn.totalCreditAmount)}", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold, color = StatusGreen)
+          }
+        }
+      },
+      confirmButton = {
+        Button(
+          onClick = {
+            clipboardManager.setText(AnnotatedString("CREDIT NOTE: ${cn.creditNoteNumber}\nDistributor: ${cn.distributorName}\nItem: ${cn.medicineName} (Batch #${cn.batchNumber})\nReturned: ${cn.returnedPacks} Packs\nCredit Amount: ₹${cn.totalCreditAmount}"))
+            Toast.makeText(context, "Credit Note Voucher #${cn.creditNoteNumber} copied to clipboard", Toast.LENGTH_SHORT).show()
+            generatedCreditNote = null
+          },
+          colors = ButtonDefaults.buttonColors(containerColor = RoyalNavy)
+        ) {
+          Text("Copy Voucher & Close")
         }
       }
     )

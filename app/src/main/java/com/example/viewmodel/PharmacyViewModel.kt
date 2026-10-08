@@ -101,7 +101,8 @@ enum class Screen {
   DOCTOR_MANAGEMENT,
   SYMPTOM_DISEASE_TRACKER,
   ROLE_MANAGEMENT,
-  STAFF_ACTIVITY
+  STAFF_ACTIVITY,
+  STOCK_TRANSFER
 }
 
 enum class BatchRiskTier {
@@ -292,6 +293,10 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
       )
     )
   )
+
+  // Batch to Return
+  val batchToReturn = MutableStateFlow<com.example.data.model.MedicineBatchDetail?>(null)
+  val scannedBarcodeForReturn = MutableStateFlow<String?>(null)
 
   // Short Expiry Tracking (<60 Days)
   val shortExpiryMedicines60Days = MutableStateFlow<List<Pair<MedicineItem, Int>>>(emptyList())
@@ -1608,7 +1613,7 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
   ) {
     viewModelScope.launch {
       val poNumber = "PO-2026-${(100..999).random()}"
-      val dateStr = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()).format(Date())
+      val dateStr = SimpleDateFormat("dd-MM-yyyy HH:mm", Locale.getDefault()).format(Date())
       repository.insertPurchaseOrder(
         PurchaseOrder(
           poNumber = poNumber,
@@ -1660,7 +1665,7 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
     medicineCostPrice: Double = 0.0
   ) {
     viewModelScope.launch {
-      val dateStr = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()).format(Date())
+      val dateStr = SimpleDateFormat("dd-MM-yyyy HH:mm", Locale.getDefault()).format(Date())
       val trimmedDist = distributorName.trim().ifBlank { "Royal Pharma Dist" }
       val trimmedGstin = gstin.trim()
       val inv = PurchaseInvoice(
@@ -2501,7 +2506,113 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
     isDarkMode.value = next
     scanFeedbackMessage.value = if (next) "Dark Mode Activated 🌙" else "Light Mode Activated ☀️"
   }
+
+  val creditNotes = MutableStateFlow<List<DistributorCreditNote>>(
+    listOf(
+      DistributorCreditNote(
+        id = "cn-101",
+        creditNoteNumber = "CN-2026-9081",
+        distributorName = "Cipla Healthcare Supply",
+        medicineName = "Augmentin 625mg",
+        batchNumber = "AUG-2024-X",
+        returnedPacks = 15,
+        purchaseRate = 105.0,
+        totalCreditAmount = 1575.0,
+        returnReason = "Expired Batch Return",
+        dateCreated = "07/10/2026 11:30 AM"
+      )
+    )
+  )
+
+  fun returnBatchToDistributor(
+    medicineId: Long,
+    batchNumber: String,
+    distributorName: String,
+    returnQty: Int,
+    reason: String,
+    creditAmount: Double
+  ): DistributorCreditNote {
+    val cnNumber = "CN-2026-${(1000..9999).random()}"
+    val timeStr = SimpleDateFormat("dd/MM/yyyy hh:mm a", Locale.getDefault()).format(Date())
+    val medicine = allMedicines.value.find { it.id == medicineId }
+    val medName = medicine?.name ?: "Medicine Batch"
+
+    if (medicine != null) {
+      val newStock = (medicine.stockPacks - returnQty).coerceAtLeast(0)
+      updateMedicine(medicine.copy(stockPacks = newStock))
+    }
+
+    val note = DistributorCreditNote(
+      id = "cn-${System.currentTimeMillis()}",
+      creditNoteNumber = cnNumber,
+      distributorName = distributorName,
+      medicineName = medName,
+      batchNumber = batchNumber,
+      returnedPacks = returnQty,
+      purchaseRate = medicine?.purchaseRate ?: 0.0,
+      totalCreditAmount = creditAmount,
+      returnReason = reason,
+      dateCreated = timeStr
+    )
+
+    creditNotes.value = listOf(note) + creditNotes.value
+
+    logStaffActivity(
+      staffName = "Store Manager",
+      staffRole = currentUserRole.value.name,
+      actionType = "DISTRIBUTOR_RETURN",
+      description = "Returned $returnQty packs of '$medName' (Batch #$batchNumber) to '$distributorName'. Issued Credit Note #$cnNumber for ₹${String.format(Locale.getDefault(), "%.2f", creditAmount)}",
+      badgeColorHex = 0xFFDC2626
+    )
+
+    return note
+  }
+
+  fun deleteMedicineBatch(medicineId: Long, batchNumber: String) {
+    val medicine = allMedicines.value.find { it.id == medicineId }
+    if (medicine != null) {
+      deleteMedicineById(medicine.id)
+      logStaffActivity(
+        staffName = "Store Manager",
+        staffRole = currentUserRole.value.name,
+        actionType = "BATCH_DELETED",
+        description = "Deleted batch #$batchNumber for '${medicine.name}' from active batch ledger.",
+        badgeColorHex = 0xFF991B1B
+      )
+    }
+  }
+
+  fun transferStock(
+    medicineId: Long,
+    medicineName: String,
+    quantity: Int,
+    sourceLocation: String,
+    destLocation: String
+  ) {
+    val currentRole = currentUserRole.value.name
+    logStaffActivity(
+      staffName = "Pharmacist",
+      staffRole = currentRole,
+      actionType = "STOCK_TRANSFER",
+      description = "Transferred $quantity packs of '$medicineName' from '$sourceLocation' to '$destLocation'",
+      badgeColorHex = 0xFF0D9488
+    )
+  }
 }
+
+data class DistributorCreditNote(
+  val id: String,
+  val creditNoteNumber: String,
+  val distributorName: String,
+  val medicineName: String,
+  val batchNumber: String,
+  val returnedPacks: Int,
+  val purchaseRate: Double,
+  val totalCreditAmount: Double,
+  val returnReason: String,
+  val dateCreated: String,
+  val createdBy: String = "Store Manager"
+)
 
 data class StaffMember(
   val id: String,

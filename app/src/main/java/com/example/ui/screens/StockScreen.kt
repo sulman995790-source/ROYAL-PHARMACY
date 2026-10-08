@@ -43,10 +43,18 @@ import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Warning
 import com.example.util.MedicineQrPayload
 import com.example.util.QrCodeGeneratorUtil
@@ -206,6 +214,18 @@ fun StockScreen(
             Icon(Icons.Default.Inventory2, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
             Spacer(modifier = Modifier.width(3.dp))
             Text("Batches", fontSize = 10.5.sp, color = Color.White, fontWeight = FontWeight.Bold)
+          }
+
+          Button(
+            onClick = { viewModel.navigateTo(Screen.STOCK_TRANSFER) },
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0D9488)),
+            shape = RoundedCornerShape(16.dp),
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+            modifier = Modifier.padding(end = 4.dp).testTag("btn_stock_transfer")
+          ) {
+            Icon(Icons.Default.SwapHoriz, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
+            Spacer(modifier = Modifier.width(3.dp))
+            Text("Transfer", fontSize = 10.5.sp, color = Color.White, fontWeight = FontWeight.Bold)
           }
 
           Button(
@@ -732,11 +752,20 @@ fun StockItemCard(
     else -> CardBorder
   }
 
+  val animatedContainerColor by animateColorAsState(
+    targetValue = cardContainerColor,
+    label = "cardBgColor"
+  )
+  val animatedBorderColor by animateColorAsState(
+    targetValue = cardBorderColor,
+    label = "cardBorderColor"
+  )
+
   Card(
     shape = RoundedCornerShape(10.dp),
-    colors = CardDefaults.cardColors(containerColor = cardContainerColor),
+    colors = CardDefaults.cardColors(containerColor = animatedContainerColor),
     border = CardDefaults.outlinedCardBorder().copy(
-      brush = androidx.compose.ui.graphics.SolidColor(cardBorderColor)
+      brush = androidx.compose.ui.graphics.SolidColor(animatedBorderColor)
     ),
     modifier = Modifier
       .fillMaxWidth()
@@ -920,11 +949,18 @@ fun StockItemCard(
             modifier = Modifier.size(12.dp)
           )
           Spacer(modifier = Modifier.width(4.dp))
-          Text(
-            text = "${item.stockPacks} Packs",
-            fontSize = 11.sp,
-            color = TextMuted
-          )
+          AnimatedContent(
+            targetState = item.stockPacks,
+            transitionSpec = { (fadeIn() + scaleIn()).togetherWith(fadeOut() + scaleOut()) },
+            label = "stockPacksAnim"
+          ) { count ->
+            Text(
+              text = "$count Packs",
+              fontSize = 11.5.sp,
+              fontWeight = FontWeight.Bold,
+              color = if (count <= item.minStockAlert) StatusRed else TextDark
+            )
+          }
         }
       }
 

@@ -1,6 +1,12 @@
 package com.example.ui.screens
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -61,8 +67,13 @@ import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
+import androidx.compose.runtime.LaunchedEffect
+import java.text.SimpleDateFormat
+import java.util.Date
+import kotlinx.coroutines.delay
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -168,6 +179,77 @@ fun HomeScreen(
           onDarkModeToggle = { viewModel.toggleDarkMode() },
           isDarkMode = isDarkMode
         )
+      }
+
+      // Real-time Store Clock Widget
+      item {
+        var currentTimeStr by remember { mutableStateOf("") }
+        var currentDateStr by remember { mutableStateOf("") }
+        
+        LaunchedEffect(Unit) {
+          val timeFormat = SimpleDateFormat("hh:mm:ss a", Locale.getDefault())
+          val dateFormat = SimpleDateFormat("EEEE, dd MMMM yyyy", Locale.getDefault())
+          while (true) {
+            val now = Date()
+            currentTimeStr = timeFormat.format(now)
+            currentDateStr = dateFormat.format(now)
+            delay(1000L)
+          }
+        }
+
+        if (currentTimeStr.isNotEmpty()) {
+          Card(
+            shape = RoundedCornerShape(10.dp),
+            colors = CardDefaults.cardColors(
+              containerColor = if (isDarkMode) Color(0xFF1E293B) else Color(0xFFEFF6FF)
+            ),
+            border = androidx.compose.foundation.BorderStroke(
+              1.dp,
+              if (isDarkMode) Color(0xFF334155) else Color(0xFFBFDBFE)
+            ),
+            modifier = Modifier
+              .fillMaxWidth()
+              .padding(horizontal = 16.dp, vertical = 2.dp)
+              .testTag("real_time_clock_widget")
+          ) {
+            Row(
+              modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+              verticalAlignment = Alignment.CenterVertically,
+              horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+              Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                  imageVector = Icons.Default.Schedule,
+                  contentDescription = "Real-time Clock",
+                  tint = if (isDarkMode) Color(0xFF60A5FA) else RoyalNavy,
+                  modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                  text = "System Real-time Clock",
+                  fontSize = 11.5.sp,
+                  fontWeight = FontWeight.Medium,
+                  color = if (isDarkMode) Color(0xFF94A3B8) else TextMuted
+                )
+              }
+              
+              Column(horizontalAlignment = Alignment.End) {
+                Text(
+                  text = currentTimeStr,
+                  fontSize = 14.sp,
+                  fontWeight = FontWeight.Bold,
+                  color = if (isDarkMode) Color.White else RoyalNavy,
+                  modifier = Modifier.testTag("clock_time_text")
+                )
+                Text(
+                  text = currentDateStr,
+                  fontSize = 10.sp,
+                  color = if (isDarkMode) Color(0xFF94A3B8) else TextMuted
+                )
+              }
+            }
+          }
+        }
       }
 
       // 2. Primary Fast-Action Row (Billing, Rx Scan, UPI QR, QuickScan)
@@ -452,12 +534,18 @@ fun HomeScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                       ) {
-                        Text(
-                          text = "Stock: ${med.stockPacks}",
-                          fontSize = 11.sp,
-                          fontWeight = FontWeight.ExtraBold,
-                          color = if (isUrgentLow) Color(0xFFDC2626) else StatusRed
-                        )
+                        AnimatedContent(
+                          targetState = med.stockPacks,
+                          transitionSpec = { (fadeIn() + scaleIn()).togetherWith(fadeOut() + scaleOut()) },
+                          label = "homeStockAnim"
+                        ) { count ->
+                          Text(
+                            text = "Stock: $count",
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = if (isUrgentLow) Color(0xFFDC2626) else StatusRed
+                          )
+                        }
                         Box(
                           modifier = Modifier
                             .clip(RoundedCornerShape(4.dp))

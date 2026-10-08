@@ -63,6 +63,7 @@ import com.example.ui.screens.PrescriptionScannerScreen
 import com.example.ui.screens.PurchaseOrdersScreen
 import com.example.ui.screens.PurchasesScreen
 import com.example.ui.screens.QuickScanScreen
+import com.example.ui.screens.StockTransferScreen
 import com.example.ui.screens.ReportsScreen
 import com.example.ui.screens.RoleManagementScreen
 import com.example.ui.screens.StaffActivityScreen
@@ -180,7 +181,7 @@ fun RoyalPharmacyApp(
       Screen.SMART_SALES_ANALYTICS -> viewModel.navigateTo(Screen.SALES)
       Screen.BATCH_EXPIRY_DASHBOARD, Screen.EXPIRY_TRACKER -> viewModel.navigateTo(Screen.HOME)
       Screen.INVOICE_PRINTER, Screen.DAILY_SALES_REPORT, Screen.CUSTOMER_HISTORY, Screen.AUTOMATED_TAX_CALC -> viewModel.navigateTo(Screen.SALES)
-      Screen.INVENTORY_DASHBOARD, Screen.BATCH_TRACKING, Screen.STOCK_ANALYTICS -> viewModel.navigateTo(Screen.STOCK)
+      Screen.INVENTORY_DASHBOARD, Screen.BATCH_TRACKING, Screen.STOCK_ANALYTICS, Screen.STOCK_TRANSFER -> viewModel.navigateTo(Screen.STOCK)
       Screen.PURCHASE_ORDERS -> viewModel.navigateTo(Screen.PURCHASE)
       Screen.VOICE_SEARCH, Screen.SYNC_MANAGER, Screen.PRESCRIPTION_SCANNER, Screen.DAILY_HUDDLE, Screen.BACKUP_RESTORE, Screen.INVENTORY_QR -> viewModel.navigateTo(Screen.HOME)
       Screen.CASH_BANK_ACCOUNTS, Screen.PRESCRIPTION_HISTORY, Screen.SMART_DOSAGE_CALCULATOR, Screen.UNIT_CONVERTER, Screen.DRUG_INTERACTION_CHECKER, Screen.SMART_INVENTORY_SUGGESTIONS, Screen.DOCTOR_MANAGEMENT, Screen.SYMPTOM_DISEASE_TRACKER, Screen.ROLE_MANAGEMENT -> viewModel.navigateTo(Screen.MORE)
@@ -260,6 +261,7 @@ fun RoyalPharmacyApp(
         Screen.SYMPTOM_DISEASE_TRACKER -> DiseaseTrackerScreen(viewModel = viewModel)
         Screen.ROLE_MANAGEMENT -> RoleManagementScreen(viewModel = viewModel)
         Screen.STAFF_ACTIVITY -> StaffActivityScreen(viewModel = viewModel)
+        Screen.STOCK_TRANSFER -> StockTransferScreen(viewModel = viewModel)
       }
 
       // Quick Actions Bottom Sheet

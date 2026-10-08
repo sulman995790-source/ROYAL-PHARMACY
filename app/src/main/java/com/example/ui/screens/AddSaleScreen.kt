@@ -65,6 +65,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -119,6 +120,7 @@ fun AddSaleScreen(
 
   val currentDate = remember { SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()).format(Date()) }
   var showItemSearchSheet by remember { mutableStateOf(false) }
+  var showBatchQrScannerDialog by remember { mutableStateOf(false) }
   var paymentMode by remember { mutableStateOf("Cash") }
 
   val userRole by viewModel.currentUserRole.collectAsState()
@@ -437,7 +439,7 @@ fun AddSaleScreen(
             ) {
               // Scan to Add button
               OutlinedButton(
-                onClick = { viewModel.navigateTo(Screen.QUICK_SCAN) },
+                onClick = { showBatchQrScannerDialog = true },
                 shape = RoundedCornerShape(8.dp),
                 colors = ButtonDefaults.outlinedButtonColors(containerColor = Color.White),
                 border = ButtonDefaults.outlinedButtonBorder().copy(
@@ -799,6 +801,20 @@ fun AddSaleScreen(
         )
       }
     }
+
+    // Batch QR Scanner Dialog
+    if (showBatchQrScannerDialog) {
+      val context = LocalContext.current
+      PosBatchScannerDialog(
+        medicines = medicines,
+        onDismiss = { showBatchQrScannerDialog = false },
+        onScan = { med ->
+          viewModel.addMedicineToCart(med, 1)
+          showBatchQrScannerDialog = false
+          android.widget.Toast.makeText(context, "Scanned & Added: ${med.name} (Batch: ${med.batchNumber})", android.widget.Toast.LENGTH_SHORT).show()
+        }
+      )
+    }
   }
 }
 
@@ -1110,4 +1126,94 @@ fun SearchItemForBillingContent(
       )
     }
   }
+}
+
+@Composable
+fun PosBatchScannerDialog(
+  medicines: List<MedicineItem>,
+  onDismiss: () -> Unit,
+  onScan: (MedicineItem) -> Unit
+) {
+  var barcodeInput by remember { mutableStateOf("") }
+  val filteredMeds = medicines.filter {
+    barcodeInput.isBlank() ||
+    it.name.contains(barcodeInput, ignoreCase = true) ||
+    it.batchNumber.contains(barcodeInput, ignoreCase = true) ||
+    it.barcode.contains(barcodeInput, ignoreCase = true)
+  }
+
+  AlertDialog(
+    onDismissRequest = onDismiss,
+    title = {
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Default.QrCodeScanner, contentDescription = null, tint = RoyalMagenta)
+        Spacer(modifier = Modifier.width(8.dp))
+        Text("POS Batch QR / Barcode Scanner", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+      }
+    },
+    text = {
+      Column(
+        modifier = Modifier.fillMaxWidth().height(340.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+      ) {
+        Box(
+          modifier = Modifier
+            .fillMaxWidth()
+            .height(110.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color(0xFF0F172A)),
+          contentAlignment = Alignment.Center
+        ) {
+          Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(Icons.Default.QrCode, contentDescription = null, tint = Color(0xFF38BDF8), modifier = Modifier.size(36.dp))
+            Spacer(modifier = Modifier.height(4.dp))
+            Text("Align Batch QR Label in Viewfinder", fontSize = 11.sp, color = Color(0xFF94A3B8), fontWeight = FontWeight.Medium)
+            Text("Simulated Live Laser Scanning Active", fontSize = 9.5.sp, color = StatusGreen, fontWeight = FontWeight.Bold)
+          }
+        }
+
+        OutlinedTextField(
+          value = barcodeInput,
+          onValueChange = { barcodeInput = it },
+          label = { Text("Search by Medicine or Batch/Barcode") },
+          singleLine = true,
+          modifier = Modifier.fillMaxWidth().testTag("input_batch_qr_search")
+        )
+
+        Text("Select Scanned Batch:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextMuted)
+
+        LazyColumn(
+          modifier = Modifier.fillMaxWidth().height(180.dp),
+          verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+          items(filteredMeds.take(20), key = { it.id }) { med ->
+            Card(
+              onClick = { onScan(med) },
+              shape = RoundedCornerShape(8.dp),
+              colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC)),
+              border = CardDefaults.outlinedCardBorder(),
+              modifier = Modifier.fillMaxWidth().testTag("scanned_batch_item_${med.id}")
+            ) {
+              Row(
+                modifier = Modifier.padding(10.dp).fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+              ) {
+                Column(modifier = Modifier.weight(1f)) {
+                  Text(med.name, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextDark)
+                  Text("Batch: ${med.batchNumber} • Exp: ${med.expiryDate}", fontSize = 10.5.sp, color = TextMuted)
+                }
+                Text("₹${med.saleRate}", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = RoyalMagenta)
+              }
+            }
+          }
+        }
+      }
+    },
+    confirmButton = {
+      TextButton(onClick = onDismiss) {
+        Text("Cancel", color = TextMuted)
+      }
+    }
+  )
 }

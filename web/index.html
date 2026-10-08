@@ -112,6 +112,50 @@
       will-change: transform, box-shadow;
     }
 
+    /* Smooth Stock Count Animations */
+    @keyframes stockPopAnim {
+      0% {
+        transform: scale(1);
+      }
+      40% {
+        transform: scale(1.45);
+        color: #db2777;
+        filter: brightness(1.25);
+      }
+      80% {
+        transform: scale(0.92);
+      }
+      100% {
+        transform: scale(1);
+      }
+    }
+    .animate-stock-pop {
+      animation: stockPopAnim 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+      display: inline-block;
+      will-change: transform;
+    }
+
+    @keyframes stockGlowAnim {
+      0% {
+        box-shadow: 0 0 0 0 rgba(156, 18, 88, 0.6);
+        background-color: rgba(219, 39, 119, 0.25);
+      }
+      50% {
+        box-shadow: 0 0 16px 4px rgba(156, 18, 88, 0.4);
+      }
+      100% {
+        box-shadow: 0 0 0 0 rgba(156, 18, 88, 0);
+      }
+    }
+    .animate-stock-glow {
+      animation: stockGlowAnim 0.75s ease-out !important;
+    }
+
+    .stock-count-number {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      display: inline-block;
+    }
+
     @keyframes fadeInUp {
       0% {
         opacity: 0;
@@ -304,6 +348,12 @@
 
     <!-- Sync and Role Status -->
     <div class="flex items-center space-x-3">
+      <!-- Real-Time Web Clock -->
+      <div class="hidden md:flex items-center space-x-2 bg-slate-800 px-3 py-1.5 rounded-full text-xs text-slate-200 border border-slate-700 font-mono">
+        <i data-lucide="clock" class="w-3.5 h-3.5 text-pink-400"></i>
+        <span id="header-realtime-clock" class="font-bold">--:--:-- --</span>
+      </div>
+
       <!-- Sync Status Badge -->
       <button onclick="openSyncDialog()" class="flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-full text-xs transition duration-200">
         <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" id="sync-dot"></span>
@@ -4533,6 +4583,61 @@
       }
     }
 
+    function adjustDrugStockWeb(drugName, delta) {
+      const drug = state.drugDatabase.find(d => d.name === drugName);
+      if (!drug) return;
+
+      const oldStock = drug.stock || 0;
+      const newStock = Math.max(0, oldStock + delta);
+      drug.stock = newStock;
+
+      saveStateToLocal();
+
+      // Sync change to Firestore immediately
+      if (typeof fbDb !== 'undefined' && fbDb) {
+        const docId = 'med_' + drugName.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+        syncWebChangeToFirestore('pharmacy_inventory', docId, {
+          name: drugName,
+          stockPacks: newStock,
+          stockQuantity: newStock
+        });
+      }
+
+      // Animate stock number and container pill in DOM
+      const stockCountEl = document.getElementById(`stock-count-${escapeHtml(escapeJsParam(drugName))}`);
+      const stockPillEl = document.getElementById(`stock-pill-${escapeHtml(escapeJsParam(drugName))}`);
+      if (stockCountEl) {
+        stockCountEl.textContent = newStock;
+        stockCountEl.classList.remove('animate-stock-pop');
+        void stockCountEl.offsetWidth; // trigger reflow for animation restart
+        stockCountEl.classList.add('animate-stock-pop');
+      }
+      if (stockPillEl) {
+        stockPillEl.classList.remove('animate-stock-glow');
+        void stockPillEl.offsetWidth;
+        stockPillEl.classList.add('animate-stock-glow');
+      }
+
+      searchDrugs();
+      if (typeof renderLowStockWidget === 'function') {
+        renderLowStockWidget();
+      }
+
+      if (window.Swal) {
+        const Toast = Swal.mixin({
+          toast: true,
+          position: 'top-end',
+          showConfirmButton: false,
+          timer: 1500,
+          timerProgressBar: true
+        });
+        Toast.fire({
+          icon: delta > 0 ? 'success' : 'info',
+          title: `${drugName} stock: ${oldStock} ➔ ${newStock} strips`
+        });
+      }
+    }
+
     function searchDrugs() {
       const rawQuery = document.getElementById('drug-search').value.toLowerCase().trim();
       const filter = document.getElementById('drug-category-filter').value;
@@ -4607,26 +4712,35 @@
         if (isOutStock) {
           rowClass = "bg-rose-50/80 hover:bg-rose-100/80 border-b border-rose-200/90 transition-colors";
           stockPill = `
-            <span class="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300 shadow-sm">
+            <div id="stock-pill-${escapeHtml(escapeJsParam(item.name))}" class="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300 shadow-sm transition-all duration-300">
+              <button onclick="adjustDrugStockWeb('${escapeHtml(escapeJsParam(item.name))}', -1)" class="w-5 h-5 rounded-full bg-rose-200 text-rose-900 hover:bg-rose-300 font-black flex items-center justify-center transition active:scale-90" title="Decrease Stock">-</button>
               <i data-lucide="x-circle" class="w-3.5 h-3.5 text-rose-600 shrink-0"></i>
-              <span>Out of Stock (0)</span>
+              <span id="stock-count-${escapeHtml(escapeJsParam(item.name))}" class="stock-count-number text-sm font-black text-rose-900">${item.stock}</span>
+              <span class="text-[11px]">strips</span>
+              <button onclick="adjustDrugStockWeb('${escapeHtml(escapeJsParam(item.name))}', 1)" class="w-5 h-5 rounded-full bg-rose-200 text-rose-900 hover:bg-rose-300 font-black flex items-center justify-center transition active:scale-90" title="Increase Stock">+</button>
               <span class="text-[9px] font-black uppercase tracking-wider bg-rose-200 text-rose-900 px-1.5 py-0.2 rounded ml-1">CRITICAL</span>
-            </span>
+            </div>
           `;
         } else if (isLowStock) {
           rowClass = "bg-amber-50/80 hover:bg-amber-100/80 border-b border-amber-200/90 transition-colors";
           stockPill = `
-            <span class="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300 shadow-sm">
+            <div id="stock-pill-${escapeHtml(escapeJsParam(item.name))}" class="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300 shadow-sm transition-all duration-300">
+              <button onclick="adjustDrugStockWeb('${escapeHtml(escapeJsParam(item.name))}', -1)" class="w-5 h-5 rounded-full bg-amber-200 text-amber-900 hover:bg-amber-300 font-black flex items-center justify-center transition active:scale-90" title="Decrease Stock">-</button>
               <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-amber-600 shrink-0"></i>
-              <span>${item.stock} strips</span>
+              <span id="stock-count-${escapeHtml(escapeJsParam(item.name))}" class="stock-count-number text-sm font-black text-amber-950">${item.stock}</span>
+              <span class="text-[11px]">strips</span>
+              <button onclick="adjustDrugStockWeb('${escapeHtml(escapeJsParam(item.name))}', 1)" class="w-5 h-5 rounded-full bg-amber-200 text-amber-900 hover:bg-amber-300 font-black flex items-center justify-center transition active:scale-90" title="Increase Stock">+</button>
               <span class="text-[9px] font-black uppercase tracking-wider bg-amber-200 text-amber-900 px-1.5 py-0.2 rounded ml-1">REORDER (Min ${minStockLevel})</span>
-            </span>
+            </div>
           `;
         } else {
           stockPill = `
-            <span class="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-              <span>${item.stock} strips</span>
-            </span>
+            <div id="stock-pill-${escapeHtml(escapeJsParam(item.name))}" class="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-sm transition-all duration-300">
+              <button onclick="adjustDrugStockWeb('${escapeHtml(escapeJsParam(item.name))}', -1)" class="w-5 h-5 rounded-full bg-emerald-200 text-emerald-900 hover:bg-emerald-300 font-black flex items-center justify-center transition active:scale-90" title="Decrease Stock">-</button>
+              <span id="stock-count-${escapeHtml(escapeJsParam(item.name))}" class="stock-count-number text-sm font-black text-emerald-900">${item.stock}</span>
+              <span class="text-[11px]">strips</span>
+              <button onclick="adjustDrugStockWeb('${escapeHtml(escapeJsParam(item.name))}', 1)" class="w-5 h-5 rounded-full bg-emerald-200 text-emerald-900 hover:bg-emerald-300 font-black flex items-center justify-center transition active:scale-90" title="Increase Stock">+</button>
+            </div>
           `;
         }
 
@@ -4652,7 +4766,9 @@
                        value="${minStockLevel}" 
                        min="1" max="100000" 
                        id="reorder-input-${escapeHtml(escapeJsParam(item.name))}"
-                       class="w-16 text-center text-xs font-extrabold bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded py-1 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-pink-500 shadow-sm"
+                       oninput="updateDrugReorderLevel('${escapeHtml(escapeJsParam(item.name))}', this.value)"
+                       onchange="updateDrugReorderLevel('${escapeHtml(escapeJsParam(item.name))}', this.value)"
+                       class="w-16 text-center text-xs font-extrabold bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded py-1 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-pink-500 shadow-sm transition-all"
                        title="Edit Reorder Threshold level for ${escapeHtml(item.name)}" />
                 <span class="text-[10px] text-slate-500 font-bold pr-0.5">units</span>
                 <button onclick="updateDrugReorderLevel('${escapeHtml(escapeJsParam(item.name))}', document.getElementById('reorder-input-${escapeHtml(escapeJsParam(item.name))}').value)" class="bg-royal-magenta text-white px-2 py-0.5 rounded text-[10px] font-bold hover:bg-royal-accent transition shadow-sm" title="Save reorder threshold level to Firestore database">Save</button>
@@ -5365,7 +5481,24 @@
       initWebDarkMode();
       loadSavedState();
       onDosageDrugChange();
+      startWebRealtimeClock();
     });
+
+    function startWebRealtimeClock() {
+      const clockEl = document.getElementById('header-realtime-clock');
+      if (!clockEl) return;
+      function update() {
+        const now = new Date();
+        clockEl.textContent = now.toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: true
+        });
+      }
+      update();
+      setInterval(update, 1000);
+    }
 
     function initWebDarkMode() {
       const savedDark = localStorage.getItem('royal_web_dark_mode') === 'true' ||
@@ -6839,31 +6972,35 @@
       tbody.innerHTML = filtered.map(b => {
         let badgeHtml = '';
         if (b.status === 'EXPIRED') {
-          badgeHtml = `<span class="px-2 py-0.5 bg-red-100 text-red-700 font-bold rounded text-[10px]">EXPIRED</span>`;
+          badgeHtml = `<span class="inline-flex items-center space-x-1 px-2.5 py-0.5 bg-rose-100 text-rose-800 border border-rose-300 font-bold rounded-full text-[10px]"><i data-lucide="alert-circle" class="w-3 h-3 text-rose-600"></i><span>EXPIRED</span></span>`;
         } else if (b.status === 'EXP_30') {
-          badgeHtml = `<span class="px-2 py-0.5 bg-amber-100 text-amber-800 font-bold rounded text-[10px]">&lt; 30 Days</span>`;
+          badgeHtml = `<span class="inline-flex items-center space-x-1 px-2.5 py-0.5 bg-amber-100 text-amber-900 border border-amber-300 font-bold rounded-full text-[10px]"><i data-lucide="clock" class="w-3 h-3 text-amber-600"></i><span>&lt; 30 DAYS</span></span>`;
         } else {
-          badgeHtml = `<span class="px-2 py-0.5 bg-blue-100 text-blue-700 font-bold rounded text-[10px]">&lt; 90 Days</span>`;
+          badgeHtml = `<span class="inline-flex items-center space-x-1 px-2.5 py-0.5 bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold rounded-full text-[10px]"><i data-lucide="check-circle-2" class="w-3 h-3 text-emerald-600"></i><span>ACTIVE (${b.expiry})</span></span>`;
         }
 
         return `
-          <tr class="hover:bg-slate-50 transition">
+          <tr class="hover:bg-slate-50 transition border-b border-slate-100">
             <td class="p-3">
-              <p class="font-bold text-slate-800">${escapeHtml(b.name)}</p>
+              <p class="font-bold text-slate-900">${escapeHtml(b.name)}</p>
               <p class="text-[10px] text-slate-400">${escapeHtml(b.salt)}</p>
             </td>
-            <td class="p-3 font-mono font-semibold text-slate-700">${escapeHtml(b.batchNo)}</td>
-            <td class="p-3 font-medium text-slate-600">${b.expiry}</td>
-            <td class="p-3 font-bold text-slate-800">${b.stock} units</td>
+            <td class="p-3 font-mono font-bold text-slate-800">${escapeHtml(b.batchNo)}</td>
+            <td class="p-3 font-semibold text-slate-700">${b.expiry}</td>
+            <td class="p-3 font-extrabold text-slate-900">${b.stock} units</td>
             <td class="p-3 font-semibold text-slate-700">₹${b.mrp.toFixed(2)}</td>
             <td class="p-3">${badgeHtml}</td>
             <td class="p-3 text-right">
               <div class="flex items-center justify-end space-x-1.5">
-                <button onclick="applyClearanceDiscount('${b.id}', 30)" title="Apply 30% Liquidation Discount" class="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold rounded text-[10px] border border-amber-200">
-                  -30% Sale
+                <button onclick="openDistributorReturnModalWeb('${b.id}')" title="Return to Supplier & Issue Credit Note" class="px-2.5 py-1 bg-royal-magenta hover:bg-royal-accent text-white font-bold rounded-lg text-xs flex items-center space-x-1 shadow-sm transition">
+                  <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                  <span>Return</span>
                 </button>
-                <button onclick="applyClearanceDiscount('${b.id}', 50)" title="Apply 50% Clearance Discount" class="px-2 py-1 bg-red-50 hover:bg-red-100 text-red-700 font-bold rounded text-[10px] border border-red-200">
-                  -50% Sale
+                <button onclick="applyClearanceDiscount('${b.id}', 30)" title="Apply 30% Liquidation Sale" class="px-2 py-1 bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold rounded-lg text-[10px] border border-amber-200 transition">
+                  -30%
+                </button>
+                <button onclick="deleteBatchRecordWeb('${b.id}')" title="Delete Batch Record" class="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-lg border border-rose-200 transition">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                 </button>
               </div>
             </td>
@@ -6872,6 +7009,98 @@
       }).join('');
 
       if (window.lucide) lucide.createIcons();
+    }
+
+    function deleteBatchRecordWeb(batchId) {
+      const idx = expiryBatches.findIndex(x => x.id === batchId);
+      if (idx === -1) return;
+      const b = expiryBatches[idx];
+
+      if (window.Swal) {
+        Swal.fire({
+          title: `Delete Batch #${b.batchNo}?`,
+          text: `Are you sure you want to delete batch record for ${b.name}?`,
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonColor: '#dc2626',
+          confirmButtonText: 'Yes, Delete Batch'
+        }).then((res) => {
+          if (res.isConfirmed) {
+            expiryBatches.splice(idx, 1);
+            renderExpiryBatches();
+            Swal.fire('Deleted!', `Batch #${b.batchNo} has been deleted.`, 'success');
+          }
+        });
+      } else {
+        expiryBatches.splice(idx, 1);
+        renderExpiryBatches();
+      }
+    }
+
+    function openDistributorReturnModalWeb(batchId) {
+      const b = expiryBatches.find(x => x.id === batchId);
+      if (!b) return;
+
+      const cnNo = 'CN-2026-' + Math.floor(1000 + Math.random() * 9000);
+      const supplierName = b.supplier || 'Apex Healthcare Distributors';
+      const unitCost = (b.mrp * 0.85).toFixed(2);
+      const totalRefund = (b.stock * unitCost).toFixed(2);
+
+      if (window.Swal) {
+        Swal.fire({
+          title: `Return Batch #${b.batchNo} to Supplier`,
+          html: `
+            <div class="text-left text-xs space-y-3 p-1">
+              <div class="p-3 bg-amber-50 rounded-xl border border-amber-200">
+                <p class="font-bold text-amber-900">Medicine: ${escapeHtml(b.name)}</p>
+                <p class="text-amber-700 font-mono">Batch: ${escapeHtml(b.batchNo)} | Exp: ${b.expiry}</p>
+              </div>
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">Distributor / Supplier Name:</label>
+                <input type="text" id="return-supplier-name" value="${escapeHtml(supplierName)}" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-bold" />
+              </div>
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">Return Quantity (Units):</label>
+                <input type="number" id="return-qty-val" value="${b.stock}" min="1" max="${b.stock}" class="w-full p-2 border border-slate-300 rounded-lg text-xs font-bold" oninput="document.getElementById('cn-refund-val').innerText = (this.value * ${unitCost}).toFixed(2)" />
+              </div>
+              <div class="p-3 bg-rose-50 rounded-xl border border-rose-200 text-rose-900">
+                <p class="font-bold uppercase tracking-wider text-[10px] text-rose-700">Estimated Credit Note Refund</p>
+                <p class="text-xl font-black text-rose-800">₹<span id="cn-refund-val">${totalRefund}</span></p>
+                <p class="text-[10px] text-rose-600">Credit Note Ref #: <b>${cnNo}</b></p>
+              </div>
+            </div>
+          `,
+          showCancelButton: true,
+          confirmButtonText: '<i class="fa fa-receipt"></i> Issue Credit Note & Return',
+          confirmButtonColor: '#9C1258'
+        }).then((res) => {
+          if (res.isConfirmed) {
+            const finalSupplier = document.getElementById('return-supplier-name')?.value || supplierName;
+            const finalQty = parseInt(document.getElementById('return-qty-val')?.value || b.stock, 10);
+            const finalRefund = (finalQty * unitCost).toFixed(2);
+
+            // Deduct stock or remove batch
+            b.stock = Math.max(0, b.stock - finalQty);
+            renderExpiryBatches();
+
+            // Display generated credit note
+            Swal.fire({
+              title: `Credit Note #${cnNo} Issued!`,
+              html: `
+                <div class="text-left text-xs space-y-2 p-3 bg-slate-900 text-emerald-400 rounded-xl font-mono">
+                  <p class="text-slate-300 font-bold border-b border-slate-700 pb-1">ROYAL PHARMACY • DISTRIBUTOR CREDIT NOTE</p>
+                  <p>Credit Note #: <b class="text-white">${cnNo}</b></p>
+                  <p>Distributor: <b class="text-white">${escapeHtml(finalSupplier)}</b></p>
+                  <p>Returned: <b class="text-white">${finalQty} units</b> of ${escapeHtml(b.name)} (Batch: ${escapeHtml(b.batchNo)})</p>
+                  <p>Credit Refund Amount: <b class="text-white">₹${finalRefund}</b></p>
+                  <p class="text-[10px] text-slate-400 mt-2">Status: AUDIT LOGGED & ACCOUNT CREDIT UPDATED</p>
+                </div>
+              `,
+              icon: 'success'
+            });
+          }
+        });
+      }
     }
 
     function filterExpiryBatches(type) {

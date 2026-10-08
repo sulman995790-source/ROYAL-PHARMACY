@@ -180,7 +180,7 @@ fun QuickScanScreen(
     }
   }
 
-  var scanMode by remember { mutableIntStateOf(1) } // 0: Barcode, 1: Blister/Strip OCR (Multi-photo), 2: Doctor Prescription Rx
+  var scanMode by remember { mutableIntStateOf(1) } // 0: Barcode, 1: Blister/Strip OCR (Multi-photo), 2: Doctor Prescription Rx, 3: Quick Return
   var lastScannedBarcode by remember { mutableStateOf("") }
   var scanCount by remember { mutableIntStateOf(0) }
   
@@ -400,8 +400,8 @@ fun QuickScanScreen(
     if (mediaImage != null) {
       val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
       
-      if (scanMode == 0) {
-        // Barcode Mode
+      if (scanMode == 0 || scanMode == 3) {
+        // Barcode Mode / Quick Return
         barcodeScanner.process(image)
           .addOnSuccessListener { barcodes ->
             if (barcodes.isNotEmpty()) {
@@ -410,7 +410,12 @@ fun QuickScanScreen(
                 lastScannedBarcode = barcode
                 scanCount++
                 triggerVibration()
-                viewModel.handleScannedBarcode(barcode)
+                if (scanMode == 0) {
+                    viewModel.handleScannedBarcode(barcode)
+                } else {
+                    viewModel.scannedBarcodeForReturn.value = barcode
+                    viewModel.navigateTo(Screen.BATCH_TRACKING)
+                }
               }
             }
           }
@@ -748,6 +753,12 @@ fun QuickScanScreen(
           onClick = { scanMode = 2 },
           text = { Text("Prescription Rx", fontSize = 11.sp, color = if (scanMode == 2) Color.White else Color.Gray) },
           modifier = Modifier.testTag("tab_scan_rx_ocr")
+        )
+        Tab(
+          selected = scanMode == 3,
+          onClick = { scanMode = 3 },
+          text = { Text("Quick Return", fontSize = 11.sp, color = if (scanMode == 3) Color.White else Color.Gray) },
+          modifier = Modifier.testTag("tab_quick_return")
         )
       }
 
