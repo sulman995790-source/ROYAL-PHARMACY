@@ -624,13 +624,15 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
   private fun persistSession() {
     try {
       val prefs = getApplication<Application>().getSharedPreferences("royal_pharmacy_session", Context.MODE_PRIVATE)
+      val token = prefs.getString("royal_pharmacy_auth_token", null) ?: ("rp_token_" + System.currentTimeMillis() + "_" + java.util.UUID.randomUUID().toString().substring(0, 8))
       prefs.edit()
         .putBoolean("is_logged_in", isLoggedIn.value)
+        .putString("royal_pharmacy_auth_token", token)
         .putString("user_name", currentUserName.value)
         .putString("user_email", currentUserEmail.value)
         .putString("user_phone", currentUserPhone.value)
         .putString("user_role", currentUserRole.value.name)
-        .apply()
+        .commit()
     } catch (e: Exception) {}
   }
 
@@ -673,7 +675,10 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
     isLoggedIn.value = false
     try {
       val prefs = getApplication<Application>().getSharedPreferences("royal_pharmacy_session", Context.MODE_PRIVATE)
-      prefs.edit().putBoolean("is_logged_in", false).apply()
+      prefs.edit()
+        .putBoolean("is_logged_in", false)
+        .remove("royal_pharmacy_auth_token")
+        .commit()
     } catch (e: Exception) {}
     navigateTo(Screen.HOME)
   }
@@ -902,7 +907,9 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
 
   init {
     val prefs = application.getSharedPreferences("royal_pharmacy_session", Context.MODE_PRIVATE)
-    isLoggedIn.value = prefs.getBoolean("is_logged_in", false)
+    val savedLogin = prefs.getBoolean("is_logged_in", false)
+    val authToken = prefs.getString("royal_pharmacy_auth_token", null)
+    isLoggedIn.value = savedLogin || !authToken.isNullOrBlank()
     currentUserName.value = prefs.getString("user_name", "Suleman Hoque") ?: "Suleman Hoque"
     currentUserEmail.value = prefs.getString("user_email", "sulman995790@gmail.com") ?: "sulman995790@gmail.com"
     currentUserPhone.value = prefs.getString("user_phone", "+91 99579 05450") ?: "+91 99579 05450"
@@ -917,7 +924,11 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
     repository = PharmacyRepository(db.pharmacyDao())
     syncManager = FirebaseSyncManager(application, db.pharmacyDao(), networkMonitor, viewModelScope)
     StockAlertNotificationService.initNotificationChannel(application)
-    StockAlertBackgroundService.start(application)
+    viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+      try {
+        StockAlertBackgroundService.start(application)
+      } catch (e: Exception) {}
+    }
 
     // Observe inventory database for essential/life-saving medicines falling below safety threshold
     viewModelScope.launch {

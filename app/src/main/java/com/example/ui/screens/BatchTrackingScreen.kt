@@ -85,6 +85,7 @@ import com.example.data.model.CartItem
 import com.example.data.model.MedicineBatchDetail
 import com.example.data.model.MedicineItem
 import com.example.service.DistributorExportService
+import com.example.service.ExportFormat
 import com.example.ui.theme.CardBorder
 import com.example.ui.theme.GrayBackground
 import com.example.ui.theme.RoyalMagenta
@@ -329,6 +330,74 @@ fun BatchTrackingScreen(
           ),
           modifier = Modifier.fillMaxWidth().height(50.dp).testTag("input_batch_search")
         )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // Expiry Report & Financial Loss Module Card
+        Card(
+          shape = RoundedCornerShape(10.dp),
+          colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFBEB)),
+          border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFDE68A)),
+          modifier = Modifier.fillMaxWidth()
+        ) {
+          Column(modifier = Modifier.padding(12.dp)) {
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              horizontalArrangement = Arrangement.SpaceBetween,
+              verticalAlignment = Alignment.CenterVertically
+            ) {
+              Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.EventBusy, contentDescription = null, tint = Color(0xFFB45309), modifier = Modifier.size(20.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("Expiry & Financial Loss Report", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color(0xFF78350F))
+              }
+              val expiredOrNear = nearExpiryBatches
+              val lossValue = expiredOrNear.sumOf { it.stockAvailable * it.purchaseRate }
+              Text("Loss Est: ₹${String.format(Locale.getDefault(), "%,.0f", lossValue)}", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF991B1B))
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            Text("Export comprehensive audit of expired & near-expiry batches with distributor contact info & purchase loss.", fontSize = 11.sp, color = Color(0xFF92400E))
+            Spacer(modifier = Modifier.height(10.dp))
+            Row(
+              modifier = Modifier.fillMaxWidth(),
+              horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+              val formats = listOf("PDF" to ExportFormat.PDF, "CSV" to ExportFormat.CSV, "XLS" to ExportFormat.XLS, "XLSX" to ExportFormat.XLSX)
+              formats.forEach { (label, format) ->
+                OutlinedButton(
+                  onClick = {
+                    val expiredOrNear = nearExpiryBatches
+                    val exportItems = expiredOrNear.map { b ->
+                      CartItem(
+                        medicineName = b.medicine.name,
+                        manufacturer = "Distributor: ${b.supplierName}",
+                        category = b.medicine.category,
+                        batchNumber = b.batchNumber,
+                        expiryDate = b.expiryDate,
+                        quantity = b.stockAvailable,
+                        unitRate = b.purchaseRate,
+                        mrp = b.mrp,
+                        itemType = "EXPIRY_LOSS_REPORT"
+                      )
+                    }
+                    DistributorExportService.exportBatchItems(
+                      context = context,
+                      cartItems = exportItems,
+                      format = format,
+                      distributorName = "Expiry & Loss Audit Ledger",
+                      pharmacyName = profile.businessName
+                    )
+                    Toast.makeText(context, "Expiry Report exported as $label!", Toast.LENGTH_SHORT).show()
+                  },
+                  modifier = Modifier.weight(1f).height(32.dp),
+                  contentPadding = PaddingValues(0.dp)
+                ) {
+                  Text(label, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFFB45309))
+                }
+              }
+            }
+          }
+        }
 
         Spacer(modifier = Modifier.height(10.dp))
 

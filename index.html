@@ -1856,9 +1856,18 @@
             <p class="text-xs text-slate-500">Identify near-expiry medicines, apply liquidation discounts, manage stock recall, and generate supplier return debit notes.</p>
           </div>
           <div class="flex items-center space-x-2">
-            <button onclick="generateSupplierReturnVoucher()" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center space-x-1.5">
+            <button onclick="generateSupplierReturnVoucher()" class="px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center space-x-1">
               <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
-              <span>Generate Return Slip</span>
+              <span>Return Slip</span>
+            </button>
+            <button onclick="exportExpiryReportWeb('pdf')" class="px-2.5 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center space-x-1" title="Export PDF">
+              <i data-lucide="file-code" class="w-3.5 h-3.5"></i><span>PDF</span>
+            </button>
+            <button onclick="exportExpiryReportWeb('csv')" class="px-2.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center space-x-1" title="Export CSV">
+              <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i><span>CSV</span>
+            </button>
+            <button onclick="exportExpiryReportWeb('xlsx')" class="px-2.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center space-x-1" title="Export XLSX">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i><span>XLSX</span>
             </button>
           </div>
         </div>
@@ -2575,9 +2584,39 @@
       });
     }
 
+    function setCookie(name, value, days) {
+      let expires = "";
+      if (days) {
+        const date = new Date();
+        date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+        expires = "; expires=" + date.toUTCString();
+      }
+      document.cookie = name + "=" + (value || "") + expires + "; path=/; SameSite=Lax";
+    }
+    function getCookie(name) {
+      const nameEQ = name + "=";
+      const ca = document.cookie.split(';');
+      for(let i=0;i < ca.length;i++) {
+        let c = ca[i];
+        while (c.charAt(0)==' ') c = c.substring(1,c.length);
+        if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
+      }
+      return null;
+    }
+    function eraseCookie(name) {
+      document.cookie = name+'=; Max-Age=-99999999; path=/;';
+    }
+
     function loadSavedState() {
       const saved = localStorage.getItem('royal_pharmacy_state');
+      const cookieToken = getCookie('royal_pharmacy_token');
+      const localToken = localStorage.getItem('royal_pharmacy_token');
+      const sessionToken = sessionStorage.getItem('royal_pharmacy_token');
       const persistentAuth = localStorage.getItem('royal_pharmacy_auth_persistent') || sessionStorage.getItem('royal_pharmacy_auth_persistent');
+      
+      if (cookieToken || localToken || sessionToken || persistentAuth) {
+        state.isLoggedIn = true;
+      }
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
@@ -2595,7 +2634,7 @@
           state.userEmail = parsed.userEmail || state.userEmail;
           state.userPhone = parsed.userPhone || state.userPhone;
           state.customReorderLevels = parsed.customReorderLevels || {};
-          state.isLoggedIn = parsed.isLoggedIn !== undefined ? parsed.isLoggedIn : false;
+          if (parsed.isLoggedIn !== undefined) state.isLoggedIn = state.isLoggedIn || parsed.isLoggedIn;
         } catch (e) {
           console.error("Failed to restore local state", e);
         }
@@ -2634,8 +2673,21 @@
         isLoggedIn: state.isLoggedIn
       };
       localStorage.setItem('royal_pharmacy_state', JSON.stringify(statePayload));
+      
+      const authToken = localStorage.getItem('royal_pharmacy_token') || sessionStorage.getItem('royal_pharmacy_token') || ('rp_token_' + Date.now() + '_' + Math.random().toString(36).substring(2));
+      if (state.isLoggedIn) {
+        localStorage.setItem('royal_pharmacy_token', authToken);
+        sessionStorage.setItem('royal_pharmacy_token', authToken);
+        setCookie('royal_pharmacy_token', authToken, 365);
+      } else {
+        localStorage.removeItem('royal_pharmacy_token');
+        sessionStorage.removeItem('royal_pharmacy_token');
+        eraseCookie('royal_pharmacy_token');
+      }
+
       const authPayload = JSON.stringify({
         isLoggedIn: state.isLoggedIn,
+        token: authToken,
         userName: state.userName,
         role: state.role,
         email: state.userEmail,
@@ -7448,6 +7500,58 @@
 
     let currentExpiryFilter = 'all';
 
+    function exportExpiryReportWeb(format) {
+      const expiredOrNear = expiryBatches.filter(b => b.status === 'EXPIRED' || b.status === 'EXP_30' || b.status === 'EXP_60' || b.status === 'EXP_90');
+      const totalLoss = expiredOrNear.reduce((sum, b) => sum + (b.stock * b.mrp), 0);
+
+      if (format === 'csv' || format === 'xls') {
+        const rows = [
+          ['ROYAL PHARMACY - EXPIRY & FINANCIAL LOSS AUDIT REPORT'],
+          ['Generated Date', new Date().toLocaleDateString()],
+          ['Total Estimated Loss (INR)', totalLoss.toFixed(2)],
+          [],
+          ['Medicine Name', 'Salt Formula', 'Batch No', 'Expiry Date', 'Stock Qty', 'MRP (INR)', 'Loss Value (INR)', 'Status', 'Distributor Contact'],
+          ...expiredOrNear.map(b => [
+            `"${b.name}"`,
+            `"${b.salt}"`,
+            b.batchNo,
+            b.expiry,
+            b.stock,
+            b.mrp.toFixed(2),
+            (b.stock * b.mrp).toFixed(2),
+            b.status,
+            '"M/s Wholesale Pharma Distributors (+91 98765 43210)"'
+          ])
+        ];
+        const csvContent = "data:text/csv;charset=utf-8," + rows.map(e => e.join(",")).join("\n");
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `Royal_Pharmacy_Expiry_Report_${new Date().toISOString().split('T')[0]}.${format === 'xls' ? 'xls' : 'csv'}`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        Swal.fire('Exported', `Expiry Report successfully exported as ${format.toUpperCase()}`, 'success');
+      } else if (format === 'xlsx') {
+        let html = `<table><tr><th colspan="9" style="background:#9C1258;color:white;font-size:16px;padding:10px;">ROYAL PHARMACY - EXPIRY & FINANCIAL LOSS AUDIT REPORT</th></tr>`;
+        html += `<tr><td colspan="9"><b>Total Estimated Financial Loss:</b> ₹${totalLoss.toFixed(2)} | Date: ${new Date().toLocaleDateString()}</td></tr>`;
+        html += `<tr style="background:#F1F5F9;"><th>Medicine Name</th><th>Salt Formula</th><th>Batch No</th><th>Expiry Date</th><th>Stock Qty</th><th>MRP (INR)</th><th>Loss Value (INR)</th><th>Status</th><th>Distributor Contact</th></tr>`;
+        expiredOrNear.forEach(b => {
+          html += `<tr><td>${b.name}</td><td>${b.salt}</td><td>${b.batchNo}</td><td>${b.expiry}</td><td>${b.stock}</td><td>${b.mrp.toFixed(2)}</td><td><b>₹${(b.stock * b.mrp).toFixed(2)}</b></td><td>${b.status}</td><td>M/s Wholesale Pharma (+91 98765 43210)</td></tr>`;
+        });
+        html += `</table>`;
+        const blob = new Blob([html], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Royal_Pharmacy_Expiry_Report_${new Date().toISOString().split('T')[0]}.xlsx`;
+        a.click();
+        Swal.fire('Exported', 'Expiry Report downloaded as XLSX.', 'success');
+      } else if (format === 'pdf') {
+        window.print();
+      }
+    }
+
     function renderExpiryBatches() {
       const tbody = document.getElementById('expiry-batches-tbody');
       if (!tbody) return;
@@ -8838,15 +8942,16 @@
       Swal.fire('Signed Out', 'You have been securely logged out.', 'success');
     }
 
-    // Trigger initial low stock widget and activity feed render
+    // Optimized instant startup and non-blocking background initialization
     window.addEventListener('DOMContentLoaded', () => {
       loadSavedState();
-      initializeFirebaseWeb();
-      setTimeout(renderLowStockWidget, 300);
-      setTimeout(renderRecentActivityFeedWeb, 350);
+      // Defer non-critical Firebase web init and widget renders to ensure instant UI responsiveness
+      setTimeout(() => {
+        try { initializeFirebaseWeb(); } catch(e) {}
+        renderLowStockWidget();
+        renderRecentActivityFeedWeb();
+      }, 50);
     });
-    setTimeout(renderLowStockWidget, 500);
-    setTimeout(renderRecentActivityFeedWeb, 550);
   </script>
 </body>
 </html>
