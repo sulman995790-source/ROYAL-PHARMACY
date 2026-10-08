@@ -561,6 +561,13 @@ fun MoreScreen(
         onClick = { viewModel.navigateTo(Screen.ROLE_MANAGEMENT) }
       )
       MoreMenuRow(
+        icon = Icons.Default.History,
+        title = "Staff Activity Audit Log",
+        subtitle = "Live activity feed of bills, stock updates & staff actions",
+        hasNewTag = true,
+        onClick = { viewModel.navigateTo(Screen.STAFF_ACTIVITY) }
+      )
+      MoreMenuRow(
         icon = Icons.Default.Fingerprint,
         title = "Security & PIN Lock",
         subtitle = if (isAppLockEnabled) "Enabled (4-digit PIN)" else "Disabled",

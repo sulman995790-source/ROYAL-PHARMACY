@@ -166,12 +166,36 @@
           </div>
 
           <!-- Staff Helper Callout (Shows when Staff Mode active) -->
-          <div id="web-staff-helper-block" class="p-3 bg-sky-950/30 border border-sky-800/40 rounded-xl text-xs text-sky-300 space-y-1 hidden">
-            <div class="flex items-center space-x-1.5 font-bold text-[11px]">
-              <span>💼</span>
-              <span>Staff / Pharmacist Access</span>
+          <div id="web-staff-helper-block" class="p-3 bg-sky-950/40 border border-sky-800/60 rounded-xl text-xs text-sky-300 space-y-2 hidden">
+            <div class="flex items-center justify-between font-bold text-[11px]">
+              <span class="flex items-center space-x-1.5">
+                <span>💼</span>
+                <span>Staff & Chemist Login Portal</span>
+              </span>
+              <span class="px-1.5 py-0.5 rounded text-[9px] bg-sky-500/20 text-sky-300 font-semibold">No Password Needed</span>
             </div>
-            <p class="text-[10px] text-sky-400/80 leading-relaxed">No owner password required. Staff members authenticate quickly via 10-digit mobile number & OTP (123456) or Google Account.</p>
+            <p class="text-[10px] text-sky-300/80 leading-relaxed">Select a staff chemist below for 1-click instant access, or authenticate via mobile number and OTP:</p>
+            
+            <div class="space-y-1.5 pt-1">
+              <button type="button" onclick="quickStaffDirectLoginWeb('s-1')" class="w-full bg-sky-600 hover:bg-sky-500 text-white py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-between cursor-pointer shadow-sm">
+                <span class="flex items-center space-x-1.5">
+                  <span>⚡</span>
+                  <span>Instant Login: Nijamuddin Khan</span>
+                </span>
+                <span class="text-[9px] bg-sky-700/80 px-1.5 py-0.5 rounded font-medium">POS-only access</span>
+              </button>
+              
+              <div class="grid grid-cols-2 gap-1.5">
+                <button type="button" onclick="quickStaffDirectLoginWeb('s-2')" class="bg-slate-900 hover:bg-slate-800 text-sky-200 border border-sky-800/60 py-1.5 px-2 rounded-lg text-[10px] font-semibold transition text-left flex items-center justify-between cursor-pointer">
+                  <span>Rahul Sharma</span>
+                  <span class="text-[8px] text-sky-400">Inventory</span>
+                </button>
+                <button type="button" onclick="quickStaffDirectLoginWeb('s-3')" class="bg-slate-900 hover:bg-slate-800 text-sky-200 border border-sky-800/60 py-1.5 px-2 rounded-lg text-[10px] font-semibold transition text-left flex items-center justify-between cursor-pointer">
+                  <span>Priya Das</span>
+                  <span class="text-[8px] text-slate-400">View-only</span>
+                </button>
+              </div>
+            </div>
           </div>
 
           <!-- Sign Up fields (Hidden by default) -->
@@ -373,6 +397,22 @@
         <button onclick="switchTab('settings')" id="tab-btn-settings" class="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 transition">
           <i data-lucide="settings" class="w-4 h-4"></i>
           <span>Pharmacy Profile</span>
+        </button>
+
+        <button onclick="switchTab('staff-mgmt')" id="tab-btn-staff-mgmt" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 transition">
+          <div class="flex items-center space-x-3">
+            <i data-lucide="users" class="w-4 h-4 text-sky-600"></i>
+            <span>Staff & Permissions</span>
+          </div>
+          <span class="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-sky-100 text-sky-700" id="sidebar-staff-badge">3</span>
+        </button>
+
+        <button onclick="switchTab('staff-activity')" id="tab-btn-staff-activity" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 transition">
+          <div class="flex items-center space-x-3">
+            <i data-lucide="activity" class="w-4 h-4 text-pink-600"></i>
+            <span>Staff Activity Log</span>
+          </div>
+          <span class="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-pink-100 text-royal-magenta" id="sidebar-activity-badge">5</span>
         </button>
       </div>
 
@@ -1030,12 +1070,29 @@
 
       <!-- ================= SECTION: PHARMACY PROFILE / SETTINGS ================= -->
       <section id="tab-content-settings" class="space-y-6 hidden">
-        <div>
-          <h2 class="text-2xl font-bold text-slate-900">Pharmacy Profile Settings</h2>
-          <p class="text-sm text-slate-500">Configure business identity, regulatory credentials, and security PIN options.</p>
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h2 class="text-2xl font-bold text-slate-900">Pharmacy Profile & Staff Operations</h2>
+            <p class="text-sm text-slate-500">Configure business identity, manage staff role-based permissions, and inspect live activity logs.</p>
+          </div>
+          <!-- Sub-navigation tabs within Settings -->
+          <div class="flex p-1 bg-slate-100 rounded-xl border border-slate-200 gap-1 text-xs font-semibold">
+            <button type="button" onclick="switchSettingsSubTab('profile')" id="subtab-btn-profile" class="px-3.5 py-1.5 rounded-lg bg-white shadow-sm text-royal-magenta font-bold transition">Business Profile</button>
+            <button type="button" onclick="switchSettingsSubTab('staff')" id="subtab-btn-staff" class="px-3.5 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition flex items-center gap-1.5">
+              <span>Staff & Permissions</span>
+              <span id="settings-staff-count-badge" class="px-1.5 py-0.2 bg-sky-100 text-sky-700 rounded-full text-[9px] font-bold">3</span>
+            </button>
+            <button type="button" onclick="switchSettingsSubTab('activity')" id="subtab-btn-activity" class="px-3.5 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition flex items-center gap-1.5">
+              <i data-lucide="activity" class="w-3.5 h-3.5 text-pink-600"></i>
+              <span>Staff Activity</span>
+              <span id="settings-activity-count-badge" class="px-1.5 py-0.2 bg-royal-magenta text-white rounded-full text-[9px] font-bold">5</span>
+            </button>
+            <button type="button" onclick="switchSettingsSubTab('security')" id="subtab-btn-security" class="px-3.5 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition">Security & PIN</button>
+          </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- ================= SUB-VIEW 1: BUSINESS PROFILE & REGULATORY ================= -->
+        <div id="settings-subview-profile" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <!-- Pharmacy profile detail card -->
           <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
             <div class="flex items-center space-x-4 pb-4 border-b border-slate-100">
@@ -1126,100 +1183,328 @@
             </div>
           </div>
 
-          <!-- Security and Role options card -->
-          <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-            <h3 class="font-bold text-slate-800 text-base">Security & Authentication Privileges</h3>
-            
-            <div class="space-y-4">
-              <div class="p-4 bg-slate-50 rounded-xl border border-slate-100 space-y-2">
-                <div class="flex items-center justify-between">
-                  <span class="text-xs font-bold text-slate-600">Owner Access PIN Verification</span>
-                  <span class="text-xs bg-pink-100 text-royal-magenta font-semibold px-2 py-0.5 rounded">Default: 1234</span>
+          <!-- Dedicated Sub-Section within Pharmacy Profile: Staff Members & Role Permissions -->
+          <div class="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+              <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold shrink-0">
+                  <i data-lucide="shield-check" class="w-5 h-5"></i>
                 </div>
-                <p class="text-[11px] text-slate-500 leading-relaxed">This PIN protects administrative features. When staff uses the system, they operate in General Work mode and need this PIN to enter Owner mode.</p>
-              </div>
-
-              <div>
-                <label class="block text-xs font-semibold text-slate-500 mb-1">Change Owner Security PIN</label>
-                <input type="password" id="set-pin" value="1234" maxlength="4" class="w-24 px-3.5 py-2 border border-slate-200 rounded-xl text-sm text-center font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-pink-500/20">
-              </div>
-
-              <div>
-                <label class="block text-xs font-semibold text-slate-500 mb-1">Owner Secret Login Password</label>
-                <div class="flex gap-2">
-                  <input type="password" id="set-secret-password" placeholder="••••••••" class="flex-1 px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20">
-                  <button onclick="changeSecretPasswordWeb()" class="px-3 py-2 bg-slate-800 text-white rounded-xl text-[10px] font-bold">Update</button>
+                <div>
+                  <h3 class="font-bold text-slate-800 text-base">Staff Members & Role-Based Permissions</h3>
+                  <p class="text-xs text-slate-500">Authorize team chemists and define granular role permissions: <span class="text-emerald-600 font-semibold">POS-only access</span>, <span class="text-slate-600 font-semibold">View-only access</span>, <span class="text-sky-600 font-semibold">Inventory & Billing</span>, or <span class="text-purple-600 font-semibold">Full Pharmacist</span>.</p>
                 </div>
               </div>
-
-              <div class="space-y-3 pt-2 border-t border-slate-50">
-                <h4 class="text-[11px] font-bold text-slate-700 uppercase">Security Questions (Reset Option)</h4>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div>
-                    <label class="block text-[10px] font-semibold text-slate-400 mb-0.5">Question 1</label>
-                    <input type="text" id="set-q1" class="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs">
-                  </div>
-                  <div>
-                    <label class="block text-[10px] font-semibold text-slate-400 mb-0.5">Answer 1</label>
-                    <input type="password" id="set-a1" class="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs">
-                  </div>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div>
-                    <label class="block text-[10px] font-semibold text-slate-400 mb-0.5">Question 2</label>
-                    <input type="text" id="set-q2" class="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs">
-                  </div>
-                  <div>
-                    <label class="block text-[10px] font-semibold text-slate-400 mb-0.5">Answer 2</label>
-                    <input type="password" id="set-a2" class="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs">
-                  </div>
-                </div>
-                <button onclick="saveSecurityQuestionsWeb()" class="w-full py-2 bg-royal-navy text-white rounded-xl text-[10px] font-bold">Save Security Questions</button>
-              </div>
-
-              <div class="pt-2">
-                <button onclick="resetPasswordFlowWeb()" class="text-xs text-royal-magenta font-semibold hover:underline flex items-center gap-1">
-                  <i data-lucide="help-circle" class="w-3 h-3"></i>
-                  Trouble logging in? Reset Secret Password
+              <div class="flex items-center space-x-2 shrink-0">
+                <button type="button" onclick="switchSettingsSubTab('staff')" class="px-3.5 py-2 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold transition flex items-center space-x-1.5">
+                  <i data-lucide="users" class="w-3.5 h-3.5 text-slate-500"></i>
+                  <span>Staff Directory</span>
+                </button>
+                <button type="button" onclick="openAddStaffModalWeb()" class="bg-royal-magenta hover:bg-royal-accent text-white px-4 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-sm">
+                  <i data-lucide="user-plus" class="w-4 h-4"></i>
+                  <span>+ Add Staff Member</span>
                 </button>
               </div>
+            </div>
 
-              <div class="pt-4 border-t border-slate-100 space-y-3">
+            <!-- Permission Tiers Quick Explanation -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+              <div class="p-3 bg-emerald-50/70 border border-emerald-100 rounded-xl space-y-1">
                 <div class="flex items-center justify-between">
-                  <h4 class="text-xs font-bold text-slate-600 uppercase tracking-wide">Staff Management Accounts</h4>
-                  <button onclick="addStaffMemberWeb()" class="bg-royal-navy hover:bg-slate-800 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold transition flex items-center space-x-1">
-                    <i data-lucide="user-plus" class="w-3 h-3"></i>
-                    <span>Register Staff</span>
-                  </button>
+                  <span class="font-bold text-emerald-900 text-xs">POS-only access</span>
+                  <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
                 </div>
-
-                <div class="overflow-x-auto">
-                  <table class="w-full text-left text-xs border border-slate-100 rounded-xl overflow-hidden bg-white">
-                    <thead class="bg-slate-50 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                      <tr>
-                        <th class="p-3">Staff Name</th>
-                        <th class="p-3">Auth Identity</th>
-                        <th class="p-3">Last Active</th>
-                        <th class="p-3 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody id="web-staff-table-body" class="divide-y divide-slate-100">
-                      <!-- Rendered dynamically -->
-                    </tbody>
-                  </table>
+                <p class="text-[10px] text-emerald-700 leading-tight">Billing counter, cash memos & print invoices only. Cost prices locked.</p>
+              </div>
+              <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                <div class="flex items-center justify-between">
+                  <span class="font-bold text-slate-800 text-xs">View-only access</span>
+                  <span class="w-2 h-2 rounded-full bg-slate-400"></span>
                 </div>
+                <p class="text-[10px] text-slate-600 leading-tight">Medicine catalog search & drug interaction check. No billing or data edits.</p>
+              </div>
+              <div class="p-3 bg-sky-50/70 border border-sky-100 rounded-xl space-y-1">
+                <div class="flex items-center justify-between">
+                  <span class="font-bold text-sky-900 text-xs">Inventory & Billing</span>
+                  <span class="w-2 h-2 rounded-full bg-sky-500"></span>
+                </div>
+                <p class="text-[10px] text-sky-700 leading-tight">Counter checkout + stock adjustments, batch tracking & purchase orders.</p>
+              </div>
+              <div class="p-3 bg-purple-50/70 border border-purple-100 rounded-xl space-y-1">
+                <div class="flex items-center justify-between">
+                  <span class="font-bold text-purple-900 text-xs">Full Pharmacist</span>
+                  <span class="w-2 h-2 rounded-full bg-purple-500"></span>
+                </div>
+                <p class="text-[10px] text-purple-700 leading-tight">Complete access: AI copilot, patient CRM, invoices & analytics.</p>
+              </div>
+            </div>
 
-                <div class="flex items-center justify-between text-xs p-3 bg-slate-50 rounded-lg">
-                  <div class="flex items-center space-x-2">
-                    <i data-lucide="shield-alert" class="w-4 h-4 text-slate-400"></i>
-                    <span class="font-semibold text-slate-700">Allow staff to self-register</span>
-                  </div>
-                  <label class="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" checked class="sr-only peer">
-                    <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-royal-magenta"></div>
-                  </label>
+            <!-- Staff List Preview within Business Profile -->
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Active Staff Chemist Accounts</h4>
+                <button type="button" onclick="switchSettingsSubTab('activity')" class="text-[11px] text-pink-600 font-semibold hover:underline flex items-center space-x-1">
+                  <i data-lucide="activity" class="w-3.5 h-3.5"></i>
+                  <span>Inspect Staff Activity Log</span>
+                </button>
+              </div>
+              <div id="profile-staff-preview-list" class="space-y-2">
+                <!-- Injected dynamically by renderStaffTableWeb() -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= SUB-VIEW 2: DEDICATED STAFF & ROLE PERMISSIONS (RBAC) ================= -->
+        <div id="settings-subview-staff" class="space-y-5 hidden">
+          <!-- Granular RBAC Explainer Banner -->
+          <div class="bg-gradient-to-r from-sky-950/90 to-royal-navy p-5 rounded-2xl border border-sky-800/40 text-white shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div class="space-y-1">
+              <div class="flex items-center space-x-2">
+                <span class="p-1.5 rounded-lg bg-sky-500/20 text-sky-400 border border-sky-500/30">
+                  <i data-lucide="shield-check" class="w-4 h-4"></i>
+                </span>
+                <h3 class="text-sm font-bold tracking-wide">Granular Role-Based Access Control (RBAC)</h3>
+              </div>
+              <p class="text-xs text-slate-300 max-w-2xl leading-relaxed">
+                Define strict access levels: <strong class="text-emerald-300">POS-Only</strong> (counter sales only), <strong class="text-slate-300">View-Only</strong> (read-only drug catalog), <strong class="text-sky-300">Billing & Inventory</strong>, or <strong class="text-purple-300">Full Pharmacist</strong>.
+              </p>
+            </div>
+            <button onclick="openAddStaffModalWeb()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center space-x-2 shadow-md shrink-0">
+              <i data-lucide="user-plus" class="w-4 h-4"></i>
+              <span>Add Staff Member</span>
+            </button>
+          </div>
+
+          <!-- RBAC Permission Tiers Cards -->
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
+            <div class="bg-white p-3.5 rounded-xl border border-slate-200 border-l-4 border-l-emerald-500 shadow-sm space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-slate-800">POS-only access</span>
+                <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700">Billing</span>
+              </div>
+              <p class="text-[10px] text-slate-500">Counter checkouts, cash memos & print invoices only. Cannot edit drug prices or view cost margins.</p>
+            </div>
+            <div class="bg-white p-3.5 rounded-xl border border-slate-200 border-l-4 border-l-slate-400 shadow-sm space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-slate-800">View-only access</span>
+                <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-100 text-slate-600">Read-Only</span>
+              </div>
+              <p class="text-[10px] text-slate-500">Search 5L+ medicines, check interactions and stock availability. Cannot bill or edit data.</p>
+            </div>
+            <div class="bg-white p-3.5 rounded-xl border border-slate-200 border-l-4 border-l-sky-500 shadow-sm space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-slate-800">Inventory & Billing</span>
+                <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-sky-50 text-sky-700">Stock + POS</span>
+              </div>
+              <p class="text-[10px] text-slate-500">Full POS billing plus stock additions, batch tracking, expiry monitoring & purchase orders.</p>
+            </div>
+            <div class="bg-white p-3.5 rounded-xl border border-slate-200 border-l-4 border-l-purple-500 shadow-sm space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-slate-800">Full Pharmacist</span>
+                <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-purple-50 text-purple-700">Complete</span>
+              </div>
+              <p class="text-[10px] text-slate-500">Full clinical tools, patient CRM, inventory, POS, receipts & distributor cart management.</p>
+            </div>
+          </div>
+
+          <!-- Staff Directory Table -->
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden space-y-3 p-5">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
+              <div>
+                <h4 class="font-bold text-slate-800 text-sm">Registered Staff Accounts</h4>
+                <p class="text-xs text-slate-400">Team members authorized to operate this pharmacy terminal</p>
+              </div>
+              <div class="flex items-center space-x-2">
+                <span class="text-xs text-slate-500">Total: <strong id="staff-table-count" class="text-slate-800">3</strong></span>
+                <button onclick="openAddStaffModalWeb()" class="bg-royal-navy hover:bg-slate-800 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1">
+                  <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                  <span>New Staff</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs border border-slate-100 rounded-xl overflow-hidden bg-white">
+                <thead class="bg-slate-50 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                  <tr>
+                    <th class="p-3.5">Staff Member</th>
+                    <th class="p-3.5">Assigned Permissions</th>
+                    <th class="p-3.5">Auth Identity</th>
+                    <th class="p-3.5">Last Active</th>
+                    <th class="p-3.5 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="web-staff-table-body" class="divide-y divide-slate-100">
+                  <!-- Rendered dynamically -->
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Self-registration setting -->
+            <div class="flex items-center justify-between text-xs p-3 bg-slate-50 rounded-xl border border-slate-100">
+              <div class="flex items-center space-x-2">
+                <i data-lucide="shield-alert" class="w-4 h-4 text-slate-400"></i>
+                <span class="font-semibold text-slate-700">Allow staff self-registration on web login portal</span>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" checked class="sr-only peer">
+                <div class="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-royal-magenta"></div>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= SUB-VIEW 3: DEDICATED STAFF ACTIVITY AUDIT TRAIL ================= -->
+        <div id="settings-subview-activity" class="space-y-5 hidden">
+          <!-- Top KPI Metrics -->
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-3">
+              <div class="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold">
+                <i data-lucide="activity" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Actions</p>
+                <h4 id="stat-total-actions" class="text-xl font-black text-slate-800">5</h4>
+              </div>
+            </div>
+
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-3">
+              <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+                <i data-lucide="receipt" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Bills Generated</p>
+                <h4 id="stat-total-bills" class="text-xl font-black text-slate-800">2</h4>
+              </div>
+            </div>
+
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-3">
+              <div class="w-10 h-10 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center font-bold">
+                <i data-lucide="package" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Stock Updates</p>
+                <h4 id="stat-total-stocks" class="text-xl font-black text-slate-800">2</h4>
+              </div>
+            </div>
+
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-3">
+              <div class="w-10 h-10 rounded-xl bg-pink-100 text-royal-magenta flex items-center justify-center font-bold">
+                <i data-lucide="users" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Active Operators</p>
+                <h4 id="stat-active-operators" class="text-xl font-black text-slate-800">3</h4>
+              </div>
+            </div>
+          </div>
+
+          <!-- Filter & Search Toolbar -->
+          <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <!-- Filter Pills -->
+            <div class="flex items-center space-x-1.5 overflow-x-auto pb-1 md:pb-0" id="activity-filter-pills">
+              <button onclick="filterStaffActivity('ALL')" id="filter-btn-ALL" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-royal-navy text-white transition">All Actions</button>
+              <button onclick="filterStaffActivity('BILLING')" id="filter-btn-BILLING" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">Bills Generated</button>
+              <button onclick="filterStaffActivity('STOCK')" id="filter-btn-STOCK" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">Stock Updates</button>
+              <button onclick="filterStaffActivity('STAFF')" id="filter-btn-STAFF" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">Staff & Roles</button>
+              <button onclick="filterStaffActivity('PO')" id="filter-btn-PO" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition">Purchase Orders</button>
+            </div>
+
+            <!-- Search and Action Buttons -->
+            <div class="flex items-center space-x-2">
+              <div class="relative flex-1 md:w-64">
+                <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5"></i>
+                <input type="text" id="activity-search-input" oninput="renderStaffActivityViewWeb()" placeholder="Search staff, invoice, medicine..." class="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-1 focus:ring-pink-500">
+              </div>
+              <button onclick="exportStaffActivityLogsCsvWeb()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center space-x-1">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                <span>Export CSV</span>
+              </button>
+              <button onclick="simulateSampleStaffActivityWeb()" title="Simulate Real-time Action" class="px-2.5 py-1.5 bg-pink-50 hover:bg-pink-100 text-royal-magenta rounded-xl text-xs font-bold transition flex items-center space-x-1">
+                <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+                <span>+ Test Log</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Activity Log Timeline / Table -->
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs border border-slate-100">
+                <thead class="bg-slate-50 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                  <tr>
+                    <th class="p-3.5">Timestamp</th>
+                    <th class="p-3.5">Staff Operator</th>
+                    <th class="p-3.5">Category</th>
+                    <th class="p-3.5">Activity Description</th>
+                    <th class="p-3.5 text-right">Status</th>
+                  </tr>
+                </thead>
+                <tbody id="web-activity-table-body" class="divide-y divide-slate-100">
+                  <!-- Rendered dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= SUB-VIEW 4: SECURITY & PIN PRIVILEGES ================= -->
+        <div id="settings-subview-security" class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 hidden max-w-2xl">
+          <h3 class="font-bold text-slate-800 text-base">Security & Authentication Privileges</h3>
+          
+          <div class="space-y-4">
+            <div class="p-4 bg-slate-50 rounded-xl border border-slate-100 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-slate-600">Owner Access PIN Verification</span>
+                <span class="text-xs bg-pink-100 text-royal-magenta font-semibold px-2 py-0.5 rounded">Default: 1234</span>
+              </div>
+              <p class="text-[11px] text-slate-500 leading-relaxed">This PIN protects administrative features. When staff uses the system, they operate in their assigned role mode and need this PIN to enter Owner mode.</p>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1">Change Owner Security PIN</label>
+              <input type="password" id="set-pin" value="1234" maxlength="4" class="w-24 px-3.5 py-2 border border-slate-200 rounded-xl text-sm text-center font-bold tracking-widest focus:outline-none focus:ring-2 focus:ring-pink-500/20">
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1">Owner Secret Login Password</label>
+              <div class="flex gap-2">
+                <input type="password" id="set-secret-password" placeholder="••••••••" class="flex-1 px-3.5 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20">
+                <button onclick="changeSecretPasswordWeb()" class="px-3 py-2 bg-slate-800 text-white rounded-xl text-[10px] font-bold">Update</button>
+              </div>
+            </div>
+
+            <div class="space-y-3 pt-2 border-t border-slate-50">
+              <h4 class="text-[11px] font-bold text-slate-700 uppercase">Security Questions (Reset Option)</h4>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-[10px] font-semibold text-slate-400 mb-0.5">Question 1</label>
+                  <input type="text" id="set-q1" class="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs">
+                </div>
+                <div>
+                  <label class="block text-[10px] font-semibold text-slate-400 mb-0.5">Answer 1</label>
+                  <input type="password" id="set-a1" class="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs">
                 </div>
               </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-[10px] font-semibold text-slate-400 mb-0.5">Question 2</label>
+                  <input type="text" id="set-q2" class="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs">
+                </div>
+                <div>
+                  <label class="block text-[10px] font-semibold text-slate-400 mb-0.5">Answer 2</label>
+                  <input type="password" id="set-a2" class="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs">
+                </div>
+              </div>
+              <button onclick="saveSecurityQuestionsWeb()" class="w-full py-2 bg-royal-navy text-white rounded-xl text-[10px] font-bold">Save Security Questions</button>
+            </div>
+
+            <div class="pt-2">
+              <button onclick="resetPasswordFlowWeb()" class="text-xs text-royal-magenta font-semibold hover:underline flex items-center gap-1">
+                <i data-lucide="help-circle" class="w-3 h-3"></i>
+                Trouble logging in? Reset Secret Password
+              </button>
             </div>
           </div>
         </div>
@@ -1693,10 +1978,63 @@
       userPhone: '+91 94350 78210',
       ownerAvatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Sulman',
       lastGoogleDriveSync: 'Today at 05:14 AM',
+      activeStaffPermission: 'FULL_ACCESS',
       staffMembers: [
-        { id: "s-1", name: "Nijamuddin Khan", email: "khannijamuddin87275@gmail.com", phone: "+91 94350 78210", lastLoginTime: "Today at 02:15 PM", loginType: "GMAIL" },
-        { id: "s-2", name: "Rahul Sharma", email: "rahul.sharma@royal.com", phone: "+91 98765 43210", lastLoginTime: "Yesterday at 11:30 AM", loginType: "PHONE" },
-        { id: "s-3", name: "Priya Das", email: "priya.das@royal.com", phone: "+91 88123 45678", lastLoginTime: "05-Oct-2026 06:12 PM", loginType: "GMAIL" }
+        { id: "s-1", name: "Nijamuddin Khan", designation: "Senior Billing Chemist", email: "khannijamuddin87275@gmail.com", phone: "+91 94350 78210", permission: "POS-only access", lastLoginTime: "Today at 02:15 PM", loginType: "GMAIL" },
+        { id: "s-2", name: "Rahul Sharma", designation: "Inventory Manager", email: "rahul.sharma@royal.com", phone: "+91 98765 43210", permission: "Inventory & Billing access", lastLoginTime: "Yesterday at 11:30 AM", loginType: "PHONE" },
+        { id: "s-3", name: "Priya Das", designation: "Clinical Assistant", email: "priya.das@royal.com", phone: "+91 88123 45678", permission: "View-only access", lastLoginTime: "05-Oct-2026 06:12 PM", loginType: "GMAIL" }
+      ],
+      staffActivityLogs: [
+        {
+          id: "act-1",
+          staffName: "Nijamuddin Khan",
+          staffRole: "POS-only access",
+          actionType: "BILL_GENERATED",
+          description: "Generated Cash Memo #INV-8821 for ₹840.00 (3 items, Customer: Ramesh Kumar)",
+          timestamp: "Today at 02:20 PM",
+          rawDate: new Date().toISOString(),
+          badgeColor: "#10B981"
+        },
+        {
+          id: "act-2",
+          staffName: "Rahul Sharma",
+          staffRole: "Inventory & Billing access",
+          actionType: "STOCK_UPDATED",
+          description: "Stock adjustment: Added 50 strips for 'Paracetamol 650mg (Dolo 650)' (New stock: 1240)",
+          timestamp: "Today at 01:15 PM",
+          rawDate: new Date().toISOString(),
+          badgeColor: "#3B82F6"
+        },
+        {
+          id: "act-3",
+          staffName: "Suleman Hoque (Owner)",
+          staffRole: "Owner (Full Access)",
+          actionType: "STAFF_ADDED",
+          description: "Registered new staff member 'Priya Das' with View-only access permissions",
+          timestamp: "Yesterday at 05:40 PM",
+          rawDate: new Date().toISOString(),
+          badgeColor: "#8B5CF6"
+        },
+        {
+          id: "act-4",
+          staffName: "Nijamuddin Khan",
+          staffRole: "POS-only access",
+          actionType: "BILL_GENERATED",
+          description: "Generated Cash Memo #INV-8820 for ₹1,250.00 (5 items, Payment Mode: UPI)",
+          timestamp: "Yesterday at 03:15 PM",
+          rawDate: new Date().toISOString(),
+          badgeColor: "#10B981"
+        },
+        {
+          id: "act-5",
+          staffName: "Rahul Sharma",
+          staffRole: "Inventory & Billing access",
+          actionType: "STOCK_UPDATED",
+          description: "Imported batch expiry updates for Azithromycin 500mg (Batch AZ-902, Exp: 12/26)",
+          timestamp: "05-Oct-2026 05:10 PM",
+          rawDate: new Date().toISOString(),
+          badgeColor: "#3B82F6"
+        }
       ],
       profile: {
         businessName: "ROYAL PHARMACY",
@@ -1940,6 +2278,8 @@
           state.role = parsed.role || state.role;
           state.ownerAvatar = parsed.ownerAvatar || state.ownerAvatar;
           state.staffMembers = parsed.staffMembers || state.staffMembers;
+          state.staffActivityLogs = parsed.staffActivityLogs || state.staffActivityLogs;
+          state.activeStaffPermission = parsed.activeStaffPermission || (state.role === 'OWNER' ? 'FULL_ACCESS' : 'POS-only access');
           state.userName = parsed.userName || state.userName;
           state.userEmail = parsed.userEmail || state.userEmail;
           state.userPhone = parsed.userPhone || state.userPhone;
@@ -1960,6 +2300,8 @@
         role: state.role,
         ownerAvatar: state.ownerAvatar,
         staffMembers: state.staffMembers,
+        staffActivityLogs: state.staffActivityLogs,
+        activeStaffPermission: state.activeStaffPermission,
         userName: state.userName,
         userEmail: state.userEmail,
         userPhone: state.userPhone,
@@ -2008,7 +2350,14 @@
       // Sync badges & Avatar elements
       const roleBadge = document.getElementById('current-role-badge');
       if (roleBadge) {
-        roleBadge.innerText = state.role === 'OWNER' ? '👑 Owner (Full Access)' : '💼 Staff (Billing & POS)';
+        if (state.role === 'OWNER') {
+          roleBadge.innerText = '👑 Owner (Full Access)';
+          roleBadge.className = 'font-medium text-pink-200';
+        } else {
+          const permLabel = state.activeStaffPermission ? state.activeStaffPermission.replace(' access', '') : 'Staff POS';
+          roleBadge.innerText = `💼 ${state.userName.split(' ')[0]} (${permLabel})`;
+          roleBadge.className = 'font-medium text-sky-200';
+        }
       }
       
       const avatarContainer = document.getElementById('user-avatar-container');
@@ -2038,6 +2387,8 @@
       }
 
       renderStaffTableWeb();
+      renderStaffActivityViewWeb();
+      renderStaffActivityBadgeWeb();
       
       // Update form configurations
       document.getElementById('set-name').value = state.profile.businessName;
@@ -2072,6 +2423,28 @@
 
     // Tab Switching Controller
     function switchTab(tabId) {
+      if (tabId === 'staff-mgmt') {
+        switchTab('settings');
+        switchSettingsSubTab('staff');
+        const dtStaffBtn = document.getElementById('tab-btn-staff-mgmt');
+        if (dtStaffBtn) {
+          dtStaffBtn.classList.add('text-royal-magenta', 'bg-pink-50', 'font-semibold');
+          dtStaffBtn.classList.remove('text-slate-600', 'font-medium');
+        }
+        return;
+      }
+
+      if (tabId === 'staff-activity') {
+        switchTab('settings');
+        switchSettingsSubTab('activity');
+        const dtActBtn = document.getElementById('tab-btn-staff-activity');
+        if (dtActBtn) {
+          dtActBtn.classList.add('text-royal-magenta', 'bg-pink-50', 'font-semibold');
+          dtActBtn.classList.remove('text-slate-600', 'font-medium');
+        }
+        return;
+      }
+
       const tabs = ['dashboard', 'pos', 'gemini', 'database', 'cart', 'calculator', 'symptoms', 'invoices', 'settings', 'udharkhata', 'expiry', 'interactions', 'tax', 'converter'];
       tabs.forEach(t => {
         const el = document.getElementById(`tab-content-${t}`);
@@ -2094,6 +2467,17 @@
           mbBtn.classList.add('text-slate-500');
         }
       });
+
+      const dtStaffBtn = document.getElementById('tab-btn-staff-mgmt');
+      if (dtStaffBtn && tabId !== 'staff-mgmt') {
+        dtStaffBtn.classList.remove('text-royal-magenta', 'bg-pink-50', 'font-semibold');
+        dtStaffBtn.classList.add('text-slate-600', 'font-medium');
+      }
+      const dtActBtn = document.getElementById('tab-btn-staff-activity');
+      if (dtActBtn && tabId !== 'staff-activity') {
+        dtActBtn.classList.remove('text-royal-magenta', 'bg-pink-50', 'font-semibold');
+        dtActBtn.classList.add('text-slate-600', 'font-medium');
+      }
 
       // Show targeted tab
       const targetEl = document.getElementById(`tab-content-${tabId}`);
@@ -2265,45 +2649,83 @@
 
     // Role switcher logic
     function openRoleDialog() {
-      if (state.role === 'OWNER') {
-        Swal.fire({
-          title: 'Switch to Staff Role?',
-          text: 'This will lock administrative screens and restrict editing pharmacy details.',
-          icon: 'warning',
-          showCancelButton: true,
-          confirmButtonColor: '#9C1258',
-          confirmButtonText: 'Yes, Switch to Staff'
-        }).then((res) => {
-          if (res.isConfirmed) {
-            state.role = 'STAFF';
-            saveStateToLocal();
-            syncUiState();
-            Swal.fire('Role Switched!', 'Operating as general chemist staff worker.', 'info');
-          }
-        });
+      const staffOptionsHtml = state.staffMembers.map(staff => `
+        <div onclick="selectRoleFromDialogWeb('${staff.id}')" class="flex items-center justify-between p-2.5 bg-slate-50 hover:bg-sky-50 rounded-xl cursor-pointer border border-slate-100 transition">
+          <div class="flex items-center space-x-2.5">
+            <div class="w-8 h-8 rounded-full bg-sky-100 text-sky-700 font-bold flex items-center justify-center text-xs">
+              ${staff.name.slice(0, 2).toUpperCase()}
+            </div>
+            <div class="text-left">
+              <p class="font-bold text-slate-800 text-xs">${staff.name}</p>
+              <p class="text-[10px] text-slate-400">${staff.designation || 'Staff Chemist'} • ${staff.permission || 'POS-only access'}</p>
+            </div>
+          </div>
+          <span class="text-[9px] font-bold px-2 py-0.5 rounded bg-sky-100 text-sky-800">Operate</span>
+        </div>
+      `).join('');
+
+      Swal.fire({
+        title: 'Switch Pharmacy Role & Terminal Mode',
+        html: `
+          <div class="text-left space-y-3.5 p-1 text-xs text-slate-600">
+            <div class="p-3 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-between">
+              <div>
+                <p class="text-[10px] text-slate-400 uppercase font-bold">Current Session</p>
+                <p class="font-bold text-slate-800 text-sm">${state.userName}</p>
+                <p class="text-[10px] text-royal-magenta font-semibold">${state.role === 'OWNER' ? '👑 Owner (Full Access)' : `💼 Staff (${state.activeStaffPermission || 'POS-only'})`}</p>
+              </div>
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            </div>
+
+            ${state.role === 'STAFF' ? `
+              <div class="p-3 bg-pink-50 border border-pink-200 rounded-xl space-y-2">
+                <div class="flex items-center justify-between">
+                  <span class="font-bold text-royal-magenta text-xs">👑 Elevate to Owner Mode</span>
+                  <span class="text-[10px] text-slate-400 font-medium">Requires PIN</span>
+                </div>
+                <div class="flex gap-2">
+                  <input type="password" id="role-dialog-owner-pin" placeholder="Enter PIN (1234)" maxlength="4" class="w-32 px-3 py-1.5 border border-pink-200 rounded-lg text-xs bg-white text-center font-bold tracking-widest outline-none">
+                  <button type="button" onclick="verifyOwnerPinFromDialog()" class="flex-1 bg-royal-magenta hover:bg-pink-800 text-white py-1.5 rounded-lg text-xs font-bold transition">Unlock Owner</button>
+                </div>
+              </div>
+            ` : ''}
+
+            <div class="space-y-1.5">
+              <div class="flex items-center justify-between">
+                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Switch to Registered Staff Profile</p>
+                <button type="button" onclick="Swal.close(); switchTab('settings'); switchSettingsSubTab('staff');" class="text-[10px] text-sky-600 hover:underline">+ Manage Staff</button>
+              </div>
+              <div class="space-y-1.5 max-h-[180px] overflow-y-auto">
+                ${staffOptionsHtml}
+              </div>
+            </div>
+          </div>
+        `,
+        showConfirmButton: false,
+        showCloseButton: true
+      });
+    }
+
+    function selectRoleFromDialogWeb(staffId) {
+      Swal.close();
+      switchStaffSessionWeb(staffId);
+    }
+
+    function verifyOwnerPinFromDialog() {
+      const pinInput = document.getElementById('role-dialog-owner-pin');
+      const val = pinInput ? pinInput.value.trim() : '';
+      if (val === state.pin) {
+        state.role = 'OWNER';
+        state.userName = state.profile.ownerName || "Sulman Pharmacist";
+        state.userEmail = "sulman995790@gmail.com";
+        state.activeStaffPermission = 'FULL_ACCESS';
+        saveStateToLocal();
+        syncUiState();
+        Swal.close();
+        Swal.fire('Owner Access Unlocked', 'Operating with unrestricted business owner privileges.', 'success');
+        logStaffActivityWeb("STAFF_LOGIN", "Owner Principal", "Owner unlocked administrative session via PIN", "#9C1258");
       } else {
-        Swal.fire({
-          title: 'Enter Owner Authorization PIN',
-          input: 'password',
-          inputPlaceholder: 'Enter 4-Digit PIN',
-          inputAttributes: {
-            maxlength: 4,
-            autocapitalize: 'off',
-            autocorrect: 'off'
-          },
-          showCancelButton: true,
-          confirmButtonColor: '#9C1258',
-          confirmButtonText: 'Verify PIN'
-        }).then((res) => {
-          if (res.value === state.pin) {
-            state.role = 'OWNER';
-            saveStateToLocal();
-            syncUiState();
-            Swal.fire('Authorized!', 'Unlocked all business owner controls.', 'success');
-          } else if (res.value) {
-            Swal.fire('Unauthorized PIN', 'The authorization token provided was invalid.', 'error');
-          }
-        });
+        Swal.fire('Invalid PIN', 'The owner PIN provided was incorrect (Default: 1234).', 'error');
       }
     }
 
@@ -2485,96 +2907,303 @@
       }
     }
 
-    // Staff Management operations
+    // Settings Sub-Tab Navigation
+    let currentSettingsSubTab = 'profile';
+    function switchSettingsSubTab(subTab) {
+      currentSettingsSubTab = subTab;
+      const subTabs = ['profile', 'staff', 'activity', 'security'];
+      subTabs.forEach(st => {
+        const view = document.getElementById(`settings-subview-${st}`);
+        const btn = document.getElementById(`subtab-btn-${st}`);
+        if (view) {
+          if (st === subTab) {
+            view.classList.remove('hidden');
+          } else {
+            view.classList.add('hidden');
+          }
+        }
+        if (btn) {
+          if (st === subTab) {
+            btn.className = "px-3.5 py-1.5 rounded-lg bg-white shadow-sm text-royal-magenta font-bold transition flex items-center gap-1.5";
+          } else {
+            btn.className = "px-3.5 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition flex items-center gap-1.5";
+          }
+        }
+      });
+      if (subTab === 'activity') {
+        renderStaffActivityViewWeb();
+      } else if (subTab === 'staff') {
+        renderStaffTableWeb();
+      }
+      if (window.lucide) lucide.createIcons();
+    }
+
+    // Staff Management & Role-Based Access Control (RBAC)
     function renderStaffTableWeb() {
       const tbody = document.getElementById('web-staff-table-body');
+      const countEl = document.getElementById('staff-table-count');
+      const settingsBadge = document.getElementById('settings-staff-count-badge');
+      const sidebarBadge = document.getElementById('sidebar-staff-badge');
+      if (countEl) countEl.innerText = state.staffMembers.length;
+      if (settingsBadge) settingsBadge.innerText = state.staffMembers.length;
+      if (sidebarBadge) sidebarBadge.innerText = state.staffMembers.length;
+
+      // Render profile staff preview list in Business Profile sub-section
+      const previewList = document.getElementById('profile-staff-preview-list');
+      if (previewList) {
+        if (state.staffMembers.length === 0) {
+          previewList.innerHTML = `<div class="p-3 text-center text-slate-400 text-xs bg-slate-50 rounded-xl">No staff accounts registered. Click "+ Add Staff Member" to add team members.</div>`;
+        } else {
+          previewList.innerHTML = state.staffMembers.map(staff => {
+            const perm = staff.permission || "POS-only access";
+            let badgeClass = "bg-emerald-50 text-emerald-800 border-emerald-200";
+            if (perm.includes("View-only")) badgeClass = "bg-slate-100 text-slate-700 border-slate-200";
+            else if (perm.includes("Inventory")) badgeClass = "bg-sky-50 text-sky-800 border-sky-200";
+            else if (perm.includes("Pharmacist")) badgeClass = "bg-purple-50 text-purple-800 border-purple-200";
+
+            return `
+              <div class="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-100 rounded-xl text-xs hover:bg-slate-100/70 transition">
+                <div class="flex items-center space-x-2.5">
+                  <div class="w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold flex items-center justify-center text-[10px] shrink-0">
+                    ${staff.name.slice(0, 2).toUpperCase()}
+                  </div>
+                  <div>
+                    <p class="font-bold text-slate-800">${staff.name}</p>
+                    <p class="text-[10px] text-slate-400">${staff.designation || 'Staff Chemist'} • ${staff.phone}</p>
+                  </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                  <span class="px-2 py-0.5 rounded-full text-[9px] font-bold border ${badgeClass}">${perm}</span>
+                  <button type="button" onclick="changeStaffPermissionWeb('${staff.id}')" class="text-[10px] text-royal-magenta font-semibold hover:underline">Edit</button>
+                  <button type="button" onclick="switchStaffSessionWeb('${staff.id}')" class="px-2 py-0.5 bg-sky-50 hover:bg-sky-100 text-sky-700 rounded text-[10px] font-bold">Switch</button>
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+      }
+
       if (!tbody) return;
 
       tbody.innerHTML = '';
+      if (state.staffMembers.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-slate-400">No staff members registered. Click "+ Add Staff Member" above to add team members.</td></tr>`;
+        return;
+      }
+
       state.staffMembers.forEach(staff => {
+        const perm = staff.permission || "POS-only access";
+        let permBadgeClass = "bg-emerald-50 text-emerald-700 border-emerald-200";
+        let permIcon = "receipt";
+        if (perm.includes("View-only")) {
+          permBadgeClass = "bg-slate-100 text-slate-700 border-slate-200";
+          permIcon = "eye";
+        } else if (perm.includes("Inventory")) {
+          permBadgeClass = "bg-sky-50 text-sky-700 border-sky-200";
+          permIcon = "package";
+        } else if (perm.includes("Pharmacist")) {
+          permBadgeClass = "bg-purple-50 text-purple-700 border-purple-200";
+          permIcon = "sparkles";
+        }
+
+        const isCurrentActive = state.role === 'STAFF' && (state.userPhone === staff.phone || state.userEmail === staff.email);
+
         tbody.innerHTML += `
-          <tr>
-            <td class="p-3">
-              <div class="flex items-center space-x-2">
-                <div class="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center font-bold text-royal-navy text-xs">
+          <tr class="hover:bg-slate-50/70 transition">
+            <td class="p-3.5">
+              <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 rounded-full bg-royal-navy/10 text-royal-navy flex items-center justify-center font-bold text-xs shrink-0">
                   ${staff.name.slice(0, 2).toUpperCase()}
                 </div>
                 <div>
-                  <p class="font-bold text-slate-800">${staff.name}</p>
-                  <p class="text-[9px] text-slate-400">${staff.phone}</p>
+                  <div class="flex items-center space-x-1.5">
+                    <p class="font-bold text-slate-800 text-xs">${staff.name}</p>
+                    ${isCurrentActive ? '<span class="px-1.5 py-0.2 rounded text-[8px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300">ACTIVE SESSION</span>' : ''}
+                  </div>
+                  <p class="text-[10px] text-slate-400">${staff.designation || 'Staff Chemist'}</p>
                 </div>
               </div>
             </td>
-            <td class="p-3">
-              <span class="px-2 py-0.5 rounded-full text-[9px] font-bold ${staff.loginType === 'GMAIL' ? 'bg-pink-100 text-royal-magenta' : 'bg-blue-100 text-blue-700'}">
-                ${staff.loginType}
+            <td class="p-3.5">
+              <span class="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full text-[10px] font-bold border ${permBadgeClass}">
+                <span>${perm}</span>
               </span>
-              <p class="text-[9px] text-slate-400 mt-0.5">${staff.email}</p>
             </td>
-            <td class="p-3 text-slate-500 text-[11px] font-medium">
-              ${staff.lastLoginTime}
+            <td class="p-3.5">
+              <div class="space-y-0.5">
+                <span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${staff.loginType === 'GMAIL' ? 'bg-pink-100 text-royal-magenta' : 'bg-blue-100 text-blue-700'}">
+                  ${staff.loginType || 'PHONE'}
+                </span>
+                <p class="text-[10px] text-slate-600 font-medium">${staff.phone}</p>
+                <p class="text-[9px] text-slate-400">${staff.email}</p>
+              </div>
             </td>
-            <td class="p-3 text-right">
-              <button onclick="removeStaffMemberWeb('${staff.id}')" class="text-red-500 hover:text-red-700 font-semibold text-xs">
-                Remove
-              </button>
+            <td class="p-3.5 text-slate-500 text-[11px] font-medium">
+              ${staff.lastLoginTime || 'Recently'}
+            </td>
+            <td class="p-3.5 text-right">
+              <div class="flex items-center justify-end space-x-1.5">
+                <button onclick="changeStaffPermissionWeb('${staff.id}')" title="Change Permissions" class="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-semibold text-[11px] transition">
+                  Permissions
+                </button>
+                <button onclick="switchStaffSessionWeb('${staff.id}')" title="Test Session as this Staff" class="px-2 py-1 bg-sky-50 hover:bg-sky-100 text-sky-700 rounded-lg font-semibold text-[11px] transition">
+                  Operate
+                </button>
+                <button onclick="removeStaffMemberWeb('${staff.id}')" title="Revoke Access" class="p-1 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
             </td>
           </tr>
         `;
       });
+      if (window.lucide) lucide.createIcons();
+    }
+
+    // Dedicated Modal to Add Staff with Role-Based Permissions
+    function openAddStaffModalWeb() {
+      if (state.role !== 'OWNER') {
+        Swal.fire({
+          title: 'Owner PIN Required',
+          text: 'Only the Pharmacy Owner Principal can add or configure staff accounts.',
+          input: 'password',
+          inputPlaceholder: 'Enter 4-Digit Owner PIN (Default: 1234)',
+          showCancelButton: true,
+          confirmButtonColor: '#9C1258',
+          confirmButtonText: 'Authorize'
+        }).then((res) => {
+          if (res.value === state.pin) {
+            triggerAddStaffDialogPrompt();
+          } else if (res.value) {
+            Swal.fire('Invalid PIN', 'The owner PIN provided was incorrect.', 'error');
+          }
+        });
+        return;
+      }
+      triggerAddStaffDialogPrompt();
     }
 
     function addStaffMemberWeb() {
-      if (state.role !== 'OWNER') {
-        Swal.fire('Admin PIN Required', 'Only the Owner Principal can register new staff members.', 'error');
-        return;
-      }
+      openAddStaffModalWeb();
+    }
 
+    function triggerAddStaffDialogPrompt() {
       Swal.fire({
-        title: 'Register Staff Member',
+        title: 'Add New Staff Member',
         html: `
-          <div class="space-y-3 text-left p-1 text-sm">
+          <div class="space-y-3.5 text-left p-1 text-xs text-slate-600">
+            <p class="text-[11px] text-slate-400">Configure staff identity and define granular role-based access permissions (RBAC).</p>
+            
             <div>
-              <label class="block text-xs font-semibold text-slate-500 mb-1">Staff Full Name</label>
-              <input type="text" id="staff-reg-name" placeholder="e.g. John Doe" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:ring-1 focus:ring-pink-500 outline-none">
+              <label class="block font-bold text-slate-700 mb-1">Staff Full Name *</label>
+              <input type="text" id="staff-reg-name" placeholder="e.g. Asif Rahman" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:ring-1 focus:ring-pink-500 outline-none">
             </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-500 mb-1">Email ID</label>
-              <input type="email" id="staff-reg-email" placeholder="john.doe@gmail.com" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:ring-1 focus:ring-pink-500 outline-none">
+
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">Mobile Number *</label>
+                <input type="text" id="staff-reg-phone" placeholder="9435078210" maxlength="10" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:ring-1 focus:ring-pink-500 outline-none">
+              </div>
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">Designation</label>
+                <input type="text" id="staff-reg-desig" placeholder="e.g. Dispensing Chemist" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:ring-1 focus:ring-pink-500 outline-none">
+              </div>
             </div>
+
             <div>
-              <label class="block text-xs font-semibold text-slate-500 mb-1">Mobile Number</label>
-              <input type="text" id="staff-reg-phone" placeholder="+91 XXXXX XXXXX" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:ring-1 focus:ring-pink-500 outline-none">
+              <label class="block font-bold text-slate-700 mb-1">Email Address</label>
+              <input type="email" id="staff-reg-email" placeholder="asif.rahman@royal.com" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:ring-1 focus:ring-pink-500 outline-none">
             </div>
+
+            <!-- Granular Permissions Selector -->
             <div>
-              <label class="block text-xs font-semibold text-slate-500 mb-1">Allowed Login Method</label>
+              <label class="block font-bold text-slate-700 mb-1.5">Define Specific Role-Based Permission *</label>
+              <div class="space-y-2">
+                <label class="flex items-start p-2.5 rounded-xl border border-slate-200 hover:border-emerald-400 cursor-pointer transition">
+                  <input type="radio" name="staff_permission" value="POS-only access" checked class="mt-0.5 text-royal-magenta focus:ring-pink-500">
+                  <div class="ml-2.5">
+                    <div class="flex items-center space-x-1.5">
+                      <span class="font-bold text-slate-800 text-[11px]">POS-only access</span>
+                      <span class="px-1.5 py-0.2 rounded text-[8px] font-bold bg-emerald-100 text-emerald-800">Billing Counter</span>
+                    </div>
+                    <p class="text-[10px] text-slate-400 mt-0.5">Can process cash memos, accept payments & print receipts. Restricted from modifying catalog prices.</p>
+                  </div>
+                </label>
+
+                <label class="flex items-start p-2.5 rounded-xl border border-slate-200 hover:border-slate-400 cursor-pointer transition">
+                  <input type="radio" name="staff_permission" value="View-only access" class="mt-0.5 text-royal-magenta focus:ring-pink-500">
+                  <div class="ml-2.5">
+                    <div class="flex items-center space-x-1.5">
+                      <span class="font-bold text-slate-800 text-[11px]">View-only access</span>
+                      <span class="px-1.5 py-0.2 rounded text-[8px] font-bold bg-slate-100 text-slate-700">Read-Only</span>
+                    </div>
+                    <p class="text-[10px] text-slate-400 mt-0.5">Search 500k+ drug catalog, check salt formulations & inventory. Cannot bill or edit data.</p>
+                  </div>
+                </label>
+
+                <label class="flex items-start p-2.5 rounded-xl border border-slate-200 hover:border-sky-400 cursor-pointer transition">
+                  <input type="radio" name="staff_permission" value="Inventory & Billing access" class="mt-0.5 text-royal-magenta focus:ring-pink-500">
+                  <div class="ml-2.5">
+                    <div class="flex items-center space-x-1.5">
+                      <span class="font-bold text-slate-800 text-[11px]">Inventory & Billing access</span>
+                      <span class="px-1.5 py-0.2 rounded text-[8px] font-bold bg-sky-100 text-sky-800">POS + Stock</span>
+                    </div>
+                    <p class="text-[10px] text-slate-400 mt-0.5">Full POS billing + stock adjustments, batch tracking & creating purchase orders.</p>
+                  </div>
+                </label>
+
+                <label class="flex items-start p-2.5 rounded-xl border border-slate-200 hover:border-purple-400 cursor-pointer transition">
+                  <input type="radio" name="staff_permission" value="Full Pharmacist access" class="mt-0.5 text-royal-magenta focus:ring-pink-500">
+                  <div class="ml-2.5">
+                    <div class="flex items-center space-x-1.5">
+                      <span class="font-bold text-slate-800 text-[11px]">Full Pharmacist access</span>
+                      <span class="px-1.5 py-0.2 rounded text-[8px] font-bold bg-purple-100 text-purple-800">Unrestricted</span>
+                    </div>
+                    <p class="text-[10px] text-slate-400 mt-0.5">Complete operational privileges: AI Pharmacist Copilot, patient CRM, stock & invoices.</p>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Allowed Login Method</label>
               <select id="staff-reg-logintype" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white outline-none">
+                <option value="PHONE">Phone OTP Auth (Mobile 123456)</option>
                 <option value="GMAIL">Gmail Account Auth</option>
-                <option value="PHONE">Phone OTP Auth</option>
               </select>
             </div>
           </div>
         `,
         showCancelButton: true,
         confirmButtonColor: '#9C1258',
-        confirmButtonText: 'Register Access'
-      }).then((res) => {
-        if (res.isConfirmed) {
+        confirmButtonText: 'Register Staff Member',
+        focusConfirm: false,
+        preConfirm: () => {
           const name = document.getElementById('staff-reg-name').value.trim();
-          const email = document.getElementById('staff-reg-email').value.trim();
           const phone = document.getElementById('staff-reg-phone').value.trim();
+          const email = document.getElementById('staff-reg-email').value.trim() || `${name.toLowerCase().replace(/\s+/g, '')}@royal.com`;
+          const desig = document.getElementById('staff-reg-desig').value.trim() || 'Dispensing Chemist';
+          const permRadio = document.querySelector('input[name="staff_permission"]:checked');
+          const permission = permRadio ? permRadio.value : 'POS-only access';
           const loginType = document.getElementById('staff-reg-logintype').value;
 
-          if (!name || !email || !phone) {
-            Swal.fire('Required Fields', 'All fields are mandatory to grant staff authentication privileges.', 'error');
-            return;
+          if (!name || !phone) {
+            Swal.showValidationMessage('Staff name and mobile number are required.');
+            return false;
           }
-
+          return { name, phone, email, desig, permission, loginType };
+        }
+      }).then((res) => {
+        if (res.isConfirmed && res.value) {
+          const { name, phone, email, desig, permission, loginType } = res.value;
+          const formattedPhone = phone.startsWith("+91") ? phone : `+91 ${phone.replace(/\D/g, '')}`;
           const newStaff = {
-            id: 's-' + (state.staffMembers.length + 1),
+            id: 's-' + Date.now(),
             name: name,
             email: email,
-            phone: phone,
+            phone: formattedPhone,
+            designation: desig,
+            permission: permission,
             lastLoginTime: "Just registered",
             loginType: loginType
           };
@@ -2582,9 +3211,106 @@
           state.staffMembers.push(newStaff);
           saveStateToLocal();
           syncUiState();
-          Swal.fire('Registered!', `Successfully registered ${name} in the cloud access directory.`, 'success');
-          showLiveSyncNotification("Staff Registered", `Granted ${name} cloud auth permissions`, "user-plus");
+
+          // Log staff creation action
+          logStaffActivityWeb(
+            "STAFF_ADDED",
+            state.role === 'OWNER' ? 'Owner Principal' : state.userName,
+            `Registered new staff member '${name}' with ${permission} (${desig})`,
+            "#8B5CF6"
+          );
+
+          Swal.fire({
+            title: 'Staff Member Registered!',
+            html: `Successfully registered <b>${name}</b> with <b>${permission}</b>.<br><span class="text-xs text-slate-500">Credentials active for instant web portal sign-in.</span>`,
+            icon: 'success',
+            confirmButtonColor: '#9C1258'
+          });
+          showLiveSyncNotification("Staff Registered", `Granted ${name} ${permission}`, "user-plus");
         }
+      });
+    }
+
+    function changeStaffPermissionWeb(id) {
+      const member = state.staffMembers.find(s => s.id === id);
+      if (!member) return;
+
+      Swal.fire({
+        title: `Update Permissions: ${member.name}`,
+        html: `
+          <div class="space-y-3 text-left p-1 text-xs text-slate-600">
+            <p class="text-slate-500">Current Assigned Role: <strong class="text-slate-800">${member.permission || 'POS-only access'}</strong></p>
+            <div class="space-y-2">
+              <label class="flex items-center p-2 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50">
+                <input type="radio" name="update_perm" value="POS-only access" ${member.permission === 'POS-only access' ? 'checked' : ''} class="text-royal-magenta">
+                <span class="ml-2 font-bold text-slate-800">POS-only access (Billing Counter)</span>
+              </label>
+              <label class="flex items-center p-2 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50">
+                <input type="radio" name="update_perm" value="View-only access" ${member.permission === 'View-only access' ? 'checked' : ''} class="text-royal-magenta">
+                <span class="ml-2 font-bold text-slate-800">View-only access (Read-Only Catalog)</span>
+              </label>
+              <label class="flex items-center p-2 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50">
+                <input type="radio" name="update_perm" value="Inventory & Billing access" ${member.permission === 'Inventory & Billing access' ? 'checked' : ''} class="text-royal-magenta">
+                <span class="ml-2 font-bold text-slate-800">Inventory & Billing access (Stock + POS)</span>
+              </label>
+              <label class="flex items-center p-2 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-50">
+                <input type="radio" name="update_perm" value="Full Pharmacist access" ${member.permission === 'Full Pharmacist access' ? 'checked' : ''} class="text-royal-magenta">
+                <span class="ml-2 font-bold text-slate-800">Full Pharmacist access (Complete Operations)</span>
+              </label>
+            </div>
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonColor: '#9C1258',
+        confirmButtonText: 'Update Permissions'
+      }).then((res) => {
+        if (res.isConfirmed) {
+          const selected = document.querySelector('input[name="update_perm"]:checked')?.value || member.permission;
+          member.permission = selected;
+          if (state.role === 'STAFF' && (state.userPhone === member.phone || state.userEmail === member.email)) {
+            state.activeStaffPermission = selected;
+          }
+          saveStateToLocal();
+          syncUiState();
+
+          logStaffActivityWeb(
+            "PERMISSION_UPDATED",
+            state.role === 'OWNER' ? 'Owner Principal' : state.userName,
+            `Updated permissions for '${member.name}' to: ${selected}`,
+            "#8B5CF6"
+          );
+
+          Swal.fire('Updated!', `Permissions updated to ${selected} for ${member.name}.`, 'success');
+        }
+      });
+    }
+
+    function switchStaffSessionWeb(id) {
+      const member = state.staffMembers.find(s => s.id === id);
+      if (!member) return;
+
+      state.role = 'STAFF';
+      state.userName = member.name;
+      state.userEmail = member.email;
+      state.userPhone = member.phone;
+      state.activeStaffPermission = member.permission || "POS-only access";
+      member.lastLoginTime = "Just now";
+
+      saveStateToLocal();
+      syncUiState();
+
+      logStaffActivityWeb(
+        "STAFF_LOGIN",
+        member.name,
+        `Active session switched to ${member.name} (${member.permission})`,
+        "#0EA5E9"
+      );
+
+      Swal.fire({
+        title: 'Operating as Staff',
+        html: `Switched session to <b>${member.name}</b><br><span class="text-xs text-sky-600 font-bold">${member.permission}</span>`,
+        icon: 'info',
+        confirmButtonColor: '#9C1258'
       });
     }
 
@@ -2598,7 +3324,7 @@
 
       Swal.fire({
         title: 'Revoke Credentials?',
-        text: `Are you sure you want to delete ${member.name} from the staff accounts registry? They will lose all database access immediately.`,
+        text: `Are you sure you want to delete ${member.name} (${member.permission}) from staff directory?`,
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#DC2626',
@@ -2608,8 +3334,283 @@
           state.staffMembers = state.staffMembers.filter(s => s.id !== id);
           saveStateToLocal();
           syncUiState();
-          Swal.fire('Revoked!', 'Staff access and cloud token invalidated.', 'success');
-          showLiveSyncNotification("Access Revoked", `Invalidated active session for ${member.name}`, "trash-2");
+
+          logStaffActivityWeb(
+            "STAFF_REMOVED",
+            'Owner Principal',
+            `Revoked credentials and access for staff member '${member.name}'`,
+            "#EF4444"
+          );
+
+          Swal.fire('Revoked!', 'Staff access credentials invalidated.', 'success');
+          showLiveSyncNotification("Access Revoked", `Invalidated session for ${member.name}`, "trash-2");
+        }
+      });
+    }
+
+    // ================= CENTRALIZED ACTIVITY LOGGER =================
+    let currentActivityFilter = 'ALL';
+
+    function logStaffActivityWeb(actionType, staffName, description, badgeColor) {
+      if (!state.staffActivityLogs) state.staffActivityLogs = [];
+      const now = new Date();
+      const timeStr = "Today at " + now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+      const newLog = {
+        id: 'act-' + Date.now(),
+        staffName: staffName || state.userName || 'Staff Operator',
+        staffRole: state.role === 'OWNER' ? 'Owner (Full Access)' : (state.activeStaffPermission || 'Staff'),
+        actionType: actionType,
+        description: description,
+        timestamp: timeStr,
+        rawDate: now.toISOString(),
+        badgeColor: badgeColor || '#10B981'
+      };
+
+      state.staffActivityLogs.unshift(newLog);
+      if (state.staffActivityLogs.length > 100) state.staffActivityLogs.pop();
+      saveStateToLocal();
+      renderStaffActivityViewWeb();
+      renderStaffActivityBadgeWeb();
+    }
+
+    function renderStaffActivityBadgeWeb() {
+      const logs = state.staffActivityLogs || [];
+      const badge = document.getElementById('settings-activity-count-badge');
+      const sideBadge = document.getElementById('sidebar-activity-badge');
+      if (badge) badge.innerText = logs.length;
+      if (sideBadge) sideBadge.innerText = logs.length;
+    }
+
+    function renderStaffActivityViewWeb() {
+      const logs = state.staffActivityLogs || [];
+      const tbody = document.getElementById('web-activity-table-body');
+      
+      // Update statistics
+      const totalBills = logs.filter(l => l.actionType === 'BILL_GENERATED').length;
+      const totalStocks = logs.filter(l => l.actionType === 'STOCK_UPDATED').length;
+      const uniqueStaff = new Set(logs.map(l => l.staffName)).size;
+
+      const statTotal = document.getElementById('stat-total-actions');
+      const statBills = document.getElementById('stat-total-bills');
+      const statStocks = document.getElementById('stat-total-stocks');
+      const statOps = document.getElementById('stat-active-operators');
+
+      if (statTotal) statTotal.innerText = logs.length;
+      if (statBills) statBills.innerText = totalBills;
+      if (statStocks) statStocks.innerText = totalStocks;
+      if (statOps) statOps.innerText = Math.max(uniqueStaff, 1);
+
+      if (!tbody) return;
+
+      const searchInput = document.getElementById('activity-search-input');
+      const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
+
+      const filteredLogs = logs.filter(l => {
+        const matchesFilter = (currentActivityFilter === 'ALL') ||
+          (currentActivityFilter === 'BILLING' && l.actionType === 'BILL_GENERATED') ||
+          (currentActivityFilter === 'STOCK' && l.actionType === 'STOCK_UPDATED') ||
+          (currentActivityFilter === 'STAFF' && (l.actionType === 'STAFF_ADDED' || l.actionType === 'STAFF_REMOVED' || l.actionType === 'PERMISSION_UPDATED' || l.actionType === 'STAFF_LOGIN')) ||
+          (currentActivityFilter === 'PO' && l.actionType === 'PO_CREATED');
+
+        const matchesQuery = !query ||
+          l.staffName.toLowerCase().includes(query) ||
+          l.description.toLowerCase().includes(query) ||
+          l.actionType.toLowerCase().includes(query) ||
+          (l.staffRole && l.staffRole.toLowerCase().includes(query));
+
+        return matchesFilter && matchesQuery;
+      });
+
+      tbody.innerHTML = '';
+      if (filteredLogs.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-slate-400">No activity logs matching '${query || currentActivityFilter}'.</td></tr>`;
+        return;
+      }
+
+      filteredLogs.forEach(item => {
+        let catBadge = "bg-slate-100 text-slate-700";
+        let catLabel = item.actionType;
+        let catIcon = "activity";
+
+        if (item.actionType === 'BILL_GENERATED') {
+          catBadge = "bg-emerald-50 text-emerald-700 border border-emerald-200";
+          catLabel = "BILLING";
+          catIcon = "receipt";
+        } else if (item.actionType === 'STOCK_UPDATED') {
+          catBadge = "bg-sky-50 text-sky-700 border border-sky-200";
+          catLabel = "STOCK UPDATE";
+          catIcon = "package";
+        } else if (item.actionType === 'STAFF_ADDED' || item.actionType === 'PERMISSION_UPDATED') {
+          catBadge = "bg-purple-50 text-purple-700 border border-purple-200";
+          catLabel = "STAFF RBAC";
+          catIcon = "shield-check";
+        } else if (item.actionType === 'STAFF_REMOVED') {
+          catBadge = "bg-rose-50 text-rose-700 border border-rose-200";
+          catLabel = "ACCESS REVOKED";
+          catIcon = "user-x";
+        } else if (item.actionType === 'PO_CREATED') {
+          catBadge = "bg-amber-50 text-amber-700 border border-amber-200";
+          catLabel = "PURCHASE ORDER";
+          catIcon = "truck";
+        } else if (item.actionType === 'STAFF_LOGIN') {
+          catBadge = "bg-blue-50 text-blue-700 border border-blue-200";
+          catLabel = "STAFF SIGN-IN";
+          catIcon = "log-in";
+        }
+
+        tbody.innerHTML += `
+          <tr class="hover:bg-slate-50/70 transition">
+            <td class="p-3.5 text-slate-500 whitespace-nowrap text-[11px] font-mono">
+              ${item.timestamp}
+            </td>
+            <td class="p-3.5">
+              <div class="flex items-center space-x-2">
+                <div class="w-6 h-6 rounded-full bg-slate-200 text-slate-700 font-bold text-[10px] flex items-center justify-center shrink-0">
+                  ${item.staffName.slice(0, 2).toUpperCase()}
+                </div>
+                <div>
+                  <p class="font-bold text-slate-800 text-xs">${item.staffName}</p>
+                  <p class="text-[9px] text-slate-400">${item.staffRole || 'Staff'}</p>
+                </div>
+              </div>
+            </td>
+            <td class="p-3.5 whitespace-nowrap">
+              <span class="px-2 py-0.5 rounded text-[9px] font-bold ${catBadge}">
+                ${catLabel}
+              </span>
+            </td>
+            <td class="p-3.5 text-slate-700 text-xs font-medium">
+              ${item.description}
+            </td>
+            <td class="p-3.5 text-right whitespace-nowrap">
+              <span class="inline-flex items-center space-x-1 text-[10px] text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                <span>Logged</span>
+              </span>
+            </td>
+          </tr>
+        `;
+      });
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function filterStaffActivity(filterType) {
+      currentActivityFilter = filterType;
+      const pills = ['ALL', 'BILLING', 'STOCK', 'STAFF', 'PO'];
+      pills.forEach(p => {
+        const btn = document.getElementById(`filter-btn-${p}`);
+        if (btn) {
+          if (p === filterType) {
+            btn.className = "px-3 py-1.5 rounded-lg text-xs font-bold bg-royal-navy text-white transition";
+          } else {
+            btn.className = "px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition";
+          }
+        }
+      });
+      renderStaffActivityViewWeb();
+    }
+
+    function exportStaffActivityLogsCsvWeb() {
+      const logs = state.staffActivityLogs || [];
+      if (logs.length === 0) {
+        Swal.fire('No Logs', 'Activity audit log is currently empty.', 'info');
+        return;
+      }
+
+      let csv = 'Timestamp,Staff Member,Role,Action Type,Description\n';
+      logs.forEach(l => {
+        const timeClean = `"${l.timestamp}"`;
+        const staffClean = `"${l.staffName.replace(/"/g, '""')}"`;
+        const roleClean = `"${(l.staffRole || '').replace(/"/g, '""')}"`;
+        const actionClean = `"${l.actionType}"`;
+        const descClean = `"${l.description.replace(/"/g, '""')}"`;
+        csv += `${timeClean},${staffClean},${roleClean},${actionClean},${descClean}\n`;
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.setAttribute('download', `Royal_Pharmacy_Staff_Activity_Logs_${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      Swal.fire('Export Complete', 'Staff activity log exported as CSV file.', 'success');
+    }
+
+    function simulateSampleStaffActivityWeb() {
+      const samples = [
+        {
+          action: "BILL_GENERATED",
+          staff: "Nijamuddin Khan",
+          desc: "Generated Cash Memo #" + (Math.floor(Math.random() * 9000) + 1000) + " for ₹" + (Math.floor(Math.random() * 1400) + 120) + ".00 (Patient: Walk-in)",
+          color: "#10B981"
+        },
+        {
+          action: "STOCK_UPDATED",
+          staff: "Rahul Sharma",
+          desc: "Adjusted inventory stock for 'Amoxicillin 500mg Capsule': +30 units (Stock now 880)",
+          color: "#3B82F6"
+        },
+        {
+          action: "PO_CREATED",
+          staff: "Rahul Sharma",
+          desc: "Drafted Purchase Order for distributor 'MediLife Supplies' (4 products)",
+          color: "#F59E0B"
+        }
+      ];
+
+      const sample = samples[Math.floor(Math.random() * samples.length)];
+      logStaffActivityWeb(sample.action, sample.staff, sample.desc, sample.color);
+      Swal.fire('Activity Logged', sample.desc, 'info');
+    }
+
+    // Modal to directly update stock and log staff activity
+    function quickUpdateMedicineStockWeb(medicineName) {
+      const drug = state.drugDatabase.find(d => d.name === medicineName) || state.drugDatabase[0];
+      if (!drug) return;
+
+      Swal.fire({
+        title: `Update Stock: ${drug.name}`,
+        html: `
+          <div class="space-y-3 text-left p-1 text-xs text-slate-600">
+            <p>Current Available Stock: <strong class="text-slate-800">${drug.stock} strips</strong></p>
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Stock Adjustment (+ or -)</label>
+              <input type="number" id="quick-stock-change" value="20" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:ring-1 focus:ring-pink-500 outline-none">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Reason for Adjustment</label>
+              <select id="quick-stock-reason" class="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs bg-white outline-none">
+                <option value="Distributor Receipt">Received from Distributor</option>
+                <option value="Physical Audit">Physical Inventory Audit</option>
+                <option value="Customer Return">Customer Return</option>
+                <option value="Damaged / Expired">Damaged / Expired Write-off</option>
+              </select>
+            </div>
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonColor: '#9C1258',
+        confirmButtonText: 'Apply Stock Adjustment'
+      }).then(res => {
+        if (res.isConfirmed) {
+          const change = parseInt(document.getElementById('quick-stock-change').value) || 0;
+          const reason = document.getElementById('quick-stock-reason').value;
+          drug.stock = Math.max(0, drug.stock + change);
+          saveStateToLocal();
+          syncUiState();
+          if (typeof searchDrugs === 'function') searchDrugs();
+
+          logStaffActivityWeb(
+            "STOCK_UPDATED",
+            state.userName,
+            `Stock adjusted for '${drug.name}': ${change >= 0 ? '+' : ''}${change} strips (New Stock: ${drug.stock}) [${reason}]`,
+            "#3B82F6"
+          );
+
+          Swal.fire('Stock Updated', `New stock for ${drug.name}: ${drug.stock} strips`, 'success');
         }
       });
     }
@@ -2806,6 +3807,16 @@
 
     // Billing Logic POS
     function addItemToCurrentBill() {
+      if (state.role === 'STAFF' && state.activeStaffPermission === 'View-only access') {
+        Swal.fire({
+          title: 'View-Only Access',
+          text: 'This staff account has View-Only access permissions (read-only drug catalog). Modifying sales bills is restricted.',
+          icon: 'warning',
+          confirmButtonColor: '#9C1258'
+        });
+        return;
+      }
+
       const selectName = document.getElementById('add-item-select').value;
       const qty = parseInt(document.getElementById('add-item-qty').value) || 1;
       const mrp = parseFloat(document.getElementById('add-item-mrp').value) || 0.0;
@@ -2943,6 +3954,16 @@
     }
 
     function checkoutSale() {
+      if (state.role === 'STAFF' && state.activeStaffPermission === 'View-only access') {
+        Swal.fire({
+          title: 'View-Only Access',
+          text: 'This staff account has View-Only access permissions. Processing sales checkouts is restricted.',
+          icon: 'warning',
+          confirmButtonColor: '#9C1258'
+        });
+        return;
+      }
+
       if (state.currentSale.items.length === 0) {
         Swal.fire('Empty Sales Bill', 'Please add items to memo cart before check out.', 'warning');
         return;
@@ -2951,6 +3972,20 @@
       state.currentSale.customerName = document.getElementById('bill-customer').value || "Walk-in Customer";
       state.currentSale.doctorName = document.getElementById('bill-doctor').value || "Dr. Self / None";
       state.currentSale.paymentMode = document.getElementById('bill-payment').value;
+
+      const billTotal = state.currentSale.items.reduce((sum, it) => sum + (it.total || (it.qty * it.mrp) || 0), 0);
+      const itemCount = state.currentSale.items.length;
+      const custName = state.currentSale.customerName;
+      const payMode = state.currentSale.paymentMode;
+      const invNo = "INV-" + (Math.floor(Math.random() * 9000) + 1000);
+
+      // Log bill generated
+      logStaffActivityWeb(
+        "BILL_GENERATED",
+        state.userName,
+        `Generated Cash Memo #${invNo} for ₹${billTotal.toFixed(2)} (${itemCount} items, Customer: ${custName}, Pay: ${payMode})`,
+        "#10B981"
+      );
 
       Swal.fire({
         title: 'Checking Out Cash Memo...',
@@ -4583,6 +5618,14 @@
           }
           
           Swal.fire('Success', `Updated ${updateCount} medicines from Excel successfully.`, 'success');
+          if (updateCount > 0) {
+            logStaffActivityWeb(
+              "STOCK_UPDATED",
+              state.userName,
+              `Bulk imported inventory & price updates for ${updateCount} medicines from Excel file`,
+              "#3B82F6"
+            );
+          }
           if (typeof searchDrugs === 'function') searchDrugs();
           saveStateToLocal();
           input.value = '';
@@ -5932,11 +6975,19 @@
               if (matchedStaff) {
                 state.userName = matchedStaff.name;
                 state.userEmail = matchedStaff.email;
+                state.activeStaffPermission = matchedStaff.permission || "POS-only access";
                 matchedStaff.lastLoginTime = "Just now";
               } else {
                 state.userName = "Nijamuddin Khan (Staff)";
                 state.userEmail = "khannijamuddin87275@gmail.com";
+                state.activeStaffPermission = "POS-only access";
               }
+              logStaffActivityWeb(
+                "STAFF_LOGIN",
+                state.userName,
+                `Staff logged in via Mobile OTP (${state.activeStaffPermission})`,
+                "#0284C7"
+              );
             }
           }
 
@@ -6015,11 +7066,67 @@
       if (window.lucide) lucide.createIcons();
     }
 
+    function quickStaffDirectLoginWeb(staffId = 's-1') {
+      const member = state.staffMembers.find(s => s.id === staffId) || state.staffMembers[0] || {
+        id: 's-1',
+        name: 'Nijamuddin Khan',
+        phone: '+91 9435078210',
+        email: 'khannijamuddin87275@gmail.com',
+        permission: 'POS-only access',
+        designation: 'Senior Chemist Counter'
+      };
+
+      state.isLoggedIn = true;
+      state.role = 'STAFF';
+      state.userName = member.name;
+      state.userEmail = member.email || 'staff@royal.com';
+      state.userPhone = member.phone;
+      state.activeStaffPermission = member.permission || 'POS-only access';
+      member.lastLoginTime = 'Just now';
+
+      saveStateToLocal();
+      syncUiState();
+
+      logStaffActivityWeb(
+        "STAFF_LOGIN",
+        member.name,
+        `Logged in as Staff (${member.permission || 'POS-only access'}) via Instant Access`,
+        "#0284C7"
+      );
+
+      Swal.fire({
+        title: 'Welcome!',
+        text: `Operating as Staff Chemist: ${member.name} (${member.permission})`,
+        icon: 'success',
+        confirmButtonColor: '#9C1258'
+      });
+      showLiveSyncNotification("Logged In", `Active staff session: ${member.name}`, "check-circle");
+    }
+
     function selectGoogleWeb(email, name, role) {
       state.isLoggedIn = true;
       state.userEmail = email;
       state.userName = name;
       state.role = role;
+      if (role === 'STAFF') {
+        const matched = state.staffMembers.find(s => s.email.toLowerCase() === email.toLowerCase());
+        state.activeStaffPermission = matched ? (matched.permission || 'POS-only access') : 'POS-only access';
+        if (matched) matched.lastLoginTime = "Just now";
+        logStaffActivityWeb(
+          "STAFF_LOGIN",
+          name,
+          `Staff authenticated via Google Account (${state.activeStaffPermission})`,
+          "#0284C7"
+        );
+      } else {
+        state.activeStaffPermission = 'FULL_ACCESS';
+        logStaffActivityWeb(
+          "STAFF_LOGIN",
+          "Owner Principal",
+          `Owner authenticated via Google Account (${email})`,
+          "#9C1258"
+        );
+      }
       saveStateToLocal();
       syncUiState();
       Swal.close();

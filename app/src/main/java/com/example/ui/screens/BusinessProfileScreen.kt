@@ -7,6 +7,7 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -21,6 +22,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -30,18 +32,27 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FileUpload
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.ManageAccounts
+import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -50,11 +61,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import com.example.viewmodel.StaffMember
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -101,7 +116,10 @@ fun BusinessProfileScreen(
   val profile by viewModel.businessProfile.collectAsState()
 
   var selectedTabIndex by remember { mutableIntStateOf(0) }
-  val tabs = listOf("BASIC", "LICENSE", "TAXATION", "LOCATION", "TIMINGS", "DATA IMPORT")
+  val tabs = listOf("BASIC", "LICENSE", "TAXATION", "LOCATION", "TIMINGS", "STAFF & PERMISSIONS", "DATA IMPORT")
+
+  val staffMembers by viewModel.staffMembers.collectAsState()
+  var showAddStaffDialog by remember { mutableStateOf(false) }
 
   // Editable Form states initialized from persistent profile
   var businessName by remember(profile) { mutableStateOf(profile.businessName) }
@@ -553,7 +571,96 @@ fun BusinessProfileScreen(
           }
 
           5 -> {
-            // TAB 5: DATA IMPORT
+            // TAB 5: STAFF & PERMISSIONS
+            item {
+              Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                // Header & Add Button
+                Row(
+                  modifier = Modifier.fillMaxWidth(),
+                  horizontalArrangement = Arrangement.SpaceBetween,
+                  verticalAlignment = Alignment.CenterVertically
+                ) {
+                  Column {
+                    Text(
+                      text = "Staff Members & Role Permissions",
+                      fontSize = 15.sp,
+                      fontWeight = FontWeight.Bold,
+                      color = TextDark
+                    )
+                    Text(
+                      text = "${staffMembers.size} registered staff members",
+                      fontSize = 11.sp,
+                      color = TextMuted
+                    )
+                  }
+
+                  Button(
+                    onClick = { showAddStaffDialog = true },
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = RoyalNavy),
+                    modifier = Modifier.testTag("btn_add_staff_profile")
+                  ) {
+                    Icon(Icons.Default.PersonAdd, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.White)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Add Staff", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                  }
+                }
+
+                // RBAC Explainer Banner
+                Card(
+                  shape = RoundedCornerShape(10.dp),
+                  colors = CardDefaults.cardColors(containerColor = Color(0xFFF0FDF4)),
+                  border = BorderStroke(1.dp, Color(0xFFBBF7D0)),
+                  modifier = Modifier.fillMaxWidth()
+                ) {
+                  Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.Top) {
+                    Icon(Icons.Default.Security, contentDescription = null, tint = Color(0xFF16A34A), modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                      Text("Granular Role-Based Access Control", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFF15803D))
+                      Text("Define strict access levels: POS-Only (billing only), View-Only (catalog search), Inventory & Billing, or Full Pharmacist.", fontSize = 10.5.sp, color = Color(0xFF166534))
+                    }
+                  }
+                }
+
+                // Staff Cards
+                staffMembers.forEach { staff ->
+                  StaffProfileItemCard(
+                    staff = staff,
+                    onUpdatePermission = { newPerm -> viewModel.updateStaffPermission(staff.id, newPerm) },
+                    onRemove = { viewModel.removeStaffMember(staff.id) }
+                  )
+                }
+
+                // Audit Trail Navigation Card
+                Card(
+                  shape = RoundedCornerShape(10.dp),
+                  colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC)),
+                  border = BorderStroke(1.dp, CardBorder),
+                  modifier = Modifier.fillMaxWidth().clickable { viewModel.navigateTo(Screen.STAFF_ACTIVITY) }
+                ) {
+                  Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                  ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                      Icon(Icons.Default.History, contentDescription = null, tint = RoyalMagenta, modifier = Modifier.size(20.dp))
+                      Spacer(modifier = Modifier.width(10.dp))
+                      Column {
+                        Text("View Staff Activity Audit Log", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextDark)
+                        Text("Inspect real-time logs of billing, stock changes & staff actions", fontSize = 10.sp, color = TextMuted)
+                      }
+                    }
+                    Text("View Log >", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = RoyalMagenta)
+                  }
+                }
+              }
+            }
+          }
+
+          6 -> {
+            // TAB 6: DATA IMPORT
             item {
               Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Text(
@@ -667,6 +774,16 @@ fun BusinessProfileScreen(
           showSavedBanner = true
         },
         onDismiss = { showLocationPicker = false }
+      )
+    }
+
+    if (showAddStaffDialog) {
+      AddStaffMemberDialog(
+        onDismiss = { showAddStaffDialog = false },
+        onConfirm = { name, email, phone, loginType, permission, designation ->
+          viewModel.addStaffMember(name, email, phone, loginType, permission, designation)
+          showAddStaffDialog = false
+        }
       )
     }
   }
@@ -793,4 +910,284 @@ fun SaveButton(onClick: () -> Unit) {
       color = Color.White
     )
   }
+}
+
+@Composable
+fun StaffProfileItemCard(
+  staff: StaffMember,
+  onUpdatePermission: (String) -> Unit,
+  onRemove: () -> Unit
+) {
+  var showPermissionMenu by remember { mutableStateOf(false) }
+
+  val permColor = when {
+    staff.permission.contains("POS-only", ignoreCase = true) -> Color(0xFF10B981)
+    staff.permission.contains("View-only", ignoreCase = true) -> Color(0xFF64748B)
+    staff.permission.contains("Inventory", ignoreCase = true) -> Color(0xFF3B82F6)
+    else -> Color(0xFF8B5CF6)
+  }
+
+  Card(
+    shape = RoundedCornerShape(12.dp),
+    colors = CardDefaults.cardColors(containerColor = Color.White),
+    border = BorderStroke(1.dp, CardBorder),
+    modifier = Modifier.fillMaxWidth()
+  ) {
+    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+      ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Box(
+            modifier = Modifier
+              .size(38.dp)
+              .clip(CircleShape)
+              .background(RoyalNavy.copy(alpha = 0.1f)),
+            contentAlignment = Alignment.Center
+          ) {
+            Text(
+              text = staff.name.take(2).uppercase(),
+              fontWeight = FontWeight.Bold,
+              fontSize = 13.sp,
+              color = RoyalNavy
+            )
+          }
+          Spacer(modifier = Modifier.width(10.dp))
+          Column {
+            Text(text = staff.name, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextDark)
+            Text(text = staff.designation, fontSize = 11.sp, color = TextMuted)
+          }
+        }
+
+        IconButton(onClick = onRemove) {
+          Icon(Icons.Default.Delete, contentDescription = "Remove Staff", tint = Color(0xFFEF4444), modifier = Modifier.size(18.dp))
+        }
+      }
+
+      // Contact & Auth details
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        Text("Phone: ${staff.phone}", fontSize = 11.sp, color = TextDark)
+        Box(
+          modifier = Modifier
+            .clip(RoundedCornerShape(4.dp))
+            .background(if (staff.loginType == "GMAIL") Color(0xFFFCE4EC) else Color(0xFFEFF6FF))
+            .padding(horizontal = 6.dp, vertical = 2.dp)
+        ) {
+          Text(
+            text = if (staff.loginType == "GMAIL") "Gmail Auth" else "Phone OTP",
+            fontSize = 9.sp,
+            color = if (staff.loginType == "GMAIL") RoyalMagenta else Color(0xFF1D4ED8),
+            fontWeight = FontWeight.Bold
+          )
+        }
+      }
+
+      // Role Permission Badge & Quick Switcher
+      Row(
+        modifier = Modifier
+          .fillMaxWidth()
+          .background(Color(0xFFF8FAFC), RoundedCornerShape(8.dp))
+          .padding(horizontal = 10.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+      ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Icon(Icons.Default.Security, contentDescription = null, tint = permColor, modifier = Modifier.size(14.dp))
+          Spacer(modifier = Modifier.width(6.dp))
+          Column {
+            Text("Assigned Access Rule:", fontSize = 9.sp, color = TextMuted)
+            Text(
+              text = staff.permission,
+              fontSize = 11.5.sp,
+              fontWeight = FontWeight.Bold,
+              color = permColor
+            )
+          }
+        }
+
+        Box {
+          TextButton(onClick = { showPermissionMenu = true }) {
+            Text("Change >", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = RoyalNavy)
+          }
+
+          DropdownMenu(
+            expanded = showPermissionMenu,
+            onDismissRequest = { showPermissionMenu = false }
+          ) {
+            DropdownMenuItem(
+              text = { Text("POS-only access (Billing Only)", fontSize = 12.sp) },
+              onClick = {
+                onUpdatePermission("POS-only access")
+                showPermissionMenu = false
+              }
+            )
+            DropdownMenuItem(
+              text = { Text("View-only access (Catalog Read-Only)", fontSize = 12.sp) },
+              onClick = {
+                onUpdatePermission("View-only access")
+                showPermissionMenu = false
+              }
+            )
+            DropdownMenuItem(
+              text = { Text("Inventory & Billing access", fontSize = 12.sp) },
+              onClick = {
+                onUpdatePermission("Inventory & Billing access")
+                showPermissionMenu = false
+              }
+            )
+            DropdownMenuItem(
+              text = { Text("Full Pharmacist access", fontSize = 12.sp) },
+              onClick = {
+                onUpdatePermission("Full Pharmacist access")
+                showPermissionMenu = false
+              }
+            )
+          }
+        }
+      }
+    }
+  }
+}
+
+@Composable
+fun AddStaffMemberDialog(
+  onDismiss: () -> Unit,
+  onConfirm: (name: String, email: String, phone: String, loginType: String, permission: String, designation: String) -> Unit
+) {
+  var name by remember { mutableStateOf("") }
+  var phone by remember { mutableStateOf("") }
+  var email by remember { mutableStateOf("") }
+  var loginType by remember { mutableStateOf("PHONE") }
+  var permission by remember { mutableStateOf("POS-only access") }
+  var designation by remember { mutableStateOf("Billing Chemist") }
+
+  val permissionOptions = listOf(
+    "POS-only access" to "Billing counter & quick sales only (Restricted from editing stock)",
+    "View-only access" to "Read-only catalog, search medicines, view customer records",
+    "Inventory & Billing access" to "Full POS billing + Stock updates, batch tracking & POs",
+    "Full Pharmacist access" to "Complete operations: Clinical tools, inventory, POS & receipts"
+  )
+
+  AlertDialog(
+    onDismissRequest = onDismiss,
+    title = {
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Default.PersonAdd, contentDescription = null, tint = RoyalNavy)
+        Spacer(modifier = Modifier.width(8.dp))
+        Text("Add New Staff Member", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+      }
+    },
+    text = {
+      LazyColumn(
+        modifier = Modifier.fillMaxWidth().heightIn(max = 420.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+      ) {
+        item {
+          OutlinedTextField(
+            value = name,
+            onValueChange = { name = it },
+            label = { Text("Staff Full Name *") },
+            placeholder = { Text("e.g. Asif Rahman") },
+            modifier = Modifier.fillMaxWidth().testTag("input_staff_name")
+          )
+        }
+        item {
+          OutlinedTextField(
+            value = phone,
+            onValueChange = { phone = it },
+            label = { Text("Mobile Number (10 digits) *") },
+            placeholder = { Text("9876543210") },
+            modifier = Modifier.fillMaxWidth().testTag("input_staff_phone")
+          )
+        }
+        item {
+          OutlinedTextField(
+            value = email,
+            onValueChange = { email = it },
+            label = { Text("Email Address") },
+            placeholder = { Text("asif.rahman@royal.com") },
+            modifier = Modifier.fillMaxWidth().testTag("input_staff_email")
+          )
+        }
+        item {
+          OutlinedTextField(
+            value = designation,
+            onValueChange = { designation = it },
+            label = { Text("Designation / Counter Shift") },
+            placeholder = { Text("e.g. Senior Chemist / Cashier") },
+            modifier = Modifier.fillMaxWidth()
+          )
+        }
+        item {
+          Text("Allowed Login Auth", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextDark)
+          Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { loginType = "PHONE" }) {
+              RadioButton(selected = loginType == "PHONE", onClick = { loginType = "PHONE" })
+              Text("Phone OTP", fontSize = 11.sp)
+            }
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { loginType = "GMAIL" }) {
+              RadioButton(selected = loginType == "GMAIL", onClick = { loginType = "GMAIL" })
+              Text("Gmail Auth", fontSize = 11.sp)
+            }
+          }
+        }
+        item {
+          Text("Role-Based Access Permissions *", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextDark)
+        }
+        items(permissionOptions.size) { idx ->
+          val (permTitle, permDesc) = permissionOptions[idx]
+          val isSelected = permission == permTitle
+          Card(
+            shape = RoundedCornerShape(8.dp),
+            colors = CardDefaults.cardColors(
+              containerColor = if (isSelected) RoyalNavy.copy(alpha = 0.06f) else Color(0xFFFAFAFA)
+            ),
+            border = BorderStroke(1.dp, if (isSelected) RoyalNavy else CardBorder),
+            modifier = Modifier.fillMaxWidth().clickable { permission = permTitle }
+          ) {
+            Row(
+              modifier = Modifier.padding(10.dp),
+              verticalAlignment = Alignment.CenterVertically
+            ) {
+              RadioButton(
+                selected = isSelected,
+                onClick = { permission = permTitle },
+                colors = RadioButtonDefaults.colors(selectedColor = RoyalNavy)
+              )
+              Spacer(modifier = Modifier.width(6.dp))
+              Column {
+                Text(permTitle, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextDark)
+                Text(permDesc, fontSize = 10.sp, color = TextMuted)
+              }
+            }
+          }
+        }
+      }
+    },
+    confirmButton = {
+      Button(
+        onClick = {
+          if (name.isNotBlank() && phone.isNotBlank()) {
+            onConfirm(name, email, phone, loginType, permission, designation)
+          }
+        },
+        enabled = name.isNotBlank() && phone.isNotBlank(),
+        colors = ButtonDefaults.buttonColors(containerColor = RoyalNavy),
+        modifier = Modifier.testTag("btn_confirm_add_staff")
+      ) {
+        Text("Save & Grant Access", fontWeight = FontWeight.Bold)
+      }
+    },
+    dismissButton = {
+      TextButton(onClick = onDismiss) {
+        Text("Cancel", color = TextMuted)
+      }
+    }
+  )
 }

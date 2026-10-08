@@ -98,7 +98,8 @@ enum class Screen {
   SMART_INVENTORY_SUGGESTIONS,
   DOCTOR_MANAGEMENT,
   SYMPTOM_DISEASE_TRACKER,
-  ROLE_MANAGEMENT
+  ROLE_MANAGEMENT,
+  STAFF_ACTIVITY
 }
 
 enum class BatchRiskTier {
@@ -386,13 +387,93 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
   // Reactive Staff Members Management
   val staffMembers = MutableStateFlow<List<StaffMember>>(
     listOf(
-      StaffMember("s-1", "Nijamuddin Khan", "khannijamuddin87275@gmail.com", "+91 94350 78210", "Today at 02:15 PM", "GMAIL"),
-      StaffMember("s-2", "Rahul Sharma", "rahul.sharma@royal.com", "+91 98765 43210", "Yesterday at 11:30 AM", "PHONE"),
-      StaffMember("s-3", "Priya Das", "priya.das@royal.com", "+91 88123 45678", "05-Oct-2026 06:12 PM", "GMAIL")
+      StaffMember("s-1", "Nijamuddin Khan", "khannijamuddin87275@gmail.com", "+91 94350 78210", "Today at 02:15 PM", "GMAIL", permission = "POS-only access", designation = "Senior Billing Chemist"),
+      StaffMember("s-2", "Rahul Sharma", "rahul.sharma@royal.com", "+91 98765 43210", "Yesterday at 11:30 AM", "PHONE", permission = "Inventory & Billing access", designation = "Stock & Inventory Lead"),
+      StaffMember("s-3", "Priya Das", "priya.das@royal.com", "+91 88123 45678", "05-Oct-2026 06:12 PM", "GMAIL", permission = "View-only access", designation = "Trainee Pharmacist")
     )
   )
 
-  fun addStaffMember(name: String, email: String, phone: String, loginType: String) {
+  // Reactive Staff Activity Audit Log
+  val staffActivityLogs = MutableStateFlow<List<StaffActivityLog>>(
+    listOf(
+      StaffActivityLog(
+        id = "act-1",
+        staffName = "Nijamuddin Khan",
+        staffRole = "POS-only access",
+        actionType = "BILL_GENERATED",
+        description = "Generated Cash Memo #INV-1029 for ₹850.00 (Patient: Rahul Roy)",
+        timestamp = "Today at 02:20 PM",
+        badgeColorHex = 0xFF10B981
+      ),
+      StaffActivityLog(
+        id = "act-2",
+        staffName = "Rahul Sharma",
+        staffRole = "Inventory & Billing access",
+        actionType = "STOCK_UPDATED",
+        description = "Updated stock quantity for Dolo 650mg (+100 Strips on Shelf A-2)",
+        timestamp = "Today at 11:45 AM",
+        badgeColorHex = 0xFF3B82F6
+      ),
+      StaffActivityLog(
+        id = "act-3",
+        staffName = "Suleman Hoque (Owner)",
+        staffRole = "Owner",
+        actionType = "STAFF_ADDED",
+        description = "Registered new staff Priya Das with 'View-only access' permission",
+        timestamp = "Yesterday at 04:30 PM",
+        badgeColorHex = 0xFF9C1258
+      ),
+      StaffActivityLog(
+        id = "act-4",
+        staffName = "Nijamuddin Khan",
+        staffRole = "POS-only access",
+        actionType = "BILL_GENERATED",
+        description = "Processed QuickScan sale #INV-1028 for ₹420.00 via UPI",
+        timestamp = "Yesterday at 03:15 PM",
+        badgeColorHex = 0xFF10B981
+      ),
+      StaffActivityLog(
+        id = "act-5",
+        staffName = "Rahul Sharma",
+        staffRole = "Inventory & Billing access",
+        actionType = "STOCK_UPDATED",
+        description = "Imported batch expiry updates for Azithromycin 500mg (Batch AZ-902)",
+        timestamp = "05-Oct-2026 05:10 PM",
+        badgeColorHex = 0xFF3B82F6
+      )
+    )
+  )
+
+  fun logStaffActivity(
+    staffName: String,
+    staffRole: String = "Staff",
+    actionType: String,
+    description: String,
+    badgeColorHex: Long = 0xFF2563EB
+  ) {
+    val simpleTime = SimpleDateFormat("dd-MMM-yyyy hh:mm a", Locale.getDefault()).format(Date())
+    val entry = StaffActivityLog(
+      id = "act-${System.currentTimeMillis()}",
+      staffName = staffName,
+      staffRole = staffRole,
+      actionType = actionType,
+      description = description,
+      timestamp = simpleTime,
+      badgeColorHex = badgeColorHex
+    )
+    val list = staffActivityLogs.value.toMutableList()
+    list.add(0, entry)
+    staffActivityLogs.value = list
+  }
+
+  fun addStaffMember(
+    name: String, 
+    email: String, 
+    phone: String, 
+    loginType: String,
+    permission: String = "POS-only access",
+    designation: String = "Chemist Counter Staff"
+  ) {
     val newList = staffMembers.value.toMutableList()
     val simpleTime = SimpleDateFormat("dd-MMM-yyyy hh:mm a", Locale.getDefault()).format(Date())
     newList.add(
@@ -402,16 +483,48 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
         email = email,
         phone = phone,
         lastLoginTime = "Registered on $simpleTime",
-        loginType = loginType
+        loginType = loginType,
+        permission = permission,
+        designation = designation
       )
     )
     staffMembers.value = newList
-    scanFeedbackMessage.value = "Successfully registered new staff: $name"
+    logStaffActivity(
+      staffName = if (currentUserRole.value == UserRole.OWNER) "Owner" else name,
+      staffRole = currentUserRole.value.label,
+      actionType = "STAFF_ADDED",
+      description = "Registered new staff '$name' with $permission permission",
+      badgeColorHex = 0xFF9C1258
+    )
+    scanFeedbackMessage.value = "Successfully registered new staff: $name ($permission)"
+  }
+
+  fun updateStaffPermission(id: String, newPermission: String) {
+    val member = staffMembers.value.firstOrNull { it.id == id } ?: return
+    staffMembers.value = staffMembers.value.map {
+      if (it.id == id) it.copy(permission = newPermission) else it
+    }
+    logStaffActivity(
+      staffName = if (currentUserRole.value == UserRole.OWNER) "Owner" else member.name,
+      staffRole = currentUserRole.value.label,
+      actionType = "PERMISSION_UPDATED",
+      description = "Updated permissions for '${member.name}' to: $newPermission",
+      badgeColorHex = 0xFF8B5CF6
+    )
+    scanFeedbackMessage.value = "Updated permissions for ${member.name}: $newPermission"
   }
 
   fun removeStaffMember(id: String) {
-    val memberName = staffMembers.value.firstOrNull { it.id == id }?.name ?: "Staff"
+    val member = staffMembers.value.firstOrNull { it.id == id }
+    val memberName = member?.name ?: "Staff"
     staffMembers.value = staffMembers.value.filter { it.id != id }
+    logStaffActivity(
+      staffName = if (currentUserRole.value == UserRole.OWNER) "Owner" else "Admin",
+      staffRole = currentUserRole.value.label,
+      actionType = "STAFF_REMOVED",
+      description = "Revoked access for staff '$memberName'",
+      badgeColorHex = 0xFFEF4444
+    )
     scanFeedbackMessage.value = "Removed staff access: $memberName"
   }
 
@@ -1075,6 +1188,14 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
       val itemQuantities = items.map { Pair(it.medicineId, it.packQty) }
       repository.createSale(invoice, itemQuantities)
 
+      logStaffActivity(
+        staffName = if (currentUserRole.value == UserRole.OWNER) "Owner" else (staffMembers.value.firstOrNull { it.phone.endsWith(currentUserPhone.value.takeLast(6)) }?.name ?: "Counter Staff"),
+        staffRole = currentUserRole.value.label,
+        actionType = "BILL_GENERATED",
+        description = "Generated Cash Memo #${invoice.invoiceNumber} for ₹${String.format(Locale.getDefault(), "%.2f", grandTotal)} (${items.size} items, Mode: $paymentMode)",
+        badgeColorHex = 0xFF10B981
+      )
+
       // If Udhar (Credit), record in Udhar Khata!
       if (isUdhar && billingCustomerName.value.isNotBlank()) {
         val existingCust = allCustomers.value.firstOrNull {
@@ -1736,11 +1857,29 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
   }
 
   fun addNewMedicine(medicine: MedicineItem) {
-    viewModelScope.launch { repository.insertMedicine(medicine) }
+    viewModelScope.launch { 
+      repository.insertMedicine(medicine)
+      logStaffActivity(
+        staffName = if (currentUserRole.value == UserRole.OWNER) "Owner" else "Staff",
+        staffRole = currentUserRole.value.label,
+        actionType = "STOCK_UPDATED",
+        description = "Catalog addition: Added new medicine '${medicine.name}' (Stock: ${medicine.stockPacks} packs)",
+        badgeColorHex = 0xFF3B82F6
+      )
+    }
   }
 
   fun updateMedicine(medicine: MedicineItem) {
-    viewModelScope.launch(Dispatchers.IO) { repository.updateMedicine(medicine) }
+    viewModelScope.launch(Dispatchers.IO) { 
+      repository.updateMedicine(medicine)
+      logStaffActivity(
+        staffName = if (currentUserRole.value == UserRole.OWNER) "Owner" else "Staff",
+        staffRole = currentUserRole.value.label,
+        actionType = "STOCK_UPDATED",
+        description = "Stock update: '${medicine.name}' (Qty: ${medicine.stockPacks} packs, MRP: ₹${medicine.mrp})",
+        badgeColorHex = 0xFF3B82F6
+      )
+    }
   }
 
   fun addNewCustomer(name: String, phone: String, email: String, doctor: String) {
@@ -2212,5 +2351,17 @@ data class StaffMember(
   val phone: String = "",
   val lastLoginTime: String,
   val loginType: String,
-  val status: String = "ACTIVE"
+  val status: String = "ACTIVE",
+  val permission: String = "POS-only access", // POS-only access, View-only access, Inventory & Billing access, Full Pharmacist access
+  val designation: String = "Chemist Counter Staff"
+)
+
+data class StaffActivityLog(
+  val id: String,
+  val staffName: String,
+  val staffRole: String = "Staff",
+  val actionType: String, // BILL_GENERATED, STOCK_UPDATED, STAFF_ADDED, STAFF_REMOVED, PERMISSION_UPDATED, PO_CREATED
+  val description: String,
+  val timestamp: String,
+  val badgeColorHex: Long = 0xFF2563EB
 )

@@ -65,6 +65,7 @@ import com.example.ui.screens.PurchasesScreen
 import com.example.ui.screens.QuickScanScreen
 import com.example.ui.screens.ReportsScreen
 import com.example.ui.screens.RoleManagementScreen
+import com.example.ui.screens.StaffActivityScreen
 import com.example.ui.screens.SalesScreen
 import com.example.ui.screens.SearchAnythingScreen
 import com.example.ui.screens.SmartDosageCalculatorScreen
@@ -258,6 +259,7 @@ fun RoyalPharmacyApp(
         Screen.DOCTOR_MANAGEMENT -> DoctorManagementScreen(viewModel = viewModel)
         Screen.SYMPTOM_DISEASE_TRACKER -> DiseaseTrackerScreen(viewModel = viewModel)
         Screen.ROLE_MANAGEMENT -> RoleManagementScreen(viewModel = viewModel)
+        Screen.STAFF_ACTIVITY -> StaffActivityScreen(viewModel = viewModel)
       }
 
       // Quick Actions Bottom Sheet
