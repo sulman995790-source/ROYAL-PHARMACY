@@ -4624,7 +4624,7 @@
                 <input type="number" 
                        value="${minStockLevel}" 
                        min="1" max="100000" 
-                       onchange="updateDrugReorderLevel('${escapeHtml(item.name)}', this.value)"
+                       onchange="updateDrugReorderLevel('${escapeHtml(escapeJsParam(item.name))}', this.value)"
                        class="w-16 text-center text-xs font-extrabold bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded py-1 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-pink-500 shadow-sm"
                        title="Edit Reorder Threshold level for ${escapeHtml(item.name)}" />
                 <span class="text-[10px] text-slate-500 font-bold pr-0.5">units</span>
@@ -4634,8 +4634,8 @@
             <td class="px-6 py-4 text-center text-xs font-bold text-pink-600">${escapeHtml(item.safety || '')}</td>
             <td class="px-6 py-4 text-center">
               <div class="flex items-center justify-center space-x-1.5">
-                <button onclick="requestStockToCart('${escapeHtml(item.name)}', ${item.price})" class="bg-royal-magenta text-white px-2.5 py-1 rounded text-xs hover:bg-royal-accent font-semibold transition" title="Add to Required Purchases">Purchase</button>
-                <button onclick="openQrBatchModalWeb('${escapeHtml(item.name)}')" class="bg-slate-800 text-white hover:bg-slate-900 px-2 py-1 rounded text-xs font-semibold flex items-center space-x-1 transition shadow-sm border border-slate-700" title="Generate printable batch QR label">
+                <button onclick="requestStockToCart('${escapeHtml(escapeJsParam(item.name))}', ${item.price})" class="bg-royal-magenta text-white px-2.5 py-1 rounded text-xs hover:bg-royal-accent font-semibold transition" title="Add to Required Purchases">Purchase</button>
+                <button onclick="openQrBatchModalWeb('${escapeHtml(escapeJsParam(item.name))}')" class="bg-slate-800 text-white hover:bg-slate-900 px-2 py-1 rounded text-xs font-semibold flex items-center space-x-1 transition shadow-sm border border-slate-700" title="Generate printable batch QR label">
                   <i data-lucide="qr-code" class="w-3.5 h-3.5"></i>
                   <span>QR Batch</span>
                 </button>
@@ -6481,6 +6481,11 @@
       return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
     }
 
+    function escapeJsParam(str) {
+      if (!str) return '';
+      return str.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
+    }
+
     // ==========================================
     // UDHAR KHATA (CUSTOMER CREDIT LEDGER) LOGIC
     // ==========================================
@@ -7195,7 +7200,7 @@
               <div class="${isUrgent ? 'bg-red-600' : 'bg-red-500'} h-full" style="width: ${Math.min(100, (drug.stock / (drug.reorderLevel || 15)) * 100)}%"></div>
             </div>
           </div>
-          <button onclick="addLowStockToPurchaseOrder('${escapeHtml(drug.name)}')" class="mt-2.5 w-full bg-royal-magenta text-white py-1.5 rounded-lg text-[11px] font-bold hover:bg-royal-accent transition flex items-center justify-center space-x-1 shadow-sm">
+          <button onclick="addLowStockToPurchaseOrder('${escapeHtml(escapeJsParam(drug.name))}')" class="mt-2.5 w-full bg-royal-magenta text-white py-1.5 rounded-lg text-[11px] font-bold hover:bg-royal-accent transition flex items-center justify-center space-x-1 shadow-sm">
             <i class="ph ph-plus-circle text-xs"></i>
             <span>1-Click + PO</span>
           </button>

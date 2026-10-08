@@ -87,16 +87,28 @@ class FirebaseSyncManager(
           if (data["_lastUpdatedBy"] == "WEB_PORTAL") {
             scope.launch(Dispatchers.IO) {
               try {
-                var item = mapToMedicineItem(data)
+                val item = mapToMedicineItem(data)
                 val existing = dao.getMedicineByName(item.name)
                 if (existing != null) {
-                  item = item.copy(
-                    id = existing.id,
-                    isEssential = existing.isEssential,
-                    isLifeSaving = existing.isLifeSaving
+                  // Merge: only update properties that are explicitly provided in Firestore,
+                  // preserving other fields already present in the device's Room database.
+                  val mergedItem = existing.copy(
+                    minStockAlert = if (data.containsKey("minStockAlert")) (data["minStockAlert"] as? Number)?.toInt() ?: existing.minStockAlert else existing.minStockAlert,
+                    manufacturer = if (data.containsKey("manufacturer") && data["manufacturer"] != null) data["manufacturer"] as? String ?: existing.manufacturer else existing.manufacturer,
+                    composition = if (data.containsKey("composition") && data["composition"] != null) data["composition"] as? String ?: existing.composition else existing.composition,
+                    saltMolecule = if (data.containsKey("saltMolecule") && data["saltMolecule"] != null) data["saltMolecule"] as? String ?: existing.saltMolecule else (if (data.containsKey("genericName") && data["genericName"] != null) data["genericName"] as? String ?: existing.saltMolecule else existing.saltMolecule),
+                    category = if (data.containsKey("category") && data["category"] != null) data["category"] as? String ?: existing.category else existing.category,
+                    hsnCode = if (data.containsKey("hsnCode") && data["hsnCode"] != null) data["hsnCode"] as? String ?: existing.hsnCode else existing.hsnCode,
+                    batchNumber = if (data.containsKey("batchNumber") && data["batchNumber"] != null) data["batchNumber"] as? String ?: existing.batchNumber else existing.batchNumber,
+                    expiryDate = if (data.containsKey("expiryDate") && data["expiryDate"] != null) data["expiryDate"] as? String ?: existing.expiryDate else existing.expiryDate,
+                    stockPacks = if (data.containsKey("stockPacks")) (data["stockPacks"] as? Number)?.toInt() ?: existing.stockPacks else (if (data.containsKey("stock")) (data["stock"] as? Number)?.toInt() ?: existing.stockPacks else existing.stockPacks),
+                    mrp = if (data.containsKey("mrp")) (data["mrp"] as? Number)?.toDouble() ?: existing.mrp else (if (data.containsKey("price")) (data["price"] as? Number)?.toDouble() ?: existing.mrp else existing.mrp),
+                    purchaseRate = if (data.containsKey("purchaseRate")) (data["purchaseRate"] as? Number)?.toDouble() ?: existing.purchaseRate else (if (data.containsKey("purchasePrice")) (data["purchasePrice"] as? Number)?.toDouble() ?: existing.purchaseRate else existing.purchaseRate),
+                    saleRate = if (data.containsKey("saleRate")) (data["saleRate"] as? Number)?.toDouble() ?: existing.saleRate else (if (data.containsKey("salePrice")) (data["salePrice"] as? Number)?.toDouble() ?: existing.saleRate else existing.saleRate),
+                    rackLocation = if (data.containsKey("rackLocation") && data["rackLocation"] != null) data["rackLocation"] as? String ?: existing.rackLocation else (if (data.containsKey("locationRack") && data["locationRack"] != null) data["locationRack"] as? String ?: existing.rackLocation else existing.rackLocation)
                   )
-                  dao.insertMedicine(item)
-                  addLog("Cloud Sync: Updated ${item.name} from Web")
+                  dao.insertMedicine(mergedItem)
+                  addLog("Cloud Sync: Updated ${mergedItem.name} from Web")
                 } else if (item.id != 0L) {
                   dao.insertMedicine(item)
                   addLog("Cloud Sync: Updated ${item.name} from Web")
