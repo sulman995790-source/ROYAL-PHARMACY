@@ -390,6 +390,7 @@ fun QuickScanScreen(
   }
 
   // --- Real Camera Frame Live Processing Logic ---
+  @androidx.annotation.OptIn(androidx.camera.core.ExperimentalGetImage::class)
   fun processImageProxy(imageProxy: ImageProxy) {
     if (isAnalyzingFrame || activeParsedOcrResult != null) {
       imageProxy.close()
