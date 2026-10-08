@@ -987,7 +987,8 @@ fun SearchItemForBillingContent(
       verticalAlignment = Alignment.CenterVertically,
       modifier = Modifier.padding(vertical = 4.dp)
     ) {
-      Icon(Icons.Default.HelpOutline, contentDescription = null, tint = RoyalMagenta, modifier = Modifier.size(14.dp))
+      @Suppress("DEPRECATION")
+    Icon(Icons.Filled.HelpOutline, contentDescription = null, tint = RoyalMagenta, modifier = Modifier.size(14.dp))
       Spacer(modifier = Modifier.width(4.dp))
       Text("Item search methods (Name, Salt, Batch or Barcode)", fontSize = 11.sp, color = RoyalMagenta)
     }

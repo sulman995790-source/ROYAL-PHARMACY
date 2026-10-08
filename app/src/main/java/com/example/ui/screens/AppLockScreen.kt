@@ -270,8 +270,9 @@ fun AppLockScreen(
               .testTag("btn_pin_backspace"),
             contentAlignment = Alignment.Center
           ) {
+            @Suppress("DEPRECATION")
             Icon(
-              imageVector = Icons.Default.Backspace,
+              imageVector = Icons.Filled.Backspace,
               contentDescription = "Backspace",
               tint = Color(0xFFCBD5E1),
               modifier = Modifier.size(24.dp)

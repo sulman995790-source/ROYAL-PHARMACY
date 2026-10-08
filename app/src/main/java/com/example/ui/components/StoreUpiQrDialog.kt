@@ -5,6 +5,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
+import java.util.Locale
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -66,7 +67,7 @@ fun StoreUpiQrDialog(
   onDismiss: () -> Unit
 ) {
   val context = LocalContext.current
-  var billAmount by remember { mutableStateOf(if (initialAmount > 0) String.format("%.2f", initialAmount) else "") }
+  var billAmount by remember { mutableStateOf(if (initialAmount > 0) String.format(Locale.getDefault(), "%.2f", initialAmount) else "") }
 
   // UPI deep link standard: upi://pay?pa=<upi_id>&pn=<name>&am=<amt>&cu=INR
   val upiUrl = remember(upiId, storeName, billAmount) {

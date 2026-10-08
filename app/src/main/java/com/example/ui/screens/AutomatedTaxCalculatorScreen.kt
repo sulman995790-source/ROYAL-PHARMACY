@@ -166,7 +166,8 @@ fun AutomatedTaxCalculatorScreen(
         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
         modifier = Modifier.testTag("btn_goto_billing_from_tax")
       ) {
-        Icon(Icons.Default.ReceiptLong, contentDescription = null, tint = Color.White, modifier = Modifier.size(13.dp))
+        @Suppress("DEPRECATION")
+        Icon(Icons.Filled.ReceiptLong, contentDescription = null, tint = Color.White, modifier = Modifier.size(13.dp))
         Spacer(modifier = Modifier.width(4.dp))
         Text("Billing POS", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
       }

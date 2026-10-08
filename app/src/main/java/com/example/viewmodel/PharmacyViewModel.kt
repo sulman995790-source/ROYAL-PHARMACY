@@ -632,7 +632,7 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
         .putString("user_email", currentUserEmail.value)
         .putString("user_phone", currentUserPhone.value)
         .putString("user_role", currentUserRole.value.name)
-        .commit()
+        .apply()
     } catch (e: Exception) {}
   }
 
@@ -678,7 +678,7 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
       prefs.edit()
         .putBoolean("is_logged_in", false)
         .remove("royal_pharmacy_auth_token")
-        .commit()
+        .apply()
     } catch (e: Exception) {}
     navigateTo(Screen.HOME)
   }
