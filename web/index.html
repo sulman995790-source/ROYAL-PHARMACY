@@ -160,9 +160,9 @@
           <div id="web-owner-password-block" class="space-y-1.5">
             <div class="flex items-center justify-between">
               <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">Owner Secret Password</label>
-              <span class="text-[9px] text-pink-400/80">Default: @arifa1234SS</span>
+              <span class="text-[9px] text-slate-500">Owner Access Only</span>
             </div>
-            <input type="password" id="web-login-password-input" placeholder="••••••••" class="w-full px-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-pink-500 placeholder-slate-600">
+            <input type="password" id="web-login-password-input" placeholder="Enter owner password" class="w-full px-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-pink-500 placeholder-slate-600">
           </div>
 
           <!-- Staff Helper Callout (Shows when Staff Mode active) -->
@@ -174,39 +174,18 @@
               </span>
               <span class="px-1.5 py-0.5 rounded text-[9px] bg-sky-500/20 text-sky-300 font-semibold">No Password Needed</span>
             </div>
-            <p class="text-[10px] text-sky-300/80 leading-relaxed">Select a staff chemist below for 1-click instant access, or authenticate via mobile number and OTP:</p>
-            
-            <div class="space-y-1.5 pt-1">
-              <button type="button" onclick="quickStaffDirectLoginWeb('s-1')" class="w-full bg-sky-600 hover:bg-sky-500 text-white py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-between cursor-pointer shadow-sm">
-                <span class="flex items-center space-x-1.5">
-                  <span>⚡</span>
-                  <span>Instant Login: Nijamuddin Khan</span>
-                </span>
-                <span class="text-[9px] bg-sky-700/80 px-1.5 py-0.5 rounded font-medium">POS-only access</span>
-              </button>
-              
-              <div class="grid grid-cols-2 gap-1.5">
-                <button type="button" onclick="quickStaffDirectLoginWeb('s-2')" class="bg-slate-900 hover:bg-slate-800 text-sky-200 border border-sky-800/60 py-1.5 px-2 rounded-lg text-[10px] font-semibold transition text-left flex items-center justify-between cursor-pointer">
-                  <span>Rahul Sharma</span>
-                  <span class="text-[8px] text-sky-400">Inventory</span>
-                </button>
-                <button type="button" onclick="quickStaffDirectLoginWeb('s-3')" class="bg-slate-900 hover:bg-slate-800 text-sky-200 border border-sky-800/60 py-1.5 px-2 rounded-lg text-[10px] font-semibold transition text-left flex items-center justify-between cursor-pointer">
-                  <span>Priya Das</span>
-                  <span class="text-[8px] text-slate-400">View-only</span>
-                </button>
-              </div>
-            </div>
+            <p class="text-[10px] text-sky-300/80 leading-relaxed">Staff members log in via registered 10-digit mobile number & OTP, or using their registered Google account below:</p>
           </div>
 
           <!-- Sign Up fields (Hidden by default) -->
           <div id="web-signup-fields" class="space-y-3 hidden">
             <div>
               <label id="web-signup-name-label" class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Owner / Partner Full Name</label>
-              <input type="text" id="web-login-name-input" placeholder="e.g. Suleman Hoque" class="w-full px-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-pink-500 placeholder-slate-600">
+              <input type="text" id="web-login-name-input" placeholder="Enter full name" class="w-full px-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-pink-500 placeholder-slate-600">
             </div>
             <div>
               <label id="web-signup-email-label" class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Business Email Address</label>
-              <input type="email" id="web-login-email-input" placeholder="sulman995790@gmail.com" class="w-full px-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-pink-500 placeholder-slate-600">
+              <input type="email" id="web-login-email-input" placeholder="name@example.com" class="w-full px-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-pink-500 placeholder-slate-600">
             </div>
           </div>
 
@@ -214,11 +193,10 @@
           <div>
             <div class="flex items-center justify-between mb-1">
               <label id="web-login-phone-label" class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">10-Digit Mobile Number</label>
-              <button type="button" id="web-login-quick-staff-phone" class="text-[9px] text-sky-400 hover:text-sky-300 underline cursor-pointer hidden" onclick="fillStaffDemoPhone()">Auto-fill: 9435078210</button>
             </div>
             <div class="relative flex items-center">
               <span class="absolute left-4 text-xs font-bold text-slate-500">+91</span>
-              <input type="text" id="web-login-phone-input" placeholder="9435078210" maxlength="10" class="w-full pl-12 pr-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-pink-500 placeholder-slate-600 font-bold tracking-wider">
+              <input type="text" id="web-login-phone-input" placeholder="Enter 10-digit mobile number" maxlength="10" class="w-full pl-12 pr-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-pink-500 placeholder-slate-600 font-bold tracking-wider">
             </div>
           </div>
 
@@ -6850,9 +6828,9 @@
           roleIndicator.className = "text-[10px] font-bold px-2 py-0.5 rounded-full bg-pink-500/10 text-pink-400 border border-pink-500/20";
         }
         if (nameLabel) nameLabel.innerText = "Owner / Partner Full Name";
-        if (nameInput) nameInput.placeholder = "e.g. Suleman Hoque";
+        if (nameInput) nameInput.placeholder = "Enter full name";
         if (emailLabel) emailLabel.innerText = "Business Email Address";
-        if (emailInput) emailInput.placeholder = "sulman995790@gmail.com";
+        if (emailInput) emailInput.placeholder = "name@example.com";
       } else {
         if (staffBtn) {
           staffBtn.className = "flex-1 py-2 text-[11px] font-bold rounded-lg bg-sky-500/20 text-sky-300 border border-sky-500/40 shadow-sm transition-all flex items-center justify-center space-x-1.5 cursor-pointer";
@@ -6862,27 +6840,20 @@
         }
         if (passwordBlock) passwordBlock.classList.add('hidden');
         if (staffHelper) staffHelper.classList.remove('hidden');
-        if (demoStaffBtn) demoStaffBtn.classList.remove('hidden');
+        if (demoStaffBtn) demoStaffBtn.classList.add('hidden');
         if (roleIndicator) {
           roleIndicator.innerText = "💼 Staff Mode";
           roleIndicator.className = "text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20";
         }
         if (nameLabel) nameLabel.innerText = "Staff / Pharmacist Full Name";
-        if (nameInput) nameInput.placeholder = "e.g. Nijamuddin Khan / Rahul Sharma";
+        if (nameInput) nameInput.placeholder = "Enter staff full name";
         if (emailLabel) emailLabel.innerText = "Staff Email Address";
-        if (emailInput) emailInput.placeholder = "khannijamuddin87275@gmail.com";
-        if (phoneInput && !phoneInput.value) {
-          phoneInput.value = "9435078210";
-        }
+        if (emailInput) emailInput.placeholder = "staff@example.com";
       }
     }
 
     function fillStaffDemoPhone() {
-      const phoneInput = document.getElementById('web-login-phone-input');
-      if (phoneInput) {
-        phoneInput.value = "9435078210";
-        phoneInput.focus();
-      }
+      // Kept for backward compatibility
     }
 
     function handleWebPrimaryAuth() {
@@ -6894,8 +6865,8 @@
 
       if (webLoginRole === 'OWNER' && passwordInput !== state.secretPassword) {
         Swal.fire({
-          title: 'Owner Password Required',
-          text: 'The provided owner secret password is incorrect (Default: @arifa1234SS).',
+          title: 'Incorrect Password',
+          text: 'The owner secret password entered is incorrect. Please try again or reset your password.',
           icon: 'error',
           confirmButtonColor: '#9C1258'
         });
@@ -6978,8 +6949,8 @@
                 state.activeStaffPermission = matchedStaff.permission || "POS-only access";
                 matchedStaff.lastLoginTime = "Just now";
               } else {
-                state.userName = "Nijamuddin Khan (Staff)";
-                state.userEmail = "khannijamuddin87275@gmail.com";
+                state.userName = "Staff Chemist (" + phoneInput.slice(-4) + ")";
+                state.userEmail = "staff." + phoneInput.slice(-4) + "@royal.com";
                 state.activeStaffPermission = "POS-only access";
               }
               logStaffActivityWeb(
