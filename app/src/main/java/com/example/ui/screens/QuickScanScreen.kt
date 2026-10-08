@@ -159,7 +159,7 @@ fun QuickScanScreen(
   modifier: Modifier = Modifier
 ) {
   val context = LocalContext.current
-  val lifecycleOwner = LocalLifecycleOwner.current
+  val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
 
   var hasCameraPermission by remember {
     mutableStateOf(
@@ -212,7 +212,7 @@ fun QuickScanScreen(
   var isAnalyzingFrame by remember { mutableStateOf(false) }
 
   fun triggerVibration() {
-    val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+    val vibrator = androidx.core.content.ContextCompat.getSystemService(context, Vibrator::class.java)
     vibrator?.let {
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
         it.vibrate(VibrationEffect.createOneShot(80, VibrationEffect.DEFAULT_AMPLITUDE))

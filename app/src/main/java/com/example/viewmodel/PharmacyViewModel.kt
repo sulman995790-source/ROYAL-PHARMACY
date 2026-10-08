@@ -27,6 +27,7 @@ import com.example.data.model.UdharTransaction
 import com.example.data.repository.PharmacyRepository
 import com.example.data.sync.FirebaseSyncManager
 import com.example.data.sync.NetworkMonitor
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import android.content.Context
 import android.net.Uri
 import android.widget.Toast
@@ -1024,6 +1025,7 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), BusinessProfile())
 
   // Substitutes Stream
+  @OptIn(ExperimentalCoroutinesApi::class)
   val availableSubstitutes: StateFlow<List<MedicineItem>> = substituteQuery
     .flatMapLatest { salt -> repository.getSubstitutesForSalt(salt) }
     .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
