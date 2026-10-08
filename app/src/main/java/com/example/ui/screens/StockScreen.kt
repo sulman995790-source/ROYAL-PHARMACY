@@ -648,12 +648,25 @@ fun StockItemCard(
 ) {
   val initials = item.name.take(2).uppercase()
   val isInStock = item.stockPacks > 0
+  val isLowStock = item.stockPacks <= item.minStockAlert
+
+  val cardContainerColor = when {
+    item.stockPacks == 0 -> Color(0xFFFFF1F2)
+    isLowStock -> Color(0xFFFFFBEB)
+    else -> Color.White
+  }
+
+  val cardBorderColor = when {
+    item.stockPacks == 0 -> Color(0xFFFECACA)
+    isLowStock -> Color(0xFFFDE68A)
+    else -> CardBorder
+  }
 
   Card(
     shape = RoundedCornerShape(10.dp),
-    colors = CardDefaults.cardColors(containerColor = Color.White),
+    colors = CardDefaults.cardColors(containerColor = cardContainerColor),
     border = CardDefaults.outlinedCardBorder().copy(
-      brush = androidx.compose.ui.graphics.SolidColor(CardBorder)
+      brush = androidx.compose.ui.graphics.SolidColor(cardBorderColor)
     ),
     modifier = Modifier
       .fillMaxWidth()
@@ -670,14 +683,14 @@ fun StockItemCard(
         modifier = Modifier
           .size(44.dp)
           .clip(RoundedCornerShape(8.dp))
-          .background(RoyalMagentaLight),
+          .background(if (isLowStock) Color(0xFFFEF3C7) else RoyalMagentaLight),
         contentAlignment = Alignment.Center
       ) {
         Text(
           text = initials,
           fontSize = 14.sp,
           fontWeight = FontWeight.Bold,
-          color = RoyalMagenta
+          color = if (isLowStock) Color(0xFFD97706) else RoyalMagenta
         )
       }
 
@@ -710,15 +723,32 @@ fun StockItemCard(
           Box(
             modifier = Modifier
               .clip(RoundedCornerShape(4.dp))
-              .background(if (isInStock) StatusGreenLight else StatusRedLight)
+              .background(if (isInStock) (if (isLowStock) Color(0xFFFEF3C7) else StatusGreenLight) else StatusRedLight)
               .padding(horizontal = 8.dp, vertical = 2.dp)
           ) {
             Text(
-              text = if (isInStock) "In Stock" else "Stock Out",
+              text = if (!isInStock) "Stock Out" else if (isLowStock) "Low Stock" else "In Stock",
               fontSize = 10.sp,
               fontWeight = FontWeight.Bold,
-              color = if (isInStock) StatusGreen else StatusRed
+              color = if (!isInStock) StatusRed else if (isLowStock) Color(0xFFB45309) else StatusGreen
             )
+          }
+
+          if (isLowStock && isInStock) {
+            Box(
+              modifier = Modifier
+                .clip(RoundedCornerShape(4.dp))
+                .background(Color(0xFFFEF3C7))
+                .border(1.dp, Color(0xFFF59E0B), RoundedCornerShape(4.dp))
+                .padding(horizontal = 6.dp, vertical = 2.dp)
+            ) {
+              Text(
+                text = "⚠️ REORDER (Min ${item.minStockAlert})",
+                fontSize = 10.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = Color(0xFF92400E)
+              )
+            }
           }
 
           // Prominent Clickable RACK BADGE (Allows Editing directly from list)
