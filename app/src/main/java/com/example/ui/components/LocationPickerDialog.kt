@@ -172,6 +172,7 @@ fun LocationPickerDialog(
     )
   )
 
+  @Suppress("DEPRECATION")
   fun detectGpsLocation() {
     isDetectingLocation = true
     val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager

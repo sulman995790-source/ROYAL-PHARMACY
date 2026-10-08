@@ -663,7 +663,7 @@ object InvoicePrinterService {
   /**
    * Retrieves paired Bluetooth devices (thermal printers like POS58, POS80, BT-Printer).
    */
-  @Suppress("MissingPermission")
+  @Suppress("MissingPermission", "DEPRECATION")
   fun getPairedBluetoothPrinters(context: Context): List<BluetoothPrinterDeviceInfo> {
     val list = mutableListOf<BluetoothPrinterDeviceInfo>()
     try {
@@ -779,7 +779,7 @@ object InvoicePrinterService {
   /**
    * Sends ESC/POS thermal receipt directly via Bluetooth SPP socket connection or Bluetooth share intent.
    */
-  @Suppress("MissingPermission")
+  @Suppress("MissingPermission", "DEPRECATION")
   fun printInvoiceViaBluetooth(
     context: Context,
     deviceAddress: String,

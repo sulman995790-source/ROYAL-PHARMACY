@@ -46,6 +46,7 @@ abstract class PharmacyDatabase : RoomDatabase() {
     @Volatile
     private var INSTANCE: PharmacyDatabase? = null
 
+    @Suppress("DEPRECATION")
     fun getDatabase(context: Context, scope: CoroutineScope): PharmacyDatabase {
       return INSTANCE ?: synchronized(this) {
         val instance = Room.databaseBuilder(
