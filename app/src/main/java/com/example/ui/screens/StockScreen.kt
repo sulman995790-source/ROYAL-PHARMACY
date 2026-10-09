@@ -131,6 +131,7 @@ fun StockScreen(
   var medicineToEditReorder by remember { mutableStateOf<MedicineItem?>(null) }
   var medicineForQrBatch by remember { mutableStateOf<MedicineItem?>(null) }
   var medicineForThermalBarcode by remember { mutableStateOf<MedicineItem?>(null) }
+  var medicineToEditDetails by remember { mutableStateOf<MedicineItem?>(null) }
 
   val searchTokens = searchQuery.trim().split("\\s+".toRegex()).filter { it.isNotBlank() }
   val filteredMedicines = medicines.filter { item ->
@@ -391,6 +392,9 @@ fun StockScreen(
             },
             onPrintThermalBarcode = {
               medicineForThermalBarcode = med
+            },
+            onEditMedicineDetails = {
+              medicineToEditDetails = med
             }
           )
         }
@@ -741,6 +745,20 @@ fun StockScreen(
         }
       )
     }
+
+    // 12. Individual Medicine Edit/View Modal with BATCH DETAILS Section
+    if (medicineToEditDetails != null) {
+      val med = medicineToEditDetails!!
+      MedicineDetailEditDialog(
+        item = med,
+        onDismiss = { medicineToEditDetails = null },
+        onSave = { updatedMed ->
+          viewModel.updateMedicine(updatedMed)
+          medicineToEditDetails = null
+          Toast.makeText(context, "Saved ${updatedMed.name} and Batch Details!", Toast.LENGTH_SHORT).show()
+        }
+      )
+    }
   }
 }
 
@@ -753,7 +771,8 @@ fun StockItemCard(
   onEditRack: () -> Unit,
   onEditReorderLevel: () -> Unit,
   onGenerateQrBatch: () -> Unit,
-  onPrintThermalBarcode: () -> Unit = {}
+  onPrintThermalBarcode: () -> Unit = {},
+  onEditMedicineDetails: () -> Unit = {}
 ) {
   val initials = item.name.take(2).uppercase()
   val isInStock = item.stockPacks > 0
@@ -821,7 +840,8 @@ fun StockItemCard(
           fontWeight = FontWeight.Bold,
           color = TextDark,
           maxLines = 1,
-          overflow = TextOverflow.Ellipsis
+          overflow = TextOverflow.Ellipsis,
+          modifier = Modifier.clickable { onEditMedicineDetails() }
         )
         Text(
           text = item.manufacturer,
@@ -1066,6 +1086,21 @@ fun StockItemCard(
               imageVector = Icons.Default.Print,
               contentDescription = "Generate & Print Thermal Barcode Label (HSN: ${item.hsnCode})",
               tint = Color(0xFF4F46E5),
+              modifier = Modifier.size(16.dp)
+            )
+          }
+
+          Spacer(modifier = Modifier.width(4.dp))
+
+          // Edit Medicine & Batch Details Button
+          IconButton(
+            onClick = onEditMedicineDetails,
+            modifier = Modifier.size(26.dp).testTag("btn_edit_medicine_${item.id}")
+          ) {
+            Icon(
+              imageVector = Icons.Default.Edit,
+              contentDescription = "Edit Medicine Details and Batches",
+              tint = Color(0xFF2563EB),
               modifier = Modifier.size(16.dp)
             )
           }

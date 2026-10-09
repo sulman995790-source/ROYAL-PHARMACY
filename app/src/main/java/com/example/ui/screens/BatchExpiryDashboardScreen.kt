@@ -29,11 +29,14 @@ import androidx.compose.material.icons.automirrored.filled.AssignmentReturn
 import androidx.compose.material.icons.filled.AddShoppingCart
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -49,6 +52,7 @@ import androidx.compose.material3.TabRow
 import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -68,6 +72,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.CardBorder
 import com.example.ui.theme.GrayBackground
+import com.example.service.DistributorExportService
 import com.example.ui.theme.RoyalMagenta
 import com.example.ui.theme.RoyalNavy
 import com.example.ui.theme.StatusGreen
@@ -78,6 +83,7 @@ import com.example.viewmodel.BatchExpiryItem
 import com.example.viewmodel.BatchRiskTier
 import com.example.viewmodel.PharmacyViewModel
 import com.example.viewmodel.Screen
+import java.io.File
 import java.util.Locale
 
 @Composable
@@ -92,6 +98,8 @@ fun BatchExpiryDashboardScreen(
 
   var selectedTab by remember { mutableIntStateOf(0) } // 0: All At-Risk, 1: Expired, 2: Critical (<30d), 3: Short Expiry (31-60d), 4: Upcoming (61-90d)
   var searchQuery by remember { mutableStateOf("") }
+  var receiptDialogBatch by remember { mutableStateOf<BatchExpiryItem?>(null) }
+  var receiptGeneratedFile by remember { mutableStateOf<File?>(null) }
 
   // Risk categorization
   val expiredBatches = allBatchItems.filter { it.riskTier == BatchRiskTier.EXPIRED }
@@ -526,8 +534,30 @@ fun BatchExpiryDashboardScreen(
               // Action Buttons Row
               Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
               ) {
+                // Generate Return Receipt Button (Professional PDF Return Note)
+                Button(
+                  onClick = {
+                    val pdfFile = DistributorExportService.generateReturnReceiptPdf(context, batchItem)
+                    if (pdfFile != null) {
+                      receiptDialogBatch = batchItem
+                      receiptGeneratedFile = pdfFile
+                      Toast.makeText(context, "Return Receipt generated for ${batchItem.batchNumber}!", Toast.LENGTH_SHORT).show()
+                    } else {
+                      Toast.makeText(context, "Failed to generate Return Receipt PDF", Toast.LENGTH_SHORT).show()
+                    }
+                  },
+                  colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB91C1C)),
+                  shape = RoundedCornerShape(6.dp),
+                  contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
+                  modifier = Modifier.weight(1.1f).testTag("btn_generate_return_receipt_${batchItem.batchNumber}")
+                ) {
+                  Icon(Icons.Default.Description, contentDescription = null, tint = Color.White, modifier = Modifier.size(13.dp))
+                  Spacer(modifier = Modifier.width(3.dp))
+                  Text("Return Receipt", fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
+                }
+
                 // Add to Return Cart (Debit Note)
                 Button(
                   onClick = {
@@ -536,12 +566,12 @@ fun BatchExpiryDashboardScreen(
                   },
                   colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF581C87)),
                   shape = RoundedCornerShape(6.dp),
-                  contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                  modifier = Modifier.weight(1.3f).testTag("btn_return_cart_${batchItem.batchNumber}")
+                  contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
+                  modifier = Modifier.weight(1.1f).testTag("btn_return_cart_${batchItem.batchNumber}")
                 ) {
                   Icon(Icons.Default.AddShoppingCart, contentDescription = null, tint = Color.White, modifier = Modifier.size(13.dp))
-                  Spacer(modifier = Modifier.width(4.dp))
-                  Text("Add to Return Cart", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                  Spacer(modifier = Modifier.width(3.dp))
+                  Text("Return Cart", fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
                 }
 
                 // Send Expiry Push Alert
@@ -551,18 +581,115 @@ fun BatchExpiryDashboardScreen(
                   },
                   colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD97706)),
                   shape = RoundedCornerShape(6.dp),
-                  contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                  modifier = Modifier.weight(1f).testTag("btn_alert_push_${batchItem.batchNumber}")
+                  contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
+                  modifier = Modifier.weight(0.9f).testTag("btn_alert_push_${batchItem.batchNumber}")
                 ) {
                   Icon(Icons.Default.NotificationsActive, contentDescription = null, tint = Color.White, modifier = Modifier.size(13.dp))
-                  Spacer(modifier = Modifier.width(4.dp))
-                  Text("Push Alert", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                  Spacer(modifier = Modifier.width(3.dp))
+                  Text("Alert", fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
                 }
               }
             }
           }
         }
       }
+    }
+
+    // Return Receipt Note Preview Dialog
+    if (receiptDialogBatch != null && receiptGeneratedFile != null) {
+      val bItem = receiptDialogBatch!!
+      val file = receiptGeneratedFile!!
+      AlertDialog(
+        onDismissRequest = {
+          receiptDialogBatch = null
+          receiptGeneratedFile = null
+        },
+        title = {
+          Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.Description, contentDescription = null, tint = Color(0xFFB91C1C), modifier = Modifier.size(20.dp))
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Supplier Return Receipt Generated", fontSize = 15.sp, fontWeight = FontWeight.Bold)
+          }
+        },
+        text = {
+          Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Medicine & Batch Box
+            Box(
+              modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color(0xFFFEF2F2))
+                .border(1.dp, Color(0xFFFECACA), RoundedCornerShape(8.dp))
+                .padding(10.dp)
+            ) {
+              Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Row(
+                  modifier = Modifier.fillMaxWidth(),
+                  horizontalArrangement = Arrangement.SpaceBetween,
+                  verticalAlignment = Alignment.CenterVertically
+                ) {
+                  Text(bItem.medicine.name, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color(0xFF991B1B))
+                  Text(bItem.batchNumber, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold, fontSize = 11.sp, color = Color(0xFF991B1B))
+                }
+                Text(
+                  text = "Expiry: ${bItem.expiryDate}  •  Rack: ${bItem.rackLocation.ifBlank { bItem.medicine.rackLocation }}",
+                  fontSize = 11.sp,
+                  color = Color(0xFFB91C1C)
+                )
+                Text(
+                  text = "Manufacturer: ${bItem.medicine.manufacturer}",
+                  fontSize = 11.sp,
+                  color = Color(0xFF7F1D1D)
+                )
+              }
+            }
+
+            // Supplier Debit Summary
+            Box(
+              modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color(0xFF0F172A))
+                .padding(10.dp)
+            ) {
+              Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text("SUPPLIER DEBIT NOTE SUMMARY", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFF94A3B8))
+                Text("Distributor: ${bItem.distributorName}", fontSize = 11.sp, color = Color.White)
+                Text("Quarantined Stock: ${bItem.stockPacks} Packs", fontSize = 11.sp, color = Color.White)
+                val creditRate = bItem.medicine.mrp * 0.85
+                Text("Agreed Credit Rate: ₹${String.format(Locale.US, "%.2f", creditRate)} / pack", fontSize = 11.sp, color = Color(0xFF34D399))
+                Text("Net Claim Value: ₹${String.format(Locale.US, "%.2f", bItem.valueAtRisk)}", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFF472B6))
+              }
+            }
+
+            Text(
+              text = "Official PDF Return Note (${file.name}) generated under Schedule M Drugs & Cosmetics Rules.",
+              fontSize = 10.5.sp,
+              color = Color(0xFF64748B)
+            )
+          }
+        },
+        confirmButton = {
+          Button(
+            onClick = {
+              DistributorExportService.shareReturnReceiptPdf(context, file, bItem.batchNumber)
+            },
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB91C1C))
+          ) {
+            Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(14.dp))
+            Spacer(modifier = Modifier.width(4.dp))
+            Text("Share PDF", fontSize = 11.5.sp)
+          }
+        },
+        dismissButton = {
+          TextButton(onClick = {
+            receiptDialogBatch = null
+            receiptGeneratedFile = null
+          }) {
+            Text("Close", color = Color(0xFF64748B))
+          }
+        }
+      )
     }
   }
 }

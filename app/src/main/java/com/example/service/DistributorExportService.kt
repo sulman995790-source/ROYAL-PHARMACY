@@ -303,6 +303,287 @@ object DistributorExportService {
     }
   }
 
+  /**
+   * Generates a professional PDF Return Receipt note for the supplier based on the selected medicine's batch details.
+   */
+  fun generateReturnReceiptPdf(
+    context: Context,
+    batchItem: com.example.viewmodel.BatchExpiryItem,
+    pharmacyName: String = "ROYAL PHARMACY",
+    dlNumber: String = "DL-20B/21B-89410",
+    gstin: String = "07AABCR1234F1Z8"
+  ): File? {
+    try {
+      val document = PdfDocument()
+      val pageWidth = 595 // Standard A4 width in points
+      val pageHeight = 842 // Standard A4 height in points
+      val pageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, 1).create()
+      val page = document.startPage(pageInfo)
+      val canvas = page.canvas
+
+      val paint = Paint().apply { isAntiAlias = true }
+      val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+      val receiptRef = "GRN-2026-${batchItem.batchNumber}-${(1000..9999).random()}"
+      val dateStr = SimpleDateFormat("dd MMMM yyyy", Locale.getDefault()).format(Date())
+
+      // 1. Top Royal Header Banner
+      paint.color = 0xFF9C1258.toInt() // Royal Magenta
+      canvas.drawRect(0f, 0f, pageWidth.toFloat(), 95f, paint)
+
+      // Header Title
+      paint.color = Color.WHITE
+      paint.textSize = 20f
+      paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+      canvas.drawText(pharmacyName.uppercase(Locale.getDefault()), 32f, 42f, paint)
+
+      // Subtitle
+      paint.textSize = 10f
+      paint.typeface = Typeface.DEFAULT
+      canvas.drawText("PHARMACEUTICAL GOODS RETURN NOTE (GRN) • SUPPLIER DEBIT RECEIPT", 32f, 60f, paint)
+      canvas.drawText("Retail & Clinical Pharmacy ERP • DL: $dlNumber • GSTIN: $gstin", 32f, 76f, paint)
+
+      var currentY = 120f
+
+      // Receipt Ref and Date Bar
+      paint.color = 0xFF9C1258.toInt()
+      paint.textSize = 11f
+      paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+      canvas.drawText("Receipt Ref: $receiptRef", 32f, currentY, paint)
+
+      paint.color = 0xFF475569.toInt()
+      paint.textSize = 10f
+      paint.typeface = Typeface.DEFAULT
+      canvas.drawText("Return Date: $dateStr", pageWidth - 180f, currentY, paint)
+
+      currentY += 16f
+
+      // Horizontal separator line
+      paint.color = 0xFFE2E8F0.toInt()
+      canvas.drawLine(32f, currentY, pageWidth - 32f, currentY, paint)
+
+      currentY += 20f
+
+      // 2. Supplier / Distributor Block
+      paint.color = 0xFFF8FAFC.toInt()
+      canvas.drawRect(32f, currentY, pageWidth - 32f, currentY + 68f, paint)
+      paint.color = 0xFFCBD5E1.toInt()
+      paint.style = Paint.Style.STROKE
+      canvas.drawRect(32f, currentY, pageWidth - 32f, currentY + 68f, paint)
+      paint.style = Paint.Style.FILL
+
+      paint.color = 0xFF1E293B.toInt()
+      paint.textSize = 11f
+      paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+      canvas.drawText("TO / SUPPLIER (DISTRIBUTOR) DETAILS:", 44f, currentY + 20f, paint)
+
+      paint.color = 0xFF334155.toInt()
+      paint.textSize = 9.5f
+      paint.typeface = Typeface.DEFAULT
+      canvas.drawText("Distributor Name: ${batchItem.distributorName}", 44f, currentY + 36f, paint)
+      canvas.drawText("Return Reason: Expired / Near-Expiry Recall (Schedule M Compliance)", 44f, currentY + 52f, paint)
+
+      paint.color = 0xFFB91C1C.toInt()
+      paint.textSize = 9.5f
+      paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+      canvas.drawText("Status: QUARANTINED FROM ACTIVE RACKS", pageWidth - 260f, currentY + 36f, paint)
+
+      currentY += 85f
+
+      // 3. Batch Details Section Header
+      paint.color = 0xFF0F172A.toInt()
+      paint.textSize = 12f
+      paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+      canvas.drawText("RETURNED BATCH & MEDICINE PARTICULARS", 32f, currentY, paint)
+
+      currentY += 12f
+
+      // Table Header Row Background
+      paint.color = 0xFF1E293B.toInt()
+      canvas.drawRect(32f, currentY, pageWidth - 32f, currentY + 24f, paint)
+
+      paint.color = Color.WHITE
+      paint.textSize = 9f
+      paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+      canvas.drawText("Medicine Name", 40f, currentY + 16f, paint)
+      canvas.drawText("Batch No", 175f, currentY + 16f, paint)
+      canvas.drawText("Expiry Date", 255f, currentY + 16f, paint)
+      canvas.drawText("Manufacturer", 340f, currentY + 16f, paint)
+      canvas.drawText("Rack Loc", 435f, currentY + 16f, paint)
+      canvas.drawText("Qty", 495f, currentY + 16f, paint)
+      canvas.drawText("Credit (₹)", 525f, currentY + 16f, paint)
+
+      currentY += 24f
+
+      // Table Data Row
+      paint.color = 0xFFFFFFFF.toInt()
+      canvas.drawRect(32f, currentY, pageWidth - 32f, currentY + 52f, paint)
+      paint.color = 0xFFE2E8F0.toInt()
+      paint.style = Paint.Style.STROKE
+      canvas.drawRect(32f, currentY, pageWidth - 32f, currentY + 52f, paint)
+      paint.style = Paint.Style.FILL
+
+      paint.color = 0xFF0F172A.toInt()
+      paint.textSize = 10f
+      paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+      val medName = if (batchItem.medicine.name.length > 22) batchItem.medicine.name.take(21) + "…" else batchItem.medicine.name
+      canvas.drawText(medName, 40f, currentY + 18f, paint)
+
+      paint.color = 0xFF64748B.toInt()
+      paint.textSize = 8f
+      paint.typeface = Typeface.DEFAULT
+      val saltText = (batchItem.medicine.saltMolecule.ifBlank { batchItem.medicine.composition }).take(24)
+      canvas.drawText(saltText, 40f, currentY + 32f, paint)
+
+      paint.color = 0xFF0F172A.toInt()
+      paint.textSize = 9.5f
+      paint.typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+      canvas.drawText(batchItem.batchNumber, 175f, currentY + 22f, paint)
+
+      paint.color = 0xFFB91C1C.toInt()
+      paint.textSize = 9.5f
+      paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+      canvas.drawText(batchItem.expiryDate, 255f, currentY + 22f, paint)
+
+      paint.color = 0xFF334155.toInt()
+      paint.textSize = 8.5f
+      paint.typeface = Typeface.DEFAULT
+      val mfgText = if (batchItem.medicine.manufacturer.length > 16) batchItem.medicine.manufacturer.take(15) + "…" else batchItem.medicine.manufacturer
+      canvas.drawText(mfgText, 340f, currentY + 22f, paint)
+
+      val rackText = (batchItem.rackLocation.ifBlank { batchItem.medicine.rackLocation }).take(10)
+      canvas.drawText(rackText, 435f, currentY + 22f, paint)
+
+      paint.color = 0xFF0F172A.toInt()
+      paint.textSize = 9.5f
+      paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+      canvas.drawText("${batchItem.stockPacks} Pk", 495f, currentY + 22f, paint)
+
+      paint.color = 0xFF9C1258.toInt()
+      canvas.drawText(String.format(Locale.US, "%.1f", batchItem.valueAtRisk), 525f, currentY + 22f, paint)
+
+      paint.color = 0xFF64748B.toInt()
+      paint.textSize = 8f
+      paint.typeface = Typeface.DEFAULT
+      val unitCreditRate = batchItem.medicine.mrp * 0.85
+      canvas.drawText("Unit MRP: ₹${batchItem.medicine.mrp}  •  Agreed Credit Rate (85%): ₹${String.format(Locale.US, "%.2f", unitCreditRate)} / pack", 40f, currentY + 44f, paint)
+
+      currentY += 70f
+
+      // 4. Financial Debit Summary Card
+      paint.color = 0xFFFEF2F2.toInt()
+      canvas.drawRect(pageWidth - 250f, currentY, pageWidth - 32f, currentY + 68f, paint)
+      paint.color = 0xFFFECACA.toInt()
+      paint.style = Paint.Style.STROKE
+      canvas.drawRect(pageWidth - 250f, currentY, pageWidth - 32f, currentY + 68f, paint)
+      paint.style = Paint.Style.FILL
+
+      paint.color = 0xFFB91C1C.toInt()
+      paint.textSize = 9.5f
+      paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+      canvas.drawText("FINANCIAL RETURN CLAIM SUMMARY", pageWidth - 238f, currentY + 18f, paint)
+
+      paint.color = 0xFF334155.toInt()
+      paint.textSize = 8.5f
+      paint.typeface = Typeface.DEFAULT
+      canvas.drawText("Total Quarantined Stock: ${batchItem.stockPacks} Units", pageWidth - 238f, currentY + 34f, paint)
+      canvas.drawText("Credit Adjustment Rate: 85% of MRP", pageWidth - 238f, currentY + 48f, paint)
+
+      paint.color = 0xFF9C1258.toInt()
+      paint.textSize = 11f
+      paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+      canvas.drawText("Net Claim Value: ₹${String.format(Locale.US, "%.2f", batchItem.valueAtRisk)}", pageWidth - 238f, currentY + 62f, paint)
+
+      currentY += 88f
+
+      // 5. Regulatory & Quarantine Compliance Box
+      paint.color = 0xFFF8FAFC.toInt()
+      canvas.drawRect(32f, currentY, pageWidth - 32f, currentY + 64f, paint)
+      paint.color = 0xFFE2E8F0.toInt()
+      paint.style = Paint.Style.STROKE
+      canvas.drawRect(32f, currentY, pageWidth - 32f, currentY + 64f, paint)
+      paint.style = Paint.Style.FILL
+
+      paint.color = 0xFF1E293B.toInt()
+      paint.textSize = 9f
+      paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+      canvas.drawText("REGULATORY COMPLIANCE & PHYSICAL QUARANTINE DECLARATION:", 44f, currentY + 16f, paint)
+
+      paint.color = 0xFF475569.toInt()
+      paint.textSize = 8f
+      paint.typeface = Typeface.DEFAULT
+      canvas.drawText("1. Certified that the above medicine batch has been sealed and quarantined away from saleable retail stock.", 44f, currentY + 30f, paint)
+      canvas.drawText("2. Handed over to authorized distributor/courier for credit note adjustment or replacement under GMP standards.", 44f, currentY + 44f, paint)
+      canvas.drawText("3. This Return Receipt serves as official proof of dispatch for pharmacy audit and GST purchase return filings.", 44f, currentY + 56f, paint)
+
+      currentY += 84f
+
+      // 6. Signatures and Official Seals
+      paint.color = 0xFFFFFFFF.toInt()
+      canvas.drawRect(32f, currentY, 260f, currentY + 60f, paint)
+      canvas.drawRect(pageWidth - 260f, currentY, pageWidth - 32f, currentY + 60f, paint)
+
+      paint.color = 0xFFE2E8F0.toInt()
+      paint.style = Paint.Style.STROKE
+      canvas.drawRect(32f, currentY, 260f, currentY + 60f, paint)
+      canvas.drawRect(pageWidth - 260f, currentY, pageWidth - 32f, currentY + 60f, paint)
+      paint.style = Paint.Style.FILL
+
+      // Left Box: Pharmacist In-Charge
+      paint.color = 0xFF1E293B.toInt()
+      paint.textSize = 8.5f
+      paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+      canvas.drawText("ISSUED & DISPATCHED BY:", 40f, currentY + 16f, paint)
+
+      paint.color = 0xFF64748B.toInt()
+      paint.textSize = 7.5f
+      paint.typeface = Typeface.DEFAULT
+      canvas.drawText("For: $pharmacyName", 40f, currentY + 28f, paint)
+      canvas.drawText("Pharmacist Reg No: REG-PH-2024-9912", 40f, currentY + 40f, paint)
+      canvas.drawText("Signature & Store Seal: ____________________", 40f, currentY + 52f, paint)
+
+      // Right Box: Supplier Logistics
+      paint.color = 0xFF1E293B.toInt()
+      paint.textSize = 8.5f
+      paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+      canvas.drawText("RECEIVED & ACCEPTED BY:", pageWidth - 250f, currentY + 16f, paint)
+
+      paint.color = 0xFF64748B.toInt()
+      paint.textSize = 7.5f
+      paint.typeface = Typeface.DEFAULT
+      val distName = if (batchItem.distributorName.length > 25) batchItem.distributorName.take(24) + "…" else batchItem.distributorName
+      canvas.drawText("For: $distName", pageWidth - 250f, currentY + 28f, paint)
+      canvas.drawText("Logistics Agent: __________________________", pageWidth - 250f, currentY + 40f, paint)
+      canvas.drawText("Agent Signature & Date: ___________________", pageWidth - 250f, currentY + 52f, paint)
+
+      // 7. Footer
+      paint.color = 0xFFCBD5E1.toInt()
+      canvas.drawLine(32f, pageHeight - 35f, pageWidth - 32f, pageHeight - 35f, paint)
+
+      paint.color = 0xFF94A3B8.toInt()
+      paint.textSize = 8f
+      paint.typeface = Typeface.DEFAULT
+      canvas.drawText("Royal Pharmacy ERP • Supplier Goods Return Note • Ref #$receiptRef • Page 1 of 1", 120f, pageHeight - 20f, paint)
+
+      document.finishPage(page)
+
+      val fileName = "Return_Receipt_${batchItem.batchNumber}_$timeStamp.pdf"
+      val file = File(context.cacheDir, fileName)
+      val fos = FileOutputStream(file)
+      document.writeTo(fos)
+      document.close()
+      fos.close()
+
+      return file
+    } catch (e: Exception) {
+      Log.e(TAG, "Error generating Return Receipt PDF: ${e.message}", e)
+      return null
+    }
+  }
+
+  fun shareReturnReceiptPdf(context: Context, file: File, batchNo: String) {
+    shareFile(context, file, "application/pdf", "Return Receipt ($batchNo)")
+  }
+
   private fun shareFile(context: Context, file: File, mimeType: String, title: String) {
     try {
       val uri: Uri = FileProvider.getUriForFile(
