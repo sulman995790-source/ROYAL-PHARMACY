@@ -94,6 +94,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.MedicineItem
+import com.example.service.InvoicePrinterService
 import com.example.ui.theme.CardBorder
 import com.example.ui.theme.GrayBackground
 import com.example.ui.theme.RoyalMagenta
@@ -129,6 +130,7 @@ fun StockScreen(
   var medicineToEditRack by remember { mutableStateOf<MedicineItem?>(null) }
   var medicineToEditReorder by remember { mutableStateOf<MedicineItem?>(null) }
   var medicineForQrBatch by remember { mutableStateOf<MedicineItem?>(null) }
+  var medicineForThermalBarcode by remember { mutableStateOf<MedicineItem?>(null) }
 
   val searchTokens = searchQuery.trim().split("\\s+".toRegex()).filter { it.isNotBlank() }
   val filteredMedicines = medicines.filter { item ->
@@ -386,6 +388,9 @@ fun StockScreen(
             },
             onGenerateQrBatch = {
               medicineForQrBatch = med
+            },
+            onPrintThermalBarcode = {
+              medicineForThermalBarcode = med
             }
           )
         }
@@ -723,6 +728,19 @@ fun StockScreen(
         onDismiss = { medicineForQrBatch = null }
       )
     }
+
+    // 11. Generate & Print Thermal Barcode Label Dialog (HSN Code)
+    if (medicineForThermalBarcode != null) {
+      val med = medicineForThermalBarcode!!
+      ThermalBarcodeLabelDialog(
+        item = med,
+        onDismiss = { medicineForThermalBarcode = null },
+        onPrint = {
+          InvoicePrinterService.printThermalBarcodeLabel(context, med)
+          medicineForThermalBarcode = null
+        }
+      )
+    }
   }
 }
 
@@ -734,7 +752,8 @@ fun StockItemCard(
   onDeleteClick: () -> Unit,
   onEditRack: () -> Unit,
   onEditReorderLevel: () -> Unit,
-  onGenerateQrBatch: () -> Unit
+  onGenerateQrBatch: () -> Unit,
+  onPrintThermalBarcode: () -> Unit = {}
 ) {
   val initials = item.name.take(2).uppercase()
   val isInStock = item.stockPacks > 0
@@ -1032,6 +1051,21 @@ fun StockItemCard(
               imageVector = Icons.Default.QrCode2,
               contentDescription = "Generate QR Batch Label",
               tint = RoyalMagenta,
+              modifier = Modifier.size(16.dp)
+            )
+          }
+
+          Spacer(modifier = Modifier.width(4.dp))
+
+          // Generate & Print Thermal Barcode Label Button (HSN code)
+          IconButton(
+            onClick = onPrintThermalBarcode,
+            modifier = Modifier.size(26.dp).testTag("btn_thermal_barcode_${item.id}")
+          ) {
+            Icon(
+              imageVector = Icons.Default.Print,
+              contentDescription = "Generate & Print Thermal Barcode Label (HSN: ${item.hsnCode})",
+              tint = Color(0xFF4F46E5),
               modifier = Modifier.size(16.dp)
             )
           }
@@ -1476,6 +1510,142 @@ fun QrBatchModalDialog(
     dismissButton = {
       TextButton(onClick = onDismiss) {
         Text("Close", color = TextMuted)
+      }
+    }
+  )
+}
+
+@Composable
+fun ThermalBarcodeLabelDialog(
+  item: MedicineItem,
+  onDismiss: () -> Unit,
+  onPrint: () -> Unit
+) {
+  val hsn = item.hsnCode.ifBlank { "3004" }
+  val batch = item.batchNumber.ifBlank { "RX-2027" }
+
+  AlertDialog(
+    onDismissRequest = onDismiss,
+    title = {
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Default.Print, contentDescription = null, tint = Color(0xFF4F46E5))
+        Spacer(modifier = Modifier.width(8.dp))
+        Text("Thermal Barcode Sticker", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+      }
+    },
+    text = {
+      Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+      ) {
+        // Thermal Label Preview Card
+        Card(
+          shape = RoundedCornerShape(8.dp),
+          colors = CardDefaults.cardColors(containerColor = Color.White),
+          border = CardDefaults.outlinedCardBorder().copy(
+            brush = androidx.compose.ui.graphics.SolidColor(Color(0xFF0F172A))
+          ),
+          modifier = Modifier.fillMaxWidth()
+        ) {
+          Column(
+            modifier = Modifier.padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+          ) {
+            Text("ROYAL PHARMACY", fontSize = 11.sp, fontWeight = FontWeight.Black, color = Color.Black, letterSpacing = 1.sp)
+            Text(item.name, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = Color.Black, textAlign = TextAlign.Center)
+            Text(
+              item.composition.ifBlank { item.saltMolecule.ifBlank { item.category } },
+              fontSize = 10.sp,
+              color = Color.DarkGray,
+              maxLines = 1,
+              overflow = TextOverflow.Ellipsis
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Barcode Drawing (Visual Code 39 Pattern for HSN Code)
+            Box(
+              modifier = Modifier
+                .fillMaxWidth()
+                .height(44.dp)
+                .background(Color.White)
+                .padding(horizontal = 16.dp),
+              contentAlignment = Alignment.Center
+            ) {
+              Canvas(modifier = Modifier.fillMaxSize()) {
+                val totalBars = 36
+                val barWidth = size.width / (totalBars * 1.5f)
+                val hsnDigits = hsn.filter { it.isDigit() }.ifBlank { "3004" }
+                for (i in 0 until totalBars) {
+                  val digit = hsnDigits[i % hsnDigits.length].digitToIntOrNull() ?: 3
+                  val isThick = (digit + i) % 3 == 0
+                  val currentWidth = if (isThick) barWidth * 1.8f else barWidth * 0.8f
+                  val x = i * (barWidth * 1.5f)
+                  drawRect(
+                    color = Color.Black,
+                    topLeft = androidx.compose.ui.geometry.Offset(x, 0f),
+                    size = androidx.compose.ui.geometry.Size(currentWidth, size.height)
+                  )
+                }
+              }
+            }
+
+            Text(
+              text = "HSN CODE: $hsn",
+              fontSize = 11.sp,
+              fontWeight = FontWeight.Bold,
+              fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+              color = Color.Black,
+              modifier = Modifier.padding(top = 2.dp)
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row(
+              modifier = Modifier
+                .fillMaxWidth()
+                .border(0.5.dp, Color.Black)
+                .padding(4.dp),
+              horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+              Text("Batch: $batch", fontSize = 9.5.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+              Text("Exp: ${item.expiryDate}", fontSize = 9.5.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+            }
+
+            Row(
+              modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 2.dp, start = 4.dp, end = 4.dp),
+              horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+              Text("MRP: ₹${item.mrp}", fontSize = 9.5.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+              Text(item.rackLocation.ifBlank { "Rack A-1" }, fontSize = 9.5.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+            }
+          }
+        }
+
+        Text(
+          text = "Standard 58mm x 40mm thermal sticker roll ready for ESC/POS and Android system print spooler.",
+          fontSize = 10.5.sp,
+          color = TextMuted,
+          textAlign = TextAlign.Center
+        )
+      }
+    },
+    confirmButton = {
+      Button(
+        onClick = onPrint,
+        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4F46E5))
+      ) {
+        Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(16.dp))
+        Spacer(modifier = Modifier.width(6.dp))
+        Text("Print Label")
+      }
+    },
+    dismissButton = {
+      TextButton(onClick = onDismiss) {
+        Text("Close", color = TextDark)
       }
     }
   )

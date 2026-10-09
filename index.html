@@ -12,9 +12,10 @@
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
   
-  <!-- html5-qrcode for Quick Scan & QRCode.js for Label Generation -->
+  <!-- html5-qrcode for Quick Scan & QRCode.js & JsBarcode for Label Generation -->
   <script src="https://unpkg.com/html5-qrcode"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
   
   <!-- SheetJS & jsPDF & SweetAlert2 & Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -112,7 +113,7 @@
       will-change: transform, box-shadow;
     }
 
-    /* Smooth Stock Count Animations */
+    /* Smooth Stock Count Animations & Feedback */
     @keyframes stockPopAnim {
       0% {
         transform: scale(1);
@@ -135,20 +136,105 @@
       will-change: transform;
     }
 
+    /* Enhanced Stock Count Pill Feedback Animations */
+    @keyframes stockPillPop {
+      0% {
+        transform: scale(1);
+      }
+      25% {
+        transform: scale(1.15);
+        box-shadow: 0 0 0 5px rgba(156, 18, 88, 0.35), 0 4px 14px rgba(156, 18, 88, 0.25);
+      }
+      50% {
+        transform: scale(0.96);
+      }
+      75% {
+        transform: scale(1.04);
+      }
+      100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(156, 18, 88, 0);
+      }
+    }
+    .animate-stock-pill-pop {
+      animation: stockPillPop 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+      transform-origin: center center;
+      will-change: transform, box-shadow;
+    }
+
+    @keyframes stockPillIncrease {
+      0% {
+        transform: scale(1);
+      }
+      25% {
+        transform: scale(1.15);
+        box-shadow: 0 0 0 6px rgba(16, 185, 129, 0.45), 0 4px 16px rgba(16, 185, 129, 0.35);
+        background-color: rgba(167, 243, 208, 0.95);
+      }
+      50% {
+        transform: scale(0.96);
+      }
+      75% {
+        transform: scale(1.04);
+      }
+      100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+      }
+    }
+    .animate-stock-pill-increase {
+      animation: stockPillIncrease 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+      transform-origin: center center;
+      will-change: transform, box-shadow, background-color;
+    }
+
+    @keyframes stockPillDecrease {
+      0% {
+        transform: scale(1);
+      }
+      25% {
+        transform: scale(1.15);
+        box-shadow: 0 0 0 6px rgba(225, 29, 72, 0.45), 0 4px 16px rgba(225, 29, 72, 0.35);
+        background-color: rgba(254, 205, 211, 0.95);
+      }
+      50% {
+        transform: scale(0.96);
+      }
+      75% {
+        transform: scale(1.04);
+      }
+      100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(225, 29, 72, 0);
+      }
+    }
+    .animate-stock-pill-decrease {
+      animation: stockPillDecrease 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+      transform-origin: center center;
+      will-change: transform, box-shadow, background-color;
+    }
+
     @keyframes stockGlowAnim {
       0% {
         box-shadow: 0 0 0 0 rgba(156, 18, 88, 0.6);
         background-color: rgba(219, 39, 119, 0.25);
       }
-      50% {
-        box-shadow: 0 0 16px 4px rgba(156, 18, 88, 0.4);
+      35% {
+        transform: scale(1.08);
+        box-shadow: 0 0 16px 5px rgba(156, 18, 88, 0.45);
+      }
+      70% {
+        transform: scale(0.97);
       }
       100% {
+        transform: scale(1);
         box-shadow: 0 0 0 0 rgba(156, 18, 88, 0);
       }
     }
     .animate-stock-glow {
       animation: stockGlowAnim 0.75s ease-out !important;
+      transform-origin: center center;
+      will-change: transform, box-shadow;
     }
 
     .stock-count-number {
@@ -5051,6 +5137,10 @@
 
       saveStateToLocal();
 
+      // Track recent adjustment for CSS animation
+      window._lastAdjustedDrugName = drugName;
+      window._lastAdjustedDelta = delta;
+
       // Sync change to Firestore immediately
       if (typeof fbDb !== 'undefined' && fbDb) {
         const docId = 'med_' + drugName.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
@@ -5061,25 +5151,62 @@
         });
       }
 
-      // Animate stock number and container pill in DOM
-      const stockCountEl = document.getElementById(`stock-count-${escapeHtml(escapeJsParam(drugName))}`);
-      const stockPillEl = document.getElementById(`stock-pill-${escapeHtml(escapeJsParam(drugName))}`);
-      if (stockCountEl) {
-        stockCountEl.textContent = newStock;
-        stockCountEl.classList.remove('animate-stock-pop');
-        void stockCountEl.offsetWidth; // trigger reflow for animation restart
-        stockCountEl.classList.add('animate-stock-pop');
-      }
-      if (stockPillEl) {
-        stockPillEl.classList.remove('animate-stock-glow');
-        void stockPillEl.offsetWidth;
-        stockPillEl.classList.add('animate-stock-glow');
-      }
+      // Preserve table scroll position if in container
+      const tableContainer = document.querySelector('#tab-content-drugs .overflow-x-auto') ||
+                             document.getElementById('drugs-table-body')?.closest('.overflow-x-auto') ||
+                             document.getElementById('drugs-table-body')?.parentElement?.parentElement;
+      const prevScrollTop = tableContainer ? tableContainer.scrollTop : 0;
 
       searchDrugs();
       if (typeof renderLowStockWidget === 'function') {
         renderLowStockWidget();
       }
+
+      if (tableContainer && prevScrollTop) {
+        tableContainer.scrollTop = prevScrollTop;
+      }
+
+      // Re-trigger and enforce CSS visual feedback animation on the newly rendered DOM elements
+      let stockPillEl = document.getElementById(`stock-pill-${escapeHtml(escapeJsParam(drugName))}`);
+      if (!stockPillEl) {
+        const safeName = drugName.replace(/["\\]/g, '\\$&');
+        stockPillEl = document.querySelector(`[data-stock-pill="${safeName}"]`);
+      }
+      if (!stockPillEl) {
+        const allPills = document.querySelectorAll('[data-stock-pill]');
+        for (const pill of allPills) {
+          if (pill.getAttribute('data-stock-pill') === drugName) {
+            stockPillEl = pill;
+            break;
+          }
+        }
+      }
+
+      let stockCountEl = document.getElementById(`stock-count-${escapeHtml(escapeJsParam(drugName))}`);
+      if (!stockCountEl && stockPillEl) {
+        stockCountEl = stockPillEl.querySelector('.stock-count-number');
+      }
+
+      if (stockPillEl) {
+        const animClass = delta > 0 ? 'animate-stock-pill-increase' : 'animate-stock-pill-decrease';
+        stockPillEl.classList.remove('animate-stock-glow', 'animate-stock-pill-pop', 'animate-stock-pill-increase', 'animate-stock-pill-decrease');
+        void stockPillEl.offsetWidth; // Force reflow to restart CSS animation cleanly
+        stockPillEl.classList.add(animClass, 'animate-stock-pill-pop', 'animate-stock-glow');
+      }
+
+      if (stockCountEl) {
+        stockCountEl.textContent = newStock;
+        stockCountEl.classList.remove('animate-stock-pop');
+        void stockCountEl.offsetWidth; // Force reflow
+        stockCountEl.classList.add('animate-stock-pop');
+      }
+
+      // Clear tracking so subsequent unrelated queries don't re-animate
+      clearTimeout(window._clearAdjustedDrugTimer);
+      window._clearAdjustedDrugTimer = setTimeout(() => {
+        window._lastAdjustedDrugName = null;
+        window._lastAdjustedDelta = 0;
+      }, 1200);
 
       if (window.Swal) {
         const Toast = Swal.mixin({
@@ -5163,6 +5290,14 @@
 
         const isLowStock = item.stock <= minStockLevel;
         const isOutStock = item.stock === 0;
+        const isBelowThreshold = isLowStock || isOutStock;
+        const recommendedQty = Math.max(10, Math.ceil((minStockLevel * 2) - (item.stock || 0)));
+
+        const isRecentlyAdjusted = (window._lastAdjustedDrugName === item.name);
+        const animPillClass = isRecentlyAdjusted
+          ? `animate-stock-pill-pop ${window._lastAdjustedDelta > 0 ? 'animate-stock-pill-increase' : 'animate-stock-pill-decrease'} animate-stock-glow`
+          : '';
+        const animCountClass = isRecentlyAdjusted ? 'animate-stock-pop' : '';
 
         let rowClass = "hover:bg-slate-50 border-b border-slate-100 transition-colors";
         let stockPill = "";
@@ -5170,10 +5305,10 @@
         if (isOutStock) {
           rowClass = "bg-rose-50/80 hover:bg-rose-100/80 border-b border-rose-200/90 transition-colors";
           stockPill = `
-            <div id="stock-pill-${escapeHtml(escapeJsParam(item.name))}" class="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300 shadow-sm transition-all duration-300">
+            <div id="stock-pill-${escapeHtml(escapeJsParam(item.name))}" data-stock-pill="${escapeHtml(item.name)}" class="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300 shadow-sm transition-all duration-300 ${animPillClass}">
               <button onclick="adjustDrugStockWeb('${escapeHtml(escapeJsParam(item.name))}', -1)" class="w-5 h-5 rounded-full bg-rose-200 text-rose-900 hover:bg-rose-300 font-black flex items-center justify-center transition active:scale-90" title="Decrease Stock">-</button>
               <i data-lucide="x-circle" class="w-3.5 h-3.5 text-rose-600 shrink-0"></i>
-              <span id="stock-count-${escapeHtml(escapeJsParam(item.name))}" class="stock-count-number text-sm font-black text-rose-900">${item.stock}</span>
+              <span id="stock-count-${escapeHtml(escapeJsParam(item.name))}" class="stock-count-number text-sm font-black text-rose-900 ${animCountClass}">${item.stock}</span>
               <span class="text-[11px]">strips</span>
               <button onclick="adjustDrugStockWeb('${escapeHtml(escapeJsParam(item.name))}', 1)" class="w-5 h-5 rounded-full bg-rose-200 text-rose-900 hover:bg-rose-300 font-black flex items-center justify-center transition active:scale-90" title="Increase Stock">+</button>
               <span class="text-[9px] font-black uppercase tracking-wider bg-rose-200 text-rose-900 px-1.5 py-0.2 rounded ml-1">CRITICAL</span>
@@ -5182,10 +5317,10 @@
         } else if (isLowStock) {
           rowClass = "bg-amber-50/80 hover:bg-amber-100/80 border-b border-amber-200/90 transition-colors";
           stockPill = `
-            <div id="stock-pill-${escapeHtml(escapeJsParam(item.name))}" class="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300 shadow-sm transition-all duration-300">
+            <div id="stock-pill-${escapeHtml(escapeJsParam(item.name))}" data-stock-pill="${escapeHtml(item.name)}" class="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300 shadow-sm transition-all duration-300 ${animPillClass}">
               <button onclick="adjustDrugStockWeb('${escapeHtml(escapeJsParam(item.name))}', -1)" class="w-5 h-5 rounded-full bg-amber-200 text-amber-900 hover:bg-amber-300 font-black flex items-center justify-center transition active:scale-90" title="Decrease Stock">-</button>
               <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-amber-600 shrink-0"></i>
-              <span id="stock-count-${escapeHtml(escapeJsParam(item.name))}" class="stock-count-number text-sm font-black text-amber-950">${item.stock}</span>
+              <span id="stock-count-${escapeHtml(escapeJsParam(item.name))}" class="stock-count-number text-sm font-black text-amber-950 ${animCountClass}">${item.stock}</span>
               <span class="text-[11px]">strips</span>
               <button onclick="adjustDrugStockWeb('${escapeHtml(escapeJsParam(item.name))}', 1)" class="w-5 h-5 rounded-full bg-amber-200 text-amber-900 hover:bg-amber-300 font-black flex items-center justify-center transition active:scale-90" title="Increase Stock">+</button>
               <span class="text-[9px] font-black uppercase tracking-wider bg-amber-200 text-amber-900 px-1.5 py-0.2 rounded ml-1">REORDER (Min ${minStockLevel})</span>
@@ -5193,9 +5328,9 @@
           `;
         } else {
           stockPill = `
-            <div id="stock-pill-${escapeHtml(escapeJsParam(item.name))}" class="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-sm transition-all duration-300">
+            <div id="stock-pill-${escapeHtml(escapeJsParam(item.name))}" data-stock-pill="${escapeHtml(item.name)}" class="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-sm transition-all duration-300 ${animPillClass}">
               <button onclick="adjustDrugStockWeb('${escapeHtml(escapeJsParam(item.name))}', -1)" class="w-5 h-5 rounded-full bg-emerald-200 text-emerald-900 hover:bg-emerald-300 font-black flex items-center justify-center transition active:scale-90" title="Decrease Stock">-</button>
-              <span id="stock-count-${escapeHtml(escapeJsParam(item.name))}" class="stock-count-number text-sm font-black text-emerald-900">${item.stock}</span>
+              <span id="stock-count-${escapeHtml(escapeJsParam(item.name))}" class="stock-count-number text-sm font-black text-emerald-900 ${animCountClass}">${item.stock}</span>
               <span class="text-[11px]">strips</span>
               <button onclick="adjustDrugStockWeb('${escapeHtml(escapeJsParam(item.name))}', 1)" class="w-5 h-5 rounded-full bg-emerald-200 text-emerald-900 hover:bg-emerald-300 font-black flex items-center justify-center transition active:scale-90" title="Increase Stock">+</button>
             </div>
@@ -5235,8 +5370,26 @@
             <td class="px-6 py-4 text-right font-semibold">₹${item.price.toFixed(2)}</td>
             <td class="px-6 py-4 text-center text-xs font-bold text-pink-600">${escapeHtml(item.safety || '')}</td>
             <td class="px-6 py-4 text-center">
-              <div class="flex items-center justify-center space-x-1.5">
+              <div class="flex items-center justify-center space-x-1.5 flex-wrap gap-y-1">
+                ${isBelowThreshold ? `
+                  <button onclick="quickReorderDrugWeb('${escapeHtml(escapeJsParam(item.name))}')" 
+                          class="bg-gradient-to-r from-amber-600 to-rose-600 hover:from-amber-700 hover:to-rose-700 text-white px-2.5 py-1 rounded text-xs font-bold flex items-center space-x-1 transition shadow-sm active:scale-95 border border-rose-700/60" 
+                          title="Quick Reorder: Automatically add recommended ${recommendedQty} units to Required Purchases">
+                    <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-200"></i>
+                    <span>Quick Reorder</span>
+                    <span class="bg-black/25 text-amber-200 text-[10px] px-1 rounded-full font-mono font-black">+${recommendedQty}</span>
+                  </button>
+                ` : ''}
                 <button onclick="requestStockToCart('${escapeHtml(escapeJsParam(item.name))}', ${item.price})" class="bg-royal-magenta text-white px-2.5 py-1 rounded text-xs hover:bg-royal-accent font-semibold transition" title="Add to Required Purchases">Purchase</button>
+                <button onclick="generateAndPrintThermalBarcodeLabel('${escapeHtml(escapeJsParam(item.name))}')" 
+                        class="bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 py-1 rounded text-xs font-semibold flex items-center space-x-1 transition shadow-sm border border-indigo-700 active:scale-95" 
+                        title="Generate and print thermal barcode label using HSN code (${escapeHtml(item.hsn || '3004')})" 
+                        data-action="print-thermal-barcode"
+                        data-hsn="${escapeHtml(item.hsn || '3004')}"
+                        data-testid="btn-thermal-barcode-${escapeHtml(escapeJsParam(item.name))}">
+                  <i data-lucide="barcode" class="w-3.5 h-3.5"></i>
+                  <span>Barcode Label</span>
+                </button>
                 <button onclick="openQrBatchModalWeb('${escapeHtml(escapeJsParam(item.name))}')" class="bg-slate-800 text-white hover:bg-slate-900 px-2 py-1 rounded text-xs font-semibold flex items-center space-x-1 transition shadow-sm border border-slate-700" title="Generate printable batch QR label">
                   <i data-lucide="qr-code" class="w-3.5 h-3.5"></i>
                   <span>QR Batch</span>
@@ -5481,6 +5634,379 @@
       }
     }
 
+    // =========================================================================
+    // THERMAL BARCODE LABEL GENERATION & PRINTING ENGINE (HSN CODE COMPLIANCE)
+    // =========================================================================
+
+    function generateCode39Svg(inputCode) {
+      const clean = (inputCode || '3004').toString().trim().toUpperCase();
+      const code39Map = {
+        '0': '000110100', '1': '100100001', '2': '001100001', '3': '101100000',
+        '4': '000110001', '5': '100110000', '6': '001110000', '7': '000100101',
+        '8': '100100100', '9': '001100100', 'A': '100001001', 'B': '001001001',
+        'C': '101001000', 'D': '000011001', 'E': '100011000', 'F': '001011000',
+        'G': '000001101', 'H': '100001100', 'I': '001001100', 'J': '000011100',
+        'K': '100000011', 'L': '001000011', 'M': '101000010', 'N': '000010011',
+        'O': '100010010', 'P': '001010010', 'Q': '000000111', 'R': '100000110',
+        'S': '001000110', 'T': '000010110', 'U': '110000001', 'V': '011000001',
+        'W': '111000000', 'X': '010010001', 'Y': '110010000', 'Z': '011010000',
+        '-': '010000101', '.': '110000100', ' ': '011000100', '*': '010010100',
+        '$': '010101000', '/': '010100010', '+': '010001010', '%': '000101010'
+      };
+
+      const safeChars = clean.replace(/[^0-9A-Z\- .$/+%]/g, '') || '3004';
+      const encodedStr = '*' + safeChars + '*';
+      const narrow = 1.3;
+      const wide = 3.2;
+      const interCharGap = 1.8;
+      const barHeight = 36;
+      let x = 6;
+      let rects = '';
+
+      for (let i = 0; i < encodedStr.length; i++) {
+        const char = encodedStr[i];
+        const pattern = code39Map[char] || code39Map['0'];
+        for (let j = 0; j < 9; j++) {
+          const isBar = (j % 2 === 0);
+          const isWide = (pattern[j] === '1');
+          const width = isWide ? wide : narrow;
+          if (isBar) {
+            rects += `<rect x="${x.toFixed(1)}" y="2" width="${width.toFixed(1)}" height="${barHeight}" fill="#000000" />`;
+          }
+          x += width;
+        }
+        x += interCharGap;
+      }
+
+      const totalWidth = Math.max(130, Math.ceil(x + 6));
+      const totalHeight = 54;
+      return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalWidth} ${totalHeight}" width="${totalWidth}" height="${totalHeight}" style="display:block;margin:0 auto;background:#ffffff;">
+        ${rects}
+        <text x="${(totalWidth / 2).toFixed(1)}" y="49" font-family="monospace" font-size="11" font-weight="bold" fill="#000000" text-anchor="middle">HSN: ${safeChars}</text>
+      </svg>`;
+    }
+
+    function generateHsnBarcodeSvg(hsnCode) {
+      const cleanHsn = (hsnCode || '300490').toString().trim().toUpperCase();
+      // 1. Try JsBarcode if loaded
+      if (typeof JsBarcode !== 'undefined') {
+        try {
+          const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+          JsBarcode(svg, cleanHsn, {
+            format: "CODE128",
+            lineColor: "#000000",
+            width: 1.8,
+            height: 38,
+            displayValue: true,
+            text: `HSN: ${cleanHsn}`,
+            fontSize: 11,
+            font: "monospace",
+            textMargin: 3,
+            margin: 2
+          });
+          return new XMLSerializer().serializeToString(svg);
+        } catch (e) {
+          console.warn("JsBarcode generation fallback to Code39:", e);
+        }
+      }
+
+      // 2. Fallback to standalone Code 39 SVG
+      return generateCode39Svg(cleanHsn);
+    }
+
+    /**
+     * Generates and prints a thermal barcode label using the medicine's HSN code.
+     * Direct print trigger on standard 58mm x 40mm thermal roll sticker format.
+     */
+    function generateAndPrintThermalBarcodeLabel(medicineName) {
+      const drug = state.drugDatabase.find(d => d.name === medicineName);
+      if (!drug) {
+        if (window.Swal) Swal.fire('Error', 'Medicine details not found in database.', 'error');
+        return;
+      }
+
+      const hsn = (drug.hsn || '300490').toString().trim();
+      const batchNum = (drug.batch && drug.batch !== 'CAT-REQ') ? drug.batch : 'RX' + Math.floor(1000 + Math.random() * 9000);
+      const expDate = drug.expiry || '12/2027';
+      const pharmacyName = state.profile?.businessName || 'ROYAL PHARMACY';
+      const rack = drug.rackLocation || 'Rack A-1';
+      const mrp = (drug.price || 0).toFixed(2);
+      const generic = drug.generic || 'Ethical Formulation';
+
+      const barcodeSvg = generateHsnBarcodeSvg(hsn);
+
+      // Open print window for thermal label printer
+      const printWindow = window.open('', '_blank', 'width=460,height=520');
+      if (printWindow) {
+        printWindow.document.write(`
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <meta charset="utf-8">
+              <title>Thermal Barcode Label - ${escapeHtml(drug.name)} (HSN: ${escapeHtml(hsn)})</title>
+              <style>
+                @page {
+                  size: 58mm 40mm;
+                  margin: 0;
+                }
+                @media print {
+                  html, body {
+                    width: 58mm;
+                    height: 40mm;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    background: #ffffff;
+                  }
+                  .no-print {
+                    display: none !important;
+                  }
+                  .thermal-label-card {
+                    border: none !important;
+                    box-shadow: none !important;
+                    width: 58mm !important;
+                    height: 38mm !important;
+                    page-break-after: always;
+                  }
+                }
+                body {
+                  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, monospace, sans-serif;
+                  margin: 0;
+                  padding: 12px;
+                  background: #f8fafc;
+                  display: flex;
+                  flex-direction: column;
+                  align-items: center;
+                  justify-content: center;
+                  color: #000;
+                }
+                .no-print-toolbar {
+                  background: #0f172a;
+                  color: #ffffff;
+                  padding: 8px 16px;
+                  border-radius: 8px;
+                  margin-bottom: 12px;
+                  display: flex;
+                  align-items: center;
+                  gap: 10px;
+                  font-size: 12px;
+                  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+                }
+                .btn {
+                  background: #4f46e5;
+                  color: #ffffff;
+                  border: none;
+                  padding: 5px 12px;
+                  border-radius: 6px;
+                  font-weight: bold;
+                  font-size: 11px;
+                  cursor: pointer;
+                  display: inline-flex;
+                  align-items: center;
+                  gap: 4px;
+                }
+                .btn:hover { background: #4338ca; }
+                .btn-secondary { background: #475569; }
+                .btn-secondary:hover { background: #334155; }
+                .thermal-label-card {
+                  width: 58mm;
+                  min-height: 38mm;
+                  box-sizing: border-box;
+                  padding: 2.5mm 3mm;
+                  background: #ffffff;
+                  border: 1px dashed #000000;
+                  border-radius: 4px;
+                  display: flex;
+                  flex-direction: column;
+                  justify-content: space-between;
+                  text-align: center;
+                  box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+                }
+                .pharmacy-header {
+                  font-size: 8pt;
+                  font-weight: 900;
+                  text-transform: uppercase;
+                  letter-spacing: 0.5px;
+                  color: #000;
+                  line-height: 1.1;
+                }
+                .drug-title {
+                  font-size: 9.5pt;
+                  font-weight: 800;
+                  line-height: 1.2;
+                  margin: 1mm 0 0.5mm 0;
+                  color: #000;
+                  word-break: break-word;
+                }
+                .drug-salt {
+                  font-size: 6.5pt;
+                  color: #333;
+                  line-height: 1.1;
+                  margin-bottom: 0.5mm;
+                }
+                .barcode-wrapper {
+                  display: flex;
+                  flex-direction: column;
+                  align-items: center;
+                  justify-content: center;
+                  margin: 0.5mm 0;
+                }
+                .barcode-wrapper svg {
+                  max-width: 52mm;
+                  height: auto;
+                  max-height: 14mm;
+                }
+                .details-row {
+                  display: flex;
+                  justify-content: space-between;
+                  font-size: 6.5pt;
+                  font-weight: bold;
+                  color: #000;
+                  line-height: 1.2;
+                  border-top: 1px solid #000;
+                  padding-top: 0.8mm;
+                  margin-top: 0.5mm;
+                }
+                .footer-badge {
+                  font-size: 5.5pt;
+                  color: #555;
+                  letter-spacing: 0.2px;
+                  text-transform: uppercase;
+                  margin-top: 0.5mm;
+                }
+              </style>
+            </head>
+            <body>
+              <div class="no-print no-print-toolbar">
+                <span>🖨️ Thermal Barcode Sticker: <b>${escapeHtml(drug.name)}</b> (HSN: <b>${escapeHtml(hsn)}</b>)</span>
+                <button class="btn" onclick="window.print()">Print Now</button>
+                <button class="btn btn-secondary" onclick="window.close()">Close</button>
+              </div>
+              <div class="thermal-label-card">
+                <div>
+                  <div class="pharmacy-header">${escapeHtml(pharmacyName)}</div>
+                  <div class="drug-title">${escapeHtml(drug.name)}</div>
+                  <div class="drug-salt">${escapeHtml(generic)}</div>
+                </div>
+                <div class="barcode-wrapper">
+                  ${barcodeSvg}
+                </div>
+                <div>
+                  <div class="details-row">
+                    <span>Batch: ${escapeHtml(batchNum)}</span>
+                    <span>Exp: ${escapeHtml(expDate)}</span>
+                  </div>
+                  <div class="details-row">
+                    <span>MRP: ₹${mrp} (Inc. Tax)</span>
+                    <span>${escapeHtml(rack)}</span>
+                  </div>
+                  <div class="footer-badge">HSN: ${escapeHtml(hsn)} • DISPENSE LABEL</div>
+                </div>
+              </div>
+              <script>
+                window.onload = function() {
+                  setTimeout(function() {
+                    window.print();
+                  }, 300);
+                };
+              <\/script>
+            </body>
+          </html>
+        `);
+        printWindow.document.close();
+      } else {
+        // Fallback to modal if popup window was blocked
+        openThermalBarcodeModalWeb(medicineName);
+      }
+
+      if (window.Swal) {
+        const Toast = Swal.mixin({
+          toast: true,
+          position: 'top-end',
+          showConfirmButton: false,
+          timer: 2000,
+          timerProgressBar: true
+        });
+        Toast.fire({
+          icon: 'success',
+          title: `Thermal barcode label generated for ${drug.name} (HSN: ${hsn})`
+        });
+      }
+    }
+
+    /**
+     * Modal dialog to preview, customize, and print/download thermal barcode label using HSN code.
+     */
+    function openThermalBarcodeModalWeb(medicineName) {
+      const drug = state.drugDatabase.find(d => d.name === medicineName);
+      if (!drug) {
+        if (window.Swal) Swal.fire('Error', 'Medicine details not found in database.', 'error');
+        return;
+      }
+
+      const hsn = (drug.hsn || '300490').toString().trim();
+      const defaultBatch = (drug.batch && drug.batch !== 'CAT-REQ') ? drug.batch : 'RX' + Math.floor(1000 + Math.random() * 9000);
+      const defaultExp = drug.expiry || '12/2027';
+      const pharmacyName = state.profile?.businessName || 'ROYAL PHARMACY';
+      const barcodeSvg = generateHsnBarcodeSvg(hsn);
+
+      const modalHtml = `
+        <div class="text-left space-y-4 text-xs">
+          <div class="p-3 bg-indigo-50 rounded-xl border border-indigo-100 flex items-center justify-between">
+            <div>
+              <p class="font-bold text-slate-800 text-sm">${escapeHtml(drug.name)}</p>
+              <p class="text-[10px] text-slate-500">${escapeHtml(drug.generic || 'Generic Formulation')}</p>
+            </div>
+            <div class="text-right">
+              <span class="px-2 py-0.5 bg-indigo-600 text-white text-[10px] font-bold rounded-full">HSN: ${escapeHtml(hsn)}</span>
+              <p class="text-[10px] font-bold text-slate-700 mt-1">₹${(drug.price || 0).toFixed(2)}</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Batch Number:</label>
+              <input type="text" id="thermal-batch-input" value="${escapeHtml(defaultBatch)}" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-mono font-bold focus:ring-2 focus:ring-indigo-500/20">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">Expiry Date:</label>
+              <input type="text" id="thermal-exp-input" value="${escapeHtml(defaultExp)}" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-mono focus:ring-2 focus:ring-indigo-500/20">
+            </div>
+          </div>
+
+          <!-- Printable Label Preview -->
+          <div class="pt-2">
+            <label class="block font-bold text-slate-700 mb-1 text-[11px] uppercase tracking-wider">Printable Thermal Barcode Sticker (58mm x 40mm)</label>
+            <div class="bg-white border-2 border-slate-900 rounded-xl p-3 shadow-sm text-center">
+              <p class="text-[10px] font-black uppercase text-indigo-700 tracking-wider">${escapeHtml(pharmacyName)}</p>
+              <p class="text-xs font-extrabold text-slate-900">${escapeHtml(drug.name)}</p>
+              <p class="text-[10px] text-slate-500 mb-1">${escapeHtml(drug.generic || '')}</p>
+              <div class="my-1.5 flex justify-center">
+                ${barcodeSvg}
+              </div>
+              <div class="flex justify-between items-center text-[10px] font-mono font-bold border-t border-slate-200 pt-1 text-slate-700">
+                <span>Batch: ${escapeHtml(defaultBatch)}</span>
+                <span>Exp: ${escapeHtml(defaultExp)}</span>
+                <span>MRP: ₹${(drug.price || 0).toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      Swal.fire({
+        title: `Thermal Barcode Label: ${drug.name}`,
+        html: modalHtml,
+        showCancelButton: true,
+        confirmButtonText: '🖨️ Print Thermal Label',
+        confirmButtonColor: '#4F46E5',
+        cancelButtonText: 'Close'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          generateAndPrintThermalBarcodeLabel(drug.name);
+        }
+      });
+    }
+
     // Sync Inventory Function: forces a real-time push of all current medicine stock levels to Firestore & Google Drive
     async function syncInventoryWeb() {
       const syncBtn = document.getElementById('btn-sync-inventory-web');
@@ -5570,6 +6096,89 @@
           syncBtn.innerHTML = originalBtnContent;
           if (window.lucide) lucide.createIcons();
         }
+      }
+    }
+
+    function quickReorderDrugWeb(drugName) {
+      const drug = state.drugDatabase.find(d => d.name === drugName);
+      if (!drug) {
+        if (window.Swal) Swal.fire('Error', 'Drug details not found in database.', 'error');
+        return;
+      }
+
+      const minStockLevel = (state.customReorderLevels && state.customReorderLevels[drug.name]) !== undefined
+        ? state.customReorderLevels[drug.name]
+        : (drug.minStock || drug.reorderLevel || 15);
+
+      // Recommended Reorder Quantity: brings inventory up to 2x safety threshold (minimum 10 units)
+      const recommendedQty = Math.max(10, Math.ceil((minStockLevel * 2) - (drug.stock || 0)));
+      const unitCost = drug.purchasePrice || (drug.price ? Number((drug.price * 0.75).toFixed(2)) : 20.0);
+
+      state.distributorCart = state.distributorCart || [];
+      const existing = state.distributorCart.find(item => item.name === drug.name);
+      if (existing) {
+        existing.qty += recommendedQty;
+        existing.total = Number((existing.qty * existing.cost).toFixed(2));
+      } else {
+        state.distributorCart.push({
+          name: drug.name,
+          batch: "REORDER-AUTO",
+          qty: recommendedQty,
+          cost: unitCost,
+          total: Number((recommendedQty * unitCost).toFixed(2))
+        });
+      }
+
+      // Also mirror entry in cartItems for purchase order tracking
+      state.cartItems = state.cartItems || [];
+      const existingPo = state.cartItems.find(c => c.name === drug.name);
+      if (existingPo) {
+        existingPo.qty += recommendedQty;
+      } else {
+        state.cartItems.push({
+          id: Date.now(),
+          name: drug.name,
+          manufacturer: "Royal Pharma Supplier",
+          qty: recommendedQty,
+          rate: unitCost,
+          mrp: drug.price || unitCost,
+          type: "PURCHASE_ORDER"
+        });
+      }
+
+      saveStateToLocal();
+      syncUiState();
+
+      if (window.Swal) {
+        Swal.fire({
+          icon: 'success',
+          title: 'Quick Reorder Added!',
+          html: `
+            <div class="text-left text-xs space-y-2 p-1">
+              <p class="font-bold text-slate-800 dark:text-white text-sm">${escapeHtml(drug.name)}</p>
+              <div class="flex items-center justify-between text-slate-600 dark:text-slate-300">
+                <span>Current Stock: <b class="text-rose-600 font-extrabold">${drug.stock || 0} strips</b></span>
+                <span>Threshold: <b class="text-amber-600 font-extrabold">${minStockLevel} strips</b></span>
+              </div>
+              <div class="p-2.5 bg-pink-50 dark:bg-pink-950/40 border border-pink-200 dark:border-pink-900 rounded-xl text-royal-magenta dark:text-pink-300 flex items-center justify-between">
+                <span class="font-bold">Recommended Order:</span>
+                <span class="text-sm font-black bg-pink-200/80 dark:bg-pink-900 px-2 py-0.5 rounded-lg">+${recommendedQty} strips</span>
+              </div>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400">Added to <b>Required Purchases</b> cart (Est. Total: ₹${(recommendedQty * unitCost).toFixed(2)})</p>
+            </div>
+          `,
+          timer: 2600,
+          showConfirmButton: true,
+          confirmButtonText: 'View Cart',
+          confirmButtonColor: '#9C1258',
+          showCancelButton: true,
+          cancelButtonText: 'Continue',
+          cancelButtonColor: '#64748B'
+        }).then((result) => {
+          if (result && result.isConfirmed) {
+            switchTab('cart');
+          }
+        });
       }
     }
 

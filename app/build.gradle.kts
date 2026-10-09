@@ -26,23 +26,11 @@ android {
   }
 
   signingConfigs {
-    val releaseKeystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks"
-    val releaseStoreFile = file(releaseKeystorePath)
-    val hasReleaseSecret = !System.getenv("STORE_PASSWORD").isNullOrEmpty()
-
-    create("unifiedConfig") {
-      if (releaseStoreFile.exists() && hasReleaseSecret) {
-        storeFile = releaseStoreFile
-        storePassword = System.getenv("STORE_PASSWORD")
-        keyAlias = System.getenv("KEY_ALIAS") ?: "upload"
-        keyPassword = System.getenv("KEY_PASSWORD") ?: System.getenv("STORE_PASSWORD")
-      } else {
-        // Automatically fallback to root debug.keystore so ALL APK downloads (debug & release) match signatures
-        storeFile = file("${rootDir}/debug.keystore")
-        storePassword = "android"
-        keyAlias = "androiddebugkey"
-        keyPassword = "android"
-      }
+    create("debugConfig") {
+      storeFile = file("${rootDir}/debug.keystore")
+      storePassword = "android"
+      keyAlias = "androiddebugkey"
+      keyPassword = "android"
     }
   }
 
@@ -52,10 +40,10 @@ android {
       isMinifyEnabled = true
       isShrinkResources = true
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-      signingConfig = signingConfigs.getByName("unifiedConfig")
+      signingConfig = signingConfigs.getByName("debugConfig")
     }
     debug {
-      signingConfig = signingConfigs.getByName("debug")
+      signingConfig = signingConfigs.getByName("debugConfig")
     }
   }
   compileOptions {

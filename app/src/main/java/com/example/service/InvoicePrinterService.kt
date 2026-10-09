@@ -12,6 +12,7 @@ import android.webkit.WebViewClient
 import android.widget.Toast
 import androidx.core.content.FileProvider
 import com.example.data.model.BusinessProfile
+import com.example.data.model.MedicineItem
 import com.example.data.model.SaleInvoice
 import android.graphics.Canvas
 import android.graphics.Color
@@ -854,5 +855,132 @@ object InvoicePrinterService {
     } catch (e: Exception) {
       onResult(false, "Bluetooth printing error: ${e.localizedMessage}")
     }
+  }
+
+  /**
+   * Generates and prints a thermal barcode label for a medicine using its HSN code.
+   * Outputs to Android PrintManager formatted for 58mm / 40mm thermal sticker roll.
+   */
+  fun printThermalBarcodeLabel(
+    context: Context,
+    item: MedicineItem,
+    profile: BusinessProfile? = null
+  ) {
+    try {
+      val printManager = context.getSystemService(Context.PRINT_SERVICE) as? PrintManager
+      if (printManager == null) {
+        Toast.makeText(context, "Print service is unavailable on this device", Toast.LENGTH_SHORT).show()
+        return
+      }
+
+      val pharmacyName = profile?.businessName ?: "ROYAL PHARMACY"
+      val hsn = item.hsnCode.ifBlank { "3004" }
+      val batch = item.batchNumber.ifBlank { "RX-2027" }
+      val exp = item.expiryDate
+      val rack = item.rackLocation.ifBlank { "Rack A-1" }
+      val mrp = String.format(Locale.getDefault(), "%.2f", item.mrp)
+      val generic = item.composition.ifBlank { item.saltMolecule.ifBlank { "Ethical Formulation" } }
+
+      val barcodeSvg = buildHsnBarcodeSvg(hsn)
+
+      val html = """
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            @page { size: 58mm 40mm; margin: 0; }
+            body {
+              font-family: monospace, sans-serif;
+              margin: 0; padding: 2mm;
+              width: 54mm; height: 36mm;
+              box-sizing: border-box;
+              text-align: center;
+              display: flex; flex-direction: column; justify-content: space-between;
+              color: #000;
+            }
+            .header { font-size: 8.5pt; font-weight: 900; text-transform: uppercase; }
+            .name { font-size: 9.5pt; font-weight: 800; margin: 1mm 0 0.5mm 0; word-break: break-word; }
+            .generic { font-size: 6.5pt; color: #333; margin-bottom: 0.5mm; }
+            .barcode { margin: 0.5mm 0; }
+            .details { font-size: 6.5pt; font-weight: bold; border-top: 1px solid #000; padding-top: 0.8mm; display: flex; justify-content: space-between; }
+            .footer { font-size: 5.5pt; color: #555; text-transform: uppercase; margin-top: 0.5mm; }
+          </style>
+        </head>
+        <body>
+          <div>
+            <div class="header">${pharmacyName}</div>
+            <div class="name">${item.name}</div>
+            <div class="generic">${generic}</div>
+          </div>
+          <div class="barcode">
+            ${barcodeSvg}
+          </div>
+          <div>
+            <div class="details">
+              <span>Batch: ${batch}</span>
+              <span>Exp: ${exp}</span>
+            </div>
+            <div class="details">
+              <span>MRP: ₹${mrp}</span>
+              <span>${rack}</span>
+            </div>
+            <div class="footer">HSN: ${hsn} • DISPENSE LABEL</div>
+          </div>
+        </body>
+        </html>
+      """.trimIndent()
+
+      val webView = WebView(context)
+      webView.webViewClient = object : WebViewClient() {
+        override fun onPageFinished(view: WebView?, url: String?) {
+          val printAdapter: PrintDocumentAdapter = webView.createPrintDocumentAdapter("BarcodeLabel_${item.id}_HSN_${hsn}")
+          val jobName = "RoyalPharmacy_BarcodeLabel_${item.name}"
+          val printAttributes = PrintAttributes.Builder()
+            .setMediaSize(PrintAttributes.MediaSize.UNKNOWN_PORTRAIT)
+            .setResolution(PrintAttributes.Resolution("thermal", "thermal_sticker", 300, 300))
+            .setMinMargins(PrintAttributes.Margins.NO_MARGINS)
+            .build()
+
+          printManager.print(jobName, printAdapter, printAttributes)
+        }
+      }
+      webView.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
+      Toast.makeText(context, "Printing Thermal Barcode Label (HSN: $hsn)...", Toast.LENGTH_SHORT).show()
+    } catch (e: Exception) {
+      Toast.makeText(context, "Label print error: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+    }
+  }
+
+  private fun buildHsnBarcodeSvg(hsn: String): String {
+    val clean = hsn.replace("[^0-9A-Za-z]".toRegex(), "").ifBlank { "3004" }
+    val code39Map = mapOf(
+      '0' to "000110100", '1' to "100100001", '2' to "001100001", '3' to "101100000",
+      '4' to "000110001", '5' to "100110000", '6' to "001110000", '7' to "000100101",
+      '8' to "100100100", '9' to "001100100", 'A' to "100001001", 'B' to "001001001"
+    )
+    val encoded = "*$clean*"
+    val rects = StringBuilder()
+    var x = 4.0
+    for (char in encoded) {
+      val pattern = code39Map[char] ?: "000110100"
+      for (i in 0 until 9) {
+        val isBar = i % 2 == 0
+        val isWide = pattern[i] == '1'
+        val w = if (isWide) 2.8 else 1.2
+        if (isBar) {
+          rects.append("""<rect x="${x}" y="0" width="${w}" height="28" fill="#000000" />""")
+        }
+        x += w
+      }
+      x += 1.5
+    }
+    val totalWidth = (x + 4.0).toInt().coerceAtLeast(100)
+    return """
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 $totalWidth 40" width="100%" height="40" style="max-height:12mm;">
+        $rects
+        <text x="${totalWidth / 2}" y="37" font-family="monospace" font-size="9" font-weight="bold" fill="#000000" text-anchor="middle">HSN: $clean</text>
+      </svg>
+    """.trimIndent()
   }
 }

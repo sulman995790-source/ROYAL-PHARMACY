@@ -52,7 +52,7 @@ self.addEventListener('fetch', event => {
             return response;
           }
         ).catch(() => {
-          if (event.request.headers.get('accept').includes('text/html')) {
+          if (event.request.headers.get('accept') && event.request.headers.get('accept').includes('text/html')) {
             return caches.match('/index.html');
           }
         });
