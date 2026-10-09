@@ -584,6 +584,172 @@ object DistributorExportService {
     shareFile(context, file, "application/pdf", "Return Receipt ($batchNo)")
   }
 
+  fun generateAiTriageReportPdf(
+    context: Context,
+    res: com.example.ui.screens.DiseaseAnalysisResult,
+    patientName: String,
+    age: String,
+    gender: String,
+    duration: String,
+    severity: String,
+    comorbidities: String,
+    symptoms: String,
+    pharmacyName: String = "ROYAL PHARMACY"
+  ): File? {
+    try {
+      val document = PdfDocument()
+      val pageWidth = 595
+      val pageHeight = 842
+      val pageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, 1).create()
+      val page = document.startPage(pageInfo)
+      val canvas = page.canvas
+
+      val paint = Paint().apply { isAntiAlias = true }
+      val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+      val reportRef = "AI-TRIAGE-${(1000..9999).random()}"
+      val dateStr = SimpleDateFormat("dd MMMM yyyy, hh:mm a", Locale.getDefault()).format(Date())
+
+      // Header Banner
+      paint.color = 0xFF9C1258.toInt() // Royal Magenta
+      canvas.drawRect(0f, 0f, pageWidth.toFloat(), 95f, paint)
+
+      paint.color = Color.WHITE
+      paint.textSize = 20f
+      paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+      canvas.drawText(pharmacyName.uppercase(Locale.getDefault()), 32f, 40f, paint)
+
+      paint.textSize = 10f
+      paint.typeface = Typeface.DEFAULT
+      canvas.drawText("AI CLINICAL TRIAGE & DISEASE DIAGNOSIS REPORT", 32f, 58f, paint)
+      canvas.drawText("Report Ref: $reportRef • Generated: $dateStr", 32f, 74f, paint)
+
+      var currentY = 120f
+
+      // Patient Info Box
+      paint.color = 0xFFF1F5F9.toInt()
+      canvas.drawRect(32f, currentY, pageWidth - 32f, currentY + 55f, paint)
+
+      paint.color = 0xFF0F172A.toInt()
+      paint.textSize = 11f
+      paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+      canvas.drawText("Patient: $patientName", 44f, currentY + 20f, paint)
+      canvas.drawText("Age / Gender: $age Yrs / $gender", 240f, currentY + 20f, paint)
+      canvas.drawText("Duration: $duration Days", 420f, currentY + 20f, paint)
+
+      paint.textSize = 10f
+      paint.typeface = Typeface.DEFAULT
+      paint.color = 0xFF475569.toInt()
+      canvas.drawText("Severity: $severity  •  Comorbidities: $comorbidities", 44f, currentY + 40f, paint)
+
+      currentY += 75f
+
+      // Diagnosis Section
+      paint.color = 0xFF0F172A.toInt()
+      paint.textSize = 13f
+      paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+      canvas.drawText("SUSPECTED DIAGNOSIS: ${res.primaryDiagnosis} (${res.probabilityPercent}% Confidence)", 32f, currentY, paint)
+
+      currentY += 16f
+      paint.textSize = 10f
+      paint.typeface = Typeface.DEFAULT
+      paint.color = 0xFF334155.toInt()
+      canvas.drawText(res.clinicalSummary, 32f, currentY, paint)
+
+      currentY += 24f
+
+      // Symptoms
+      paint.color = 0xFF9C1258.toInt()
+      paint.textSize = 11f
+      paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+      canvas.drawText("PRESENTING SYMPTOMS:", 32f, currentY, paint)
+      currentY += 14f
+      paint.color = 0xFF1E293B.toInt()
+      paint.textSize = 10f
+      paint.typeface = Typeface.DEFAULT
+      canvas.drawText(symptoms, 32f, currentY, paint)
+
+      currentY += 24f
+
+      // Recommended Oral Medicines
+      paint.color = 0xFF047857.toInt()
+      paint.textSize = 11f
+      paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+      canvas.drawText("RECOMMENDED ORAL MEDICINES & PROTOCOL:", 32f, currentY, paint)
+
+      currentY += 16f
+      res.oralMedicines.forEach { med ->
+        paint.color = 0xFF0F172A.toInt()
+        paint.textSize = 10.5f
+        paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        canvas.drawText("• ${med.brandName} (${med.genericSalt}) - ${med.dosageAndStrength}", 40f, currentY, paint)
+        currentY += 14f
+        paint.color = 0xFF475569.toInt()
+        paint.textSize = 9.5f
+        paint.typeface = Typeface.DEFAULT
+        canvas.drawText("   Frequency: ${med.frequency} | Duration: ${med.duration} | Note: ${med.instructions}", 40f, currentY, paint)
+        currentY += 16f
+      }
+
+      currentY += 10f
+
+      // Lab Tests
+      if (res.recommendedLabTests.isNotEmpty()) {
+        paint.color = 0xFF0284C7.toInt()
+        paint.textSize = 11f
+        paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        canvas.drawText("RECOMMENDED DIAGNOSTIC LAB TESTS:", 32f, currentY, paint)
+        currentY += 14f
+        paint.color = 0xFF1E293B.toInt()
+        paint.textSize = 10f
+        paint.typeface = Typeface.DEFAULT
+        canvas.drawText(res.recommendedLabTests.joinToString(" • "), 32f, currentY, paint)
+        currentY += 24f
+      }
+
+      // Red Flag Warnings
+      if (res.redFlagWarnings.isNotEmpty()) {
+        paint.color = 0xFFDC2626.toInt()
+        paint.textSize = 11f
+        paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        canvas.drawText("RED FLAG CLINICAL WARNINGS:", 32f, currentY, paint)
+        currentY += 14f
+        paint.color = 0xFF991B1B.toInt()
+        paint.textSize = 9.5f
+        paint.typeface = Typeface.DEFAULT
+        res.redFlagWarnings.forEach { warn ->
+          canvas.drawText("• $warn", 40f, currentY, paint)
+          currentY += 14f
+        }
+      }
+
+      // Footer
+      paint.color = 0xFFCBD5E1.toInt()
+      canvas.drawLine(32f, pageHeight - 40f, pageWidth - 32f, pageHeight - 40f, paint)
+
+      paint.color = 0xFF94A3B8.toInt()
+      paint.textSize = 8f
+      canvas.drawText("Royal Pharmacy ERP • AI Clinical Triage Report • Ref #$reportRef • Page 1 of 1", 120f, pageHeight - 25f, paint)
+
+      document.finishPage(page)
+
+      val fileName = "AI_Triage_Report_${patientName.replace(" ", "_")}_$timeStamp.pdf"
+      val file = File(context.cacheDir, fileName)
+      val fos = FileOutputStream(file)
+      document.writeTo(fos)
+      document.close()
+      fos.close()
+
+      return file
+    } catch (e: Exception) {
+      Log.e(TAG, "Error generating AI Triage Report PDF: ${e.message}", e)
+      return null
+    }
+  }
+
+  fun shareAiTriageReportPdf(context: Context, file: File, patientName: String) {
+    shareFile(context, file, "application/pdf", "AI Triage Report ($patientName)")
+  }
+
   private fun shareFile(context: Context, file: File, mimeType: String, title: String) {
     try {
       val uri: Uri = FileProvider.getUriForFile(

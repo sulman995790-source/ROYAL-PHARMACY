@@ -455,11 +455,12 @@ fun BatchExpiryDashboardScreen(
                       fontWeight = FontWeight.Bold,
                       color = TextDark
                     )
-                  Text(
-                    text = "${batchItem.medicine.manufacturer} • ${batchItem.rackLocation}",
-                    fontSize = 11.sp,
-                    color = TextMuted
-                  )
+                    Text(
+                      text = "${batchItem.medicine.manufacturer} • ${batchItem.rackLocation}",
+                      fontSize = 11.sp,
+                      color = TextMuted
+                    )
+                  }
                 }
 
                 // Days Countdown Pill

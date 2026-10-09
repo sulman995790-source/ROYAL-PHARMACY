@@ -31,12 +31,14 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Healing
 import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.Medication
 import androidx.compose.material.icons.filled.MedicalServices
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Science
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Vaccines
 import androidx.compose.material.icons.filled.Warning
@@ -135,6 +137,7 @@ fun DiseaseTrackerScreen(
   )
   var selectedSymptoms by remember { mutableStateOf(setOf("High Fever", "Body Ache & Muscle Pain")) }
   var customSymptomDetails by remember { mutableStateOf("") }
+  var symptomSearchQuery by remember { mutableStateOf("") }
 
   // Comorbidities
   val comorbidityOptions = listOf("None", "Diabetes Mellitus", "Hypertension", "Asthma / COPD", "CKD (Kidney Disease)", "Liver Impairment", "Pregnancy")
@@ -343,9 +346,30 @@ fun DiseaseTrackerScreen(
               Text("Tap to select presenting symptoms:", fontSize = 11.5.sp, color = TextMuted)
               Spacer(modifier = Modifier.height(6.dp))
 
+              OutlinedTextField(
+                value = symptomSearchQuery,
+                onValueChange = { symptomSearchQuery = it },
+                label = { Text("Search available symptoms...") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = TextMuted) },
+                singleLine = true,
+                shape = RoundedCornerShape(8.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                  focusedContainerColor = GrayBackground,
+                  unfocusedContainerColor = GrayBackground,
+                  focusedBorderColor = RoyalMagenta,
+                  unfocusedBorderColor = CardBorder
+                ),
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .height(52.dp)
+                  .testTag("input_search_symptoms")
+              )
+              Spacer(modifier = Modifier.height(8.dp))
+
               // Multi-select symptom chips grid
               Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                popularSymptoms.chunked(2).forEach { rowPair ->
+                val filteredSymptoms = popularSymptoms.filter { it.contains(symptomSearchQuery, ignoreCase = true) }
+                filteredSymptoms.chunked(2).forEach { rowPair ->
                   Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -592,6 +616,38 @@ fun DiseaseTrackerScreen(
                     Text("Save Protocol")
                   }
                 }
+
+                Spacer(modifier = Modifier.height(10.dp))
+                Button(
+                  onClick = {
+                    val pdfFile = com.example.service.DistributorExportService.generateAiTriageReportPdf(
+                      context = context,
+                      res = res,
+                      patientName = patientName,
+                      age = ageText,
+                      gender = gender,
+                      duration = durationDays,
+                      severity = severityLevel,
+                      comorbidities = selectedComorbidities.joinToString(", "),
+                      symptoms = (selectedSymptoms.toList() + if (customSymptomDetails.isNotBlank()) listOf(customSymptomDetails) else emptyList()).joinToString(", ")
+                    )
+                    if (pdfFile != null) {
+                      Toast.makeText(context, "AI Triage Report PDF Generated Successfully!", Toast.LENGTH_SHORT).show()
+                      com.example.service.DistributorExportService.shareAiTriageReportPdf(context, pdfFile, patientName)
+                    } else {
+                      Toast.makeText(context, "Failed to generate AI Triage Report PDF", Toast.LENGTH_SHORT).show()
+                    }
+                  },
+                  colors = ButtonDefaults.buttonColors(containerColor = RoyalNavy),
+                  modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .testTag("btn_generate_ai_triage_report")
+                ) {
+                  Icon(Icons.Default.Description, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                  Spacer(modifier = Modifier.width(6.dp))
+                  Text("Generate AI Triage Report (PDF)", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                }
               }
             }
           }
@@ -751,7 +807,7 @@ fun generateLocalDiseaseResult(
 ): DiseaseAnalysisResult {
   val s = symptoms.lowercase()
   return when {
-    s.contains("fever") && (s.contains("chills") || s.contains("body ache")) -> {
+    s.contains("fever") && (s.contains("chills") || s.contains("body ache") || s.contains("rigors")) -> {
       DiseaseAnalysisResult(
         primaryDiagnosis = "Acute Viral Fever / Suspected Dengue Exanthem",
         probabilityPercent = 88,
@@ -771,7 +827,7 @@ fun generateLocalDiseaseResult(
         dietaryAdvice = "Increase oral fluid intake (coconut water, ORS, soups) to 3 Liters daily."
       )
     }
-    s.contains("cough") || s.contains("sore throat") || s.contains("chest") -> {
+    s.contains("cough") || s.contains("sore throat") || s.contains("chest") || s.contains("breath") -> {
       DiseaseAnalysisResult(
         primaryDiagnosis = "Acute Lower Respiratory Tract Infection / Bronchitis",
         probabilityPercent = 82,
@@ -791,7 +847,7 @@ fun generateLocalDiseaseResult(
         dietaryAdvice = "Steam inhalation twice daily. Warm fluids and salt water gargles."
       )
     }
-    s.contains("diarrhea") || s.contains("vomiting") || s.contains("stomach") || s.contains("acidity") -> {
+    s.contains("diarrhea") || s.contains("vomiting") || s.contains("stomach") || s.contains("acidity") || s.contains("cramps") -> {
       DiseaseAnalysisResult(
         primaryDiagnosis = "Acute Gastroenteritis & Dehydration",
         probabilityPercent = 85,
@@ -811,20 +867,114 @@ fun generateLocalDiseaseResult(
         dietaryAdvice = "BRAT diet (Bananas, Rice, Applesauce, Toast). Avoid milk and spicy foods."
       )
     }
-    else -> {
+    s.contains("insomnia") || s.contains("sleep") || s.contains("sleepless") -> {
       DiseaseAnalysisResult(
-        primaryDiagnosis = "General Symptomatic Inflammatory / Febrile Syndrome",
-        probabilityPercent = 75,
-        differentialDiagnoses = listOf("Viral Infection", "Mild Allergic Exacerbation", "Physical Exhaustion"),
-        clinicalSummary = "General clinical evaluation based on presenting symptoms and patient age $age.",
+        primaryDiagnosis = "Primary Insomnia / Sleep Architecture Disruption",
+        probabilityPercent = 85,
+        differentialDiagnoses = listOf("Circadian Rhythm Disorder", "Situational Anxiety", "Secondary Sleep Disturbance"),
+        clinicalSummary = "Difficulty initiating or maintaining restorative sleep with associated daytime fatigue.",
         oralMedicines = listOf(
-          SuggestedMedicine("Dolo 650", "Paracetamol 650mg", "Oral Tablet", "650 mg", "1-0-1 (BD)", "3 Days", "Symptomatic analgesia and antipyresis"),
-          SuggestedMedicine("Cetirizine 10mg / Allegra 120", "Cetirizine / Fexofenadine", "Oral Tablet", "10 mg", "0-0-1 (OD at night)", "3 Days", "Antihistamine relief")
+          SuggestedMedicine("Meloset 3mg / Melatonin", "Melatonin", "Oral Tablet", "3 mg", "0-0-1 (1 hr before bedtime)", "7 Days", "Chronobiotic to regulate sleep-wake cycle"),
+          SuggestedMedicine("Etilaam 0.25 / Clonazepam", "Etizolam 0.25mg", "Oral Tablet", "0.25 mg", "0-0-1 (At bedtime as needed)", "3 Days", "Short-term anxiolytic sedative under physician guidance"),
+          SuggestedMedicine("B-Complex with L-Theanine", "Neuro-Nutritional Support", "Oral Capsule", "1 Cap", "1-0-0 (Morning)", "14 Days", "Nervous system relaxation and recovery")
         ),
         injectables = emptyList(),
-        recommendedLabTests = listOf("Complete Blood Count (CBC)"),
-        redFlagWarnings = listOf("Persistent high fever >102°F for over 3 days"),
-        dietaryAdvice = "Adequate rest and balanced liquid nutrition."
+        recommendedLabTests = listOf("Thyroid Function Test (TSH)", "Serum Vitamin B12 & Vitamin D3", "Sleep Study Evaluation"),
+        redFlagWarnings = listOf("Severe depressive symptoms or self-harm thoughts", "Chronic daytime microsleeps affecting driving/machinery"),
+        dietaryAdvice = "Avoid caffeine after 4 PM, maintain consistent sleep schedule, and limit screen time 1 hour before bed."
+      )
+    }
+    s.contains("migraine") || s.contains("headache") -> {
+      DiseaseAnalysisResult(
+        primaryDiagnosis = "Vascular Migraine / Tension Headache",
+        probabilityPercent = 83,
+        differentialDiagnoses = listOf("Cluster Headache", "Sinusitis", "Cervicogenic Headache"),
+        clinicalSummary = "Recurrent throbbing cephalalgia often exacerbated by sensory stimuli and stress.",
+        oralMedicines = listOf(
+          SuggestedMedicine("Naprosyn 500 / Sumatriptan", "Naproxen Sodium 500mg", "Oral Tablet", "500 mg", "1-0-1 (BD with food)", "3 Days", "NSAID targeted for neurovascular inflammation"),
+          SuggestedMedicine("Stemetil MD / Prochlorperazine", "Prochlorperazine", "Oral Tablet", "5 mg", "SOS for nausea", "3 Days", "Anti-emetic for migraine-associated nausea"),
+          SuggestedMedicine("Inderal 40 / Propranolol", "Propranolol Hydrochloride", "Oral Tablet", "40 mg", "1-0-1 (BD)", "10 Days", "Vascular migraine prophylaxis")
+        ),
+        injectables = if (severity.equals("Severe", ignoreCase = true)) listOf(
+          SuggestedMedicine("Inj. Diclofenac (Voveran)", "Diclofenac Sodium IM", "IM Injection", "75 mg / 3ml", "STAT", "1 Day", "Deep IM injection for acute severe migraine attack", true)
+        ) else emptyList(),
+        recommendedLabTests = listOf("MRI Brain / MRA if atypical", "Cervical Spine X-Ray", "Blood Pressure Monitoring"),
+        redFlagWarnings = listOf("Sudden 'thunderclap' severe headache", "Neurological deficits or confusion"),
+        dietaryAdvice = "Avoid known triggers (aged cheeses, red wine, chocolate), maintain adequate hydration."
+      )
+    }
+    s.contains("rash") || s.contains("skin") || s.contains("itching") || s.contains("allergy") -> {
+      DiseaseAnalysisResult(
+        primaryDiagnosis = "Allergic Dermatitis / Acute Urticaria",
+        probabilityPercent = 86,
+        differentialDiagnoses = listOf("Contact Dermatitis", "Atopic Eczema", "Drug Eruption"),
+        clinicalSummary = "Cutaneous hypersensitivity reaction manifesting with pruritus, erythema, and wheals.",
+        oralMedicines = listOf(
+          SuggestedMedicine("Allegra 120 / Bilastine 20", "Fexofenadine 120mg", "Oral Tablet", "120 mg", "1-0-0 (Morning)", "5 Days", "Non-sedating antihistamine for pruritus"),
+          SuggestedMedicine("Atarax 25 / Hydroxyzine", "Hydroxyzine Hydrochloride", "Oral Tablet", "25 mg", "0-0-1 (At night)", "5 Days", "Anti-pruritic sedative antihistamine"),
+          SuggestedMedicine("Wysolone 10 / Prednisolone", "Prednisolone", "Oral Tablet", "10 mg", "1-1-0 (After breakfast/lunch)", "3 Days", "Short course systemic anti-inflammatory steroid")
+        ),
+        injectables = if (severity.equals("Severe", ignoreCase = true)) listOf(
+          SuggestedMedicine("Inj. Avil (Pheniramine Maleate)", "Pheniramine Maleate IM/IV", "IM Injection", "22.5 mg / 2ml", "STAT", "1 Day", "Immediate antihistamine rescue for severe hives", true),
+          SuggestedMedicine("Inj. Dexamethasone 4mg", "Dexamethasone Sodium", "IV Injection", "4 mg", "STAT", "1 Day", "Rapid suppression of acute allergic cascade", true)
+        ) else emptyList(),
+        recommendedLabTests = listOf("Absolute Eosinophil Count (AEC)", "Serum IgE Levels", "Skin Prick Allergy Panel"),
+        redFlagWarnings = listOf("Facial swelling or difficulty breathing (Anaphylaxis risk)", "Widespread blistering"),
+        dietaryAdvice = "Avoid potential food/contact allergens. Wear loose cotton garments."
+      )
+    }
+    s.contains("joint") || s.contains("arthritis") || s.contains("pain") || s.contains("stiffness") -> {
+      DiseaseAnalysisResult(
+        primaryDiagnosis = "Acute Myalgia / Inflammatory Arthropathy",
+        probabilityPercent = 81,
+        differentialDiagnoses = listOf("Rheumatoid Arthritis", "Gouty Arthritis", "Viral Polyarthralgia"),
+        clinicalSummary = "Musculoskeletal joint inflammation and soft tissue tenderness.",
+        oralMedicines = listOf(
+          SuggestedMedicine("Zerodol-SP / Aceclo-SP", "Aceclofenac + Paracetamol + Serratiopeptidase", "Oral Tablet", "1 Tab", "1-0-1 (BD after food)", "5 Days", "Anti-inflammatory and proteolytic enzyme combination"),
+          SuggestedMedicine("Pantocid 40", "Pantoprazole", "Oral Capsule", "40 mg", "1-0-0 (Before breakfast)", "5 Days", "Gastric mucosal protection during NSAID therapy"),
+          SuggestedMedicine("Dynapar QPS Spray / Volini", "Diclofenac Topical Gel", "Topical Gel", "Apply locally", "3-4 times daily", "5 Days", "Localized percutaneous pain relief")
+        ),
+        injectables = emptyList(),
+        recommendedLabTests = listOf("Serum Uric Acid", "RA Factor & Anti-CCP", "ESR & CRP"),
+        redFlagWarnings = listOf("Severe joint swelling with local warmth and fever (Septic arthritis risk)"),
+        dietaryAdvice = "Warm Epsom salt soaks, gentle range-of-motion exercises, and anti-inflammatory diet."
+      )
+    }
+    s.contains("dizziness") || s.contains("vertigo") || s.contains("balance") -> {
+      DiseaseAnalysisResult(
+        primaryDiagnosis = "Peripheral Vestibular Vertigo / Benign Paroxysmal Positional Vertigo",
+        probabilityPercent = 84,
+        differentialDiagnoses = listOf("Meniere's Disease", "Orthostatic Hypotension", "Cerebrovascular Insufficiency"),
+        clinicalSummary = "Rotational spinning sensation triggered by head movements and inner ear imbalance.",
+        oralMedicines = listOf(
+          SuggestedMedicine("Stemetil / Prochlorperazine", "Prochlorperazine Maleate", "Oral Tablet", "5 mg", "1-0-1 (BD)", "5 Days", "Vestibular suppressant"),
+          SuggestedMedicine("Vertin 16 / Betahistine", "Betahistine Hydrochloride", "Oral Tablet", "16 mg", "1-1-1 (TDS)", "10 Days", "Improves microcirculation in the inner ear"),
+          SuggestedMedicine("Neurobion Forte", "Vitamin B-Complex", "Oral Tablet", "1 Tab", "1-0-0 (Morning)", "10 Days", "Nerve nourishment")
+        ),
+        injectables = emptyList(),
+        recommendedLabTests = listOf("Pure Tone Audiometry", "MRI Brain with Angiography", "Blood Pressure & Lipid Profile"),
+        redFlagWarnings = listOf("Sudden weakness, slurred speech, or double vision", "Inability to stand or walk"),
+        dietaryAdvice = "Avoid sudden head rotations, stay hydrated, and reduce dietary sodium if Meniere's suspected."
+      )
+    }
+    else -> {
+      val capitalizedQuery = symptoms.trim().replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
+      DiseaseAnalysisResult(
+        primaryDiagnosis = "Clinical Evaluation for: $capitalizedQuery",
+        probabilityPercent = 82,
+        differentialDiagnoses = listOf("Symptomatic Functional Disorder", "Metabolic Imbalance", "Acute Stress Response"),
+        clinicalSummary = "Comprehensive clinical evaluation of presenting symptoms: $symptoms in patient of age $age years with $severity severity.",
+        oralMedicines = listOf(
+          SuggestedMedicine("Paracetamol 650mg (Dolo)", "Paracetamol", "Oral Tablet", "650 mg", "1-0-1 (BD) SOS", "3 Days", "General symptomatic pain and fever relief"),
+          SuggestedMedicine("Multivitamin with Minerals", "Vit-C, Zinc, B-Complex", "Oral Tablet", "1 Tab", "1-0-0 (Morning)", "10 Days", "Nutritional and metabolic support"),
+          SuggestedMedicine("Pantocid 40mg", "Pantoprazole", "Oral Capsule", "40 mg", "1-0-0 (Before food)", "5 Days", "Gastric comfort and acid suppression")
+        ),
+        injectables = if (severity.equals("Severe", ignoreCase = true)) listOf(
+          SuggestedMedicine("Inj. Pantocid 40mg IV", "Pantoprazole IV", "IV Injection", "40 mg", "STAT", "1 Day", "Immediate gastric protection", true)
+        ) else emptyList(),
+        recommendedLabTests = listOf("Complete Blood Count (CBC)", "Liver & Kidney Function Test", "Random Blood Sugar"),
+        redFlagWarnings = listOf("Persistent worsening of symptoms over 48 hours", "Severe acute distress or functional impairment"),
+        dietaryAdvice = "Balanced nutritious diet, adequate hydration (2.5 - 3 Liters daily), and proper rest."
       )
     }
   }
