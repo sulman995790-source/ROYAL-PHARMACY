@@ -23,14 +23,26 @@ jobs:
     - run: gradle wrapper --gradle-version 9.3.1
     - run: chmod +x ./gradlew
 
-    - name: Restore Debug Keystore
+    - name: Restore or Generate Debug Keystore
       run: |
-        if [ -f debug.keystore.base64 ]; then
-          echo "Decoding debug.keystore.base64 to debug.keystore"
-          base64 --decode debug.keystore.base64 > debug.keystore
-        else
-          echo "debug.keystore.base64 not found!"
+        if [ -s debug.keystore.base64 ]; then
+          echo "Restoring debug.keystore from debug.keystore.base64"
+          base64 -d debug.keystore.base64 > debug.keystore || base64 --decode debug.keystore.base64 > debug.keystore
         fi
+        if [ ! -s debug.keystore ]; then
+          echo "debug.keystore not found or empty. Generating fresh standard debug keystore via keytool..."
+          keytool -genkeypair -v \
+            -keystore debug.keystore \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+        fi
+        echo "Verifying debug.keystore existence and size:"
+        ls -la debug.keystore
 
     - name: Check Keystore Secrets & Build
       env:
