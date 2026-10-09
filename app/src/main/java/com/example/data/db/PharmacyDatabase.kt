@@ -54,7 +54,7 @@ abstract class PharmacyDatabase : RoomDatabase() {
           PharmacyDatabase::class.java,
           "royal_pharmacy_db"
         )
-          .addCallback(PharmacyDatabaseCallback(scope))
+          .addCallback(PharmacyDatabaseCallback(context.applicationContext, scope))
           .fallbackToDestructiveMigration()
           .build()
         INSTANCE = instance
@@ -64,13 +64,17 @@ abstract class PharmacyDatabase : RoomDatabase() {
   }
 
   private class PharmacyDatabaseCallback(
+    private val context: Context,
     private val scope: CoroutineScope
   ) : RoomDatabase.Callback() {
     override fun onCreate(db: SupportSQLiteDatabase) {
       super.onCreate(db)
-      INSTANCE?.let { database ->
-        scope.launch(Dispatchers.IO) {
+      scope.launch(Dispatchers.IO) {
+        try {
+          val database = getDatabase(context, scope)
           populateInitialData(database.pharmacyDao())
+        } catch (e: Throwable) {
+          android.util.Log.e("PharmacyDatabase", "Error populating initial data: ${e.message}")
         }
       }
     }

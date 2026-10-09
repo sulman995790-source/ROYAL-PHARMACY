@@ -98,8 +98,12 @@ class StockAlertBackgroundService : Service() {
     fun start(context: Context) {
       try {
         val intent = Intent(context, StockAlertBackgroundService::class.java)
-        context.startService(intent)
-      } catch (e: Exception) {
+        try {
+          context.startService(intent)
+        } catch (e: Throwable) {
+          Log.w(TAG, "Background service start skipped: ${e.message}")
+        }
+      } catch (e: Throwable) {
         Log.e(TAG, "Unable to start StockAlertBackgroundService: ${e.message}")
       }
     }
@@ -109,8 +113,12 @@ class StockAlertBackgroundService : Service() {
         val intent = Intent(context, StockAlertBackgroundService::class.java).apply {
           action = ACTION_CHECK_NOW
         }
-        context.startService(intent)
-      } catch (e: Exception) {
+        try {
+          context.startService(intent)
+        } catch (e: Throwable) {
+          Log.w(TAG, "Unable to trigger stock check: ${e.message}")
+        }
+      } catch (e: Throwable) {
         Log.e(TAG, "Unable to trigger stock check: ${e.message}")
       }
     }
@@ -120,8 +128,12 @@ class StockAlertBackgroundService : Service() {
         val intent = Intent(context, StockAlertBackgroundService::class.java).apply {
           action = ACTION_SYNC_FIREBASE
         }
-        context.startService(intent)
-      } catch (e: Exception) {
+        try {
+          context.startService(intent)
+        } catch (e: Throwable) {
+          Log.w(TAG, "Unable to trigger Firebase sync: ${e.message}")
+        }
+      } catch (e: Throwable) {
         Log.e(TAG, "Unable to trigger Firebase sync: ${e.message}")
       }
     }

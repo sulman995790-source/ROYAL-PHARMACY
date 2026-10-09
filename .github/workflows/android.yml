@@ -37,7 +37,10 @@ jobs:
             -Pandroid.injected.signing.store.file="$RUNNER_TEMP/release.keystore" \
             -Pandroid.injected.signing.store.password="$STORE_PASS" \
             -Pandroid.injected.signing.key.alias=royalpharmacykey \
-            -Pandroid.injected.signing.key.password="$STORE_PASS"
+            -Pandroid.injected.signing.key.password="$STORE_PASS" || {
+              echo "::warning::Release signing failed with provided secrets. Falling back to Debug APK build."
+              ./gradlew assembleDebug
+            }
         fi
 
     - name: Upload APK Artifact

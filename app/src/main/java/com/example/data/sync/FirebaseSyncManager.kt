@@ -30,7 +30,7 @@ class FirebaseSyncManager(
   private val firestore: FirebaseFirestore? by lazy {
     try {
       FirebaseFirestore.getInstance()
-    } catch (e: Exception) {
+    } catch (e: Throwable) {
       Log.w("FirebaseSyncManager", "Firebase Firestore unavailable or uninitialized: ${e.message}")
       null
     }

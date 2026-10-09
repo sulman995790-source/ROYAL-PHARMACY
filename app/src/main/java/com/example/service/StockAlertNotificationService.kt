@@ -156,7 +156,11 @@ object StockAlertNotificationService {
       )
       .build()
 
-    notificationManager.notify(medicine.id.toInt(), notification)
+    try {
+      notificationManager.notify(medicine.id.toInt(), notification)
+    } catch (e: Throwable) {
+      android.util.Log.e("StockAlertNotify", "Could not dispatch notification: ${e.message}")
+    }
     lastAlertTimestamps[medicine.id] = System.currentTimeMillis()
   }
 
@@ -198,7 +202,11 @@ object StockAlertNotificationService {
       .setAutoCancel(true)
       .build()
 
-    notificationManager.notify(99999, notification)
+    try {
+      notificationManager.notify(99999, notification)
+    } catch (e: Throwable) {
+      android.util.Log.e("StockAlertNotify", "Could not dispatch batch notification: ${e.message}")
+    }
   }
 
   fun sendTestPushNotification(context: Context) {
@@ -300,7 +308,11 @@ object StockAlertNotificationService {
       )
       .build()
 
-    notificationManager.notify((medicine.id + 50000).toInt(), notification)
+    try {
+      notificationManager.notify((medicine.id + 50000).toInt(), notification)
+    } catch (e: Throwable) {
+      android.util.Log.e("StockAlertNotify", "Could not dispatch expiry notification: ${e.message}")
+    }
     lastExpiryAlertTimestamps[medicine.id] = System.currentTimeMillis()
   }
 
