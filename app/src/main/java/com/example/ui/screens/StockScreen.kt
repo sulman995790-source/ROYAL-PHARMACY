@@ -133,6 +133,10 @@ fun StockScreen(
   var medicineForThermalBarcode by remember { mutableStateOf<MedicineItem?>(null) }
   var medicineToEditDetails by remember { mutableStateOf<MedicineItem?>(null) }
 
+  var selectedTab by remember { mutableStateOf("Database") } // "Database" or "Audit Mode"
+  val selectedMedicineIds = remember { androidx.compose.runtime.mutableStateMapOf<Long, Boolean>() }
+  val physicalAuditCounts = remember { androidx.compose.runtime.mutableStateMapOf<Long, String>() }
+
   val searchTokens = searchQuery.trim().split("\\s+".toRegex()).filter { it.isNotBlank() }
   val filteredMedicines = medicines.filter { item ->
     val textToSearch = "${item.name} ${item.manufacturer} ${item.composition} ${item.barcode} ${item.rackLocation}".lowercase(Locale.ROOT)
@@ -245,84 +249,154 @@ fun StockScreen(
         }
       }
 
-      // 2. Search Bar
-      Box(
-        modifier = Modifier
-          .fillMaxWidth()
-          .background(Color.White)
-          .padding(horizontal = 16.dp, vertical = 6.dp)
-      ) {
-        OutlinedTextField(
-          value = searchQuery,
-          onValueChange = {
-            searchQuery = it
-            viewModel.globalSearchQuery.value = it
-          },
-          placeholder = { Text("Search by name, salt, rack (e.g. Rack A)...", fontSize = 13.sp, color = TextMuted) },
-          leadingIcon = {
-            Icon(Icons.Default.Search, contentDescription = "Search", tint = TextMuted)
-          },
-          trailingIcon = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-              if (searchQuery.isNotEmpty()) {
-                IconButton(onClick = {
-                  searchQuery = ""
-                  viewModel.globalSearchQuery.value = ""
-                }) {
-                  Icon(Icons.Default.Close, contentDescription = "Clear", tint = TextMuted, modifier = Modifier.size(18.dp))
-                }
-              }
-              IconButton(onClick = { viewModel.navigateTo(Screen.INVENTORY_QR) }) {
-                Icon(Icons.Default.QrCodeScanner, contentDescription = "Scan QR", tint = RoyalMagenta)
-              }
-            }
-          },
-          singleLine = true,
-          shape = RoundedCornerShape(8.dp),
-          colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = RoyalMagenta,
-            unfocusedBorderColor = CardBorder,
-            focusedContainerColor = GrayBackground,
-            unfocusedContainerColor = GrayBackground
-          ),
-          modifier = Modifier
-            .fillMaxWidth()
-            .testTag("input_stock_search")
-        )
-      }
-
-      // 3. Category Filter Chips (Row 1)
+      // 1.5 Mode Tabs: Drug Database vs Inventory Audit Mode
       Row(
         modifier = Modifier
           .fillMaxWidth()
           .background(Color.White)
-          .horizontalScroll(rememberScrollState())
-          .padding(horizontal = 16.dp, vertical = 4.dp),
+          .padding(horizontal = 16.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
       ) {
-        listOf("All", "In Stock", "Stock Out", "Critical & Life-Saving", "Essential", "Expiring", "Schedule H").forEach { cat ->
-          val isSelected = filterCategory == cat
-          FilterChip(
-            selected = isSelected,
-            onClick = { filterCategory = cat },
-            label = { Text(cat, fontSize = 11.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal) },
-            colors = FilterChipDefaults.filterChipColors(
-              selectedContainerColor = RoyalNavy,
-              selectedLabelColor = Color.White,
-              containerColor = GrayBackground,
-              labelColor = TextDark
-            ),
-            border = FilterChipDefaults.filterChipBorder(
-              enabled = true,
-              selected = isSelected,
-              borderColor = if (isSelected) RoyalNavy else CardBorder,
-              selectedBorderColor = RoyalNavy
-            )
-          )
+        val isDb = selectedTab == "Database"
+        Button(
+          onClick = { selectedTab = "Database" },
+          colors = ButtonDefaults.buttonColors(containerColor = if (isDb) RoyalNavy else GrayBackground),
+          shape = RoundedCornerShape(8.dp),
+          contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+          modifier = Modifier.weight(1f).testTag("tab_drug_database")
+        ) {
+          Icon(Icons.Default.Inventory2, contentDescription = null, tint = if (isDb) Color.White else TextDark, modifier = Modifier.size(16.dp))
+          Spacer(modifier = Modifier.width(6.dp))
+          Text("Drug Database", fontSize = 12.sp, color = if (isDb) Color.White else TextDark, fontWeight = FontWeight.Bold)
+        }
+
+        val isAudit = selectedTab == "Audit Mode"
+        Button(
+          onClick = { selectedTab = "Audit Mode" },
+          colors = ButtonDefaults.buttonColors(containerColor = if (isAudit) RoyalNavy else GrayBackground),
+          shape = RoundedCornerShape(8.dp),
+          contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+          modifier = Modifier.weight(1f).testTag("tab_inventory_audit")
+        ) {
+          Icon(Icons.Default.EditNote, contentDescription = null, tint = if (isAudit) Color.White else TextDark, modifier = Modifier.size(16.dp))
+          Spacer(modifier = Modifier.width(6.dp))
+          Text("Inventory Audit Mode", fontSize = 12.sp, color = if (isAudit) Color.White else TextDark, fontWeight = FontWeight.Bold)
         }
       }
 
-      // 4. Physical Rack Location Filter Chips (Row 2 - NEW RACK ORGANIZER)
+      val selectedCount = selectedMedicineIds.values.count { it }
+      if (selectedTab == "Database" && selectedCount > 0) {
+        Row(
+          modifier = Modifier
+            .fillMaxWidth()
+            .background(RoyalMagentaLight)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+          horizontalArrangement = Arrangement.SpaceBetween,
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          Text("$selectedCount medicines selected for QR labels", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = RoyalMagenta)
+          Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TextButton(onClick = { selectedMedicineIds.clear() }) {
+              Text("Clear", fontSize = 11.sp, color = TextDark)
+            }
+            Button(
+              onClick = {
+                val selectedItems = medicines.filter { selectedMedicineIds[it.id] == true }
+                InvoicePrinterService.printBulkHsnQrLabels(context, selectedItems, viewModel.businessProfile.value)
+              },
+              colors = ButtonDefaults.buttonColors(containerColor = RoyalMagenta),
+              shape = RoundedCornerShape(8.dp),
+              contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+              modifier = Modifier.testTag("btn_bulk_print_qr")
+            ) {
+              Icon(Icons.Default.Print, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+              Spacer(modifier = Modifier.width(4.dp))
+              Text("Bulk Print HSN QR Labels", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
+            }
+          }
+        }
+      }
+
+      if (selectedTab == "Database") {
+        // 2. Search Bar
+        Box(
+          modifier = Modifier
+            .fillMaxWidth()
+            .background(Color.White)
+            .padding(horizontal = 16.dp, vertical = 6.dp)
+        ) {
+          OutlinedTextField(
+            value = searchQuery,
+            onValueChange = {
+              searchQuery = it
+              viewModel.globalSearchQuery.value = it
+            },
+            placeholder = { Text("Search by name, salt, rack (e.g. Rack A)...", fontSize = 13.sp, color = TextMuted) },
+            leadingIcon = {
+              Icon(Icons.Default.Search, contentDescription = "Search", tint = TextMuted)
+            },
+            trailingIcon = {
+              Row(verticalAlignment = Alignment.CenterVertically) {
+                if (searchQuery.isNotEmpty()) {
+                  IconButton(onClick = {
+                    searchQuery = ""
+                    viewModel.globalSearchQuery.value = ""
+                  }) {
+                    Icon(Icons.Default.Close, contentDescription = "Clear", tint = TextMuted, modifier = Modifier.size(18.dp))
+                  }
+                }
+                IconButton(onClick = { viewModel.navigateTo(Screen.INVENTORY_QR) }) {
+                  Icon(Icons.Default.QrCodeScanner, contentDescription = "Scan QR", tint = RoyalMagenta)
+                }
+              }
+            },
+            singleLine = true,
+            shape = RoundedCornerShape(8.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+              focusedBorderColor = RoyalMagenta,
+              unfocusedBorderColor = CardBorder,
+              focusedContainerColor = GrayBackground,
+              unfocusedContainerColor = GrayBackground
+            ),
+            modifier = Modifier
+              .fillMaxWidth()
+              .testTag("input_stock_search")
+          )
+        }
+
+        // 3. Category Filter Chips (Row 1)
+        Row(
+          modifier = Modifier
+            .fillMaxWidth()
+            .background(Color.White)
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+          horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+          listOf("All", "In Stock", "Stock Out", "Critical & Life-Saving", "Essential", "Expiring", "Schedule H").forEach { cat ->
+            val isSelected = filterCategory == cat
+            FilterChip(
+              selected = isSelected,
+              onClick = { filterCategory = cat },
+              label = { Text(cat, fontSize = 11.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal) },
+              colors = FilterChipDefaults.filterChipColors(
+                selectedContainerColor = RoyalNavy,
+                selectedLabelColor = Color.White,
+                containerColor = GrayBackground,
+                labelColor = TextDark
+              ),
+              border = FilterChipDefaults.filterChipBorder(
+                enabled = true,
+                selected = isSelected,
+                borderColor = if (isSelected) RoyalNavy else CardBorder,
+                selectedBorderColor = RoyalNavy
+              )
+            )
+          }
+        }
+      }
+
+      // 4. Physical Rack Location Filter Chips
       Row(
         modifier = Modifier
           .fillMaxWidth()
@@ -356,51 +430,157 @@ fun StockScreen(
         }
       }
 
-      // 5. Stock Items List
-      LazyColumn(
-        modifier = Modifier
-          .fillMaxSize()
-          .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        contentPadding = PaddingValues(vertical = 10.dp)
-      ) {
-        items(filteredMedicines, key = { it.id }) { med ->
-          StockItemCard(
-            item = med,
-            onStockAdjust = { delta ->
-              if (delta < 0 && med.stockPacks <= 0) {
-                // Cannot reduce below 0
-              } else {
-                viewModel.updateMedicine(med.copy(stockPacks = (med.stockPacks + delta).coerceAtLeast(0)))
-              }
-            },
-            onAddToCart = {
-              viewModel.addMedicineToCart(med, 1)
-              Toast.makeText(context, "Added ${med.name} to bill!", Toast.LENGTH_SHORT).show()
-            },
-            onDeleteClick = {
-              medicineToDelete = med
-            },
-            onEditRack = {
-              medicineToEditRack = med
-            },
-            onEditReorderLevel = {
-              medicineToEditReorder = med
-            },
-            onGenerateQrBatch = {
-              medicineForQrBatch = med
-            },
-            onPrintThermalBarcode = {
-              medicineForThermalBarcode = med
-            },
-            onEditMedicineDetails = {
-              medicineToEditDetails = med
-            }
-          )
-        }
+      // 5. Content: Database vs Audit Mode
+      if (selectedTab == "Database") {
+        LazyColumn(
+          modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 16.dp),
+          verticalArrangement = Arrangement.spacedBy(8.dp),
+          contentPadding = PaddingValues(vertical = 10.dp)
+        ) {
+          items(filteredMedicines, key = { it.id }) { med ->
+            StockItemCard(
+              item = med,
+              isSelected = selectedMedicineIds[med.id] == true,
+              onToggleSelect = { selectedMedicineIds[med.id] = !(selectedMedicineIds[med.id] == true) },
+              onStockAdjust = { delta ->
+                if (delta < 0 && med.stockPacks <= 0) {
+                  // Cannot reduce below 0
+                } else {
+                  viewModel.updateMedicine(med.copy(stockPacks = (med.stockPacks + delta).coerceAtLeast(0)))
+                }
+              },
+              onAddToCart = {
+                viewModel.addMedicineToCart(med, 1)
+                Toast.makeText(context, "Added ${med.name} to bill!", Toast.LENGTH_SHORT).show()
+              },
+              onDeleteClick = { medicineToDelete = med },
+              onEditRack = { medicineToEditRack = med },
+              onEditReorderLevel = { medicineToEditReorder = med },
+              onGenerateQrBatch = { medicineForQrBatch = med },
+              onPrintThermalBarcode = { medicineForThermalBarcode = med },
+              onEditMedicineDetails = { medicineToEditDetails = med }
+            )
+          }
 
-        item {
-          Spacer(modifier = Modifier.height(80.dp))
+          item {
+            Spacer(modifier = Modifier.height(80.dp))
+          }
+        }
+      } else {
+        // Inventory Audit Mode View
+        Column(
+          modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+        ) {
+          Card(
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFEFF6FF)),
+            border = CardDefaults.outlinedCardBorder().copy(brush = androidx.compose.ui.graphics.SolidColor(Color(0xFFBFDBFE))),
+            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+          ) {
+            Column(modifier = Modifier.padding(12.dp)) {
+              Text("Inventory Audit Mode", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1E40AF))
+              Spacer(modifier = Modifier.height(2.dp))
+              Text("Count physical stock shelf-by-shelf. Enter actual physical counts below to automatically flag shortages or surplus discrepancies.", fontSize = 11.sp, color = Color(0xFF1E3A8A))
+            }
+          }
+
+          val discrepanciesCount = filteredMedicines.count { med ->
+            val phys = (physicalAuditCounts[med.id] ?: med.stockPacks.toString()).toIntOrNull() ?: med.stockPacks
+            phys != med.stockPacks
+          }
+
+          Row(
+            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            Text("Items in View: ${filteredMedicines.size} | Discrepancies: $discrepanciesCount", fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold, color = TextDark)
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+              Button(
+                onClick = {
+                  var synced = 0
+                  filteredMedicines.forEach { med ->
+                    val phys = (physicalAuditCounts[med.id] ?: med.stockPacks.toString()).toIntOrNull() ?: med.stockPacks
+                    if (phys != med.stockPacks) {
+                      viewModel.updateMedicine(med.copy(stockPacks = phys.coerceAtLeast(0)))
+                      synced++
+                    }
+                  }
+                  Toast.makeText(context, "Auto-synced $synced items to system stock!", Toast.LENGTH_SHORT).show()
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0D9488)),
+                shape = RoundedCornerShape(8.dp),
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+              ) {
+                Text("Sync All", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
+              }
+              Button(
+                onClick = {
+                  physicalAuditCounts.clear()
+                  Toast.makeText(context, "Audit session completed & reset!", Toast.LENGTH_SHORT).show()
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = RoyalNavy),
+                shape = RoundedCornerShape(8.dp),
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+              ) {
+                Text("Complete", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
+              }
+            }
+          }
+
+          LazyColumn(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+          ) {
+            items(filteredMedicines, key = { it.id }) { med ->
+              val sysStock = med.stockPacks
+              val physStr = physicalAuditCounts[med.id] ?: sysStock.toString()
+              val physStock = physStr.toIntOrNull() ?: sysStock
+              val diff = physStock - sysStock
+
+              Card(
+                shape = RoundedCornerShape(8.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                border = CardDefaults.outlinedCardBorder().copy(brush = androidx.compose.ui.graphics.SolidColor(CardBorder)),
+                modifier = Modifier.fillMaxWidth()
+              ) {
+                Row(
+                  modifier = Modifier.fillMaxWidth().padding(12.dp),
+                  horizontalArrangement = Arrangement.SpaceBetween,
+                  verticalAlignment = Alignment.CenterVertically
+                ) {
+                  Column(modifier = Modifier.weight(1f)) {
+                    Text(med.name, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextDark)
+                    Text("Rack: ${med.rackLocation.ifBlank { "Unassigned" }} | System Stock: $sysStock packs", fontSize = 11.sp, color = TextMuted)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    when {
+                      diff == 0 -> Text("✓ Matched", fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = StatusGreen)
+                      diff < 0 -> Text("⚠️ Shortage: $diff packs", fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = StatusRed)
+                      else -> Text("📦 Excess: +$diff packs", fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD97706))
+                    }
+                  }
+
+                  Spacer(modifier = Modifier.width(8.dp))
+
+                  OutlinedTextField(
+                    value = physStr,
+                    onValueChange = { physicalAuditCounts[med.id] = it.filter { ch -> ch.isDigit() } },
+                    label = { Text("Physical", fontSize = 10.sp) },
+                    singleLine = true,
+                    modifier = Modifier.width(90.dp)
+                  )
+                }
+              }
+            }
+
+            item {
+              Spacer(modifier = Modifier.height(60.dp))
+            }
+          }
         }
       }
     }
@@ -765,6 +945,8 @@ fun StockScreen(
 @Composable
 fun StockItemCard(
   item: MedicineItem,
+  isSelected: Boolean = false,
+  onToggleSelect: () -> Unit = {},
   onStockAdjust: (Int) -> Unit,
   onAddToCart: () -> Unit,
   onDeleteClick: () -> Unit,
@@ -815,6 +997,12 @@ fun StockItemCard(
         .padding(12.dp),
       verticalAlignment = Alignment.Top
     ) {
+      androidx.compose.material3.Checkbox(
+        checked = isSelected,
+        onCheckedChange = { onToggleSelect() },
+        modifier = Modifier.padding(end = 4.dp).size(24.dp)
+      )
+
       // Initials Square
       Box(
         modifier = Modifier

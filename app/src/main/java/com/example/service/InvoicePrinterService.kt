@@ -983,4 +983,99 @@ object InvoicePrinterService {
       </svg>
     """.trimIndent()
   }
+
+  fun printBulkHsnQrLabels(
+    context: Context,
+    items: List<MedicineItem>,
+    profile: BusinessProfile? = null
+  ) {
+    try {
+      val printManager = context.getSystemService(Context.PRINT_SERVICE) as? PrintManager
+      if (printManager == null) {
+        Toast.makeText(context, "Print service is unavailable on this device", Toast.LENGTH_SHORT).show()
+        return
+      }
+
+      val pharmacyName = profile?.businessName ?: "ROYAL PHARMACY"
+
+      val labelsHtml = items.joinToString(separator = "") { item ->
+        val hsn = item.hsnCode.ifBlank { "3004" }
+        val batch = item.batchNumber.ifBlank { "RX-2027" }
+        val exp = item.expiryDate
+        val rack = item.rackLocation.ifBlank { "Rack A-1" }
+        val mrp = String.format(Locale.getDefault(), "%.2f", item.mrp)
+        val generic = item.composition.ifBlank { item.saltMolecule.ifBlank { "Ethical Formulation" } }
+        val barcodeSvg = buildHsnBarcodeSvg(hsn)
+
+        """
+        <div class="label-card">
+          <div class="header">${pharmacyName}</div>
+          <div class="name">${item.name}</div>
+          <div class="generic">${generic}</div>
+          <div class="barcode">${barcodeSvg}</div>
+          <div class="details-box">
+            <div class="row"><span>Batch: ${batch}</span><span>Exp: ${exp}</span></div>
+            <div class="row"><span>MRP: ₹${mrp}</span><span class="rack">${rack}</span></div>
+            <div class="footer">HSN: ${hsn} • SHELF QR LABEL</div>
+          </div>
+        </div>
+        """
+      }
+
+      val html = """
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            @page { size: A4; margin: 10mm; }
+            body { font-family: monospace, sans-serif; margin: 0; padding: 0; background: #FFF; color: #000; }
+            .grid { display: flex; flex-wrap: wrap; gap: 8mm; justify-content: flex-start; }
+            .label-card {
+              width: 85mm; height: 50mm;
+              border: 1.5px dashed #333;
+              padding: 4mm;
+              box-sizing: border-box;
+              display: flex; flex-direction: column; justify-content: space-between;
+              page-break-inside: avoid;
+              background: #FFF;
+            }
+            .header { font-size: 9pt; font-weight: 900; text-align: center; text-transform: uppercase; border-bottom: 1px solid #000; padding-bottom: 1mm; }
+            .name { font-size: 11pt; font-weight: 800; text-align: center; margin: 1mm 0; word-break: break-word; }
+            .generic { font-size: 7.5pt; color: #441; text-align: center; margin-bottom: 1mm; }
+            .barcode { text-align: center; margin: 1mm 0; }
+            .details-box { border-top: 1px solid #000; padding-top: 1.5mm; font-size: 8pt; font-weight: bold; }
+            .row { display: flex; justify-content: space-between; margin-bottom: 1mm; }
+            .rack { background: #000; color: #fff; padding: 1px 4px; font-size: 7.5pt; }
+            .footer { font-size: 6pt; color: #666; text-align: center; text-transform: uppercase; margin-top: 1mm; }
+          </style>
+        </head>
+        <body>
+          <div class="grid">
+            $labelsHtml
+          </div>
+        </body>
+        </html>
+      """.trimIndent()
+
+      val webView = WebView(context)
+      webView.webViewClient = object : WebViewClient() {
+        override fun onPageFinished(view: WebView?, url: String?) {
+          val printAdapter: PrintDocumentAdapter = webView.createPrintDocumentAdapter("Bulk_HSN_QR_Labels_${items.size}")
+          val jobName = "RoyalPharmacy_BulkShelfLabels_${items.size}Items"
+          val printAttributes = PrintAttributes.Builder()
+            .setMediaSize(PrintAttributes.MediaSize.ISO_A4)
+            .setResolution(PrintAttributes.Resolution("pdf", "pdf_print", 300, 300))
+            .setMinMargins(PrintAttributes.Margins.NO_MARGINS)
+            .build()
+
+          printManager.print(jobName, printAdapter, printAttributes)
+        }
+      }
+      webView.loadDataWithBaseURL(null, html, "text/html", "UTF-8", null)
+      Toast.makeText(context, "Generating Bulk HSN QR Shelf Labels PDF (${items.size} items)...", Toast.LENGTH_SHORT).show()
+    } catch (e: Exception) {
+      Toast.makeText(context, "Bulk print error: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+    }
+  }
 }

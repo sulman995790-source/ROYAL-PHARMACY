@@ -63,6 +63,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.LocalContext
 import com.example.data.model.MedicineItem
 import com.example.ui.theme.CardBorder
 import com.example.ui.theme.GrayBackground
@@ -81,7 +84,8 @@ data class AdditionalBatchRecord(
   var expiryDate: String,
   var manufacturer: String,
   var rackLocation: String,
-  var stock: String
+  var stock: String,
+  var expiryNotificationDays: String = "30"
 )
 
 data class StockAdjustmentLogItem(
@@ -133,6 +137,43 @@ fun MedicineDetailEditDialog(
   // Additional Batch Records list ("Add Batch" requirement)
   var additionalBatches by remember {
     mutableStateOf(listOf<AdditionalBatchRecord>())
+  }
+
+  var primaryExpiryNotificationDays by remember { mutableStateOf("30") }
+  var showExcelImportDialog by remember { mutableStateOf(false) }
+  val context = LocalContext.current
+
+  val excelFileLauncher = rememberLauncherForActivityResult(
+    contract = ActivityResultContracts.GetContent()
+  ) { uri ->
+    uri?.let {
+      try {
+        val inputStream = context.contentResolver.openInputStream(uri)
+        val reader = java.io.BufferedReader(java.io.InputStreamReader(inputStream))
+        val lines = reader.readLines()
+        val newRecords = mutableListOf<AdditionalBatchRecord>()
+        lines.drop(1).forEach { line ->
+          val parts = line.split(",")
+          if (parts.size >= 5) {
+            newRecords.add(
+              AdditionalBatchRecord(
+                batchNumber = parts[0].trim().uppercase(Locale.getDefault()),
+                expiryDate = parts[1].trim(),
+                manufacturer = parts[2].trim(),
+                rackLocation = parts[3].trim(),
+                stock = parts[4].trim().filter { c -> c.isDigit() },
+                expiryNotificationDays = if (parts.size > 5) parts[5].trim().filter { c -> c.isDigit() }.ifBlank { "30" } else "30"
+              )
+            )
+          }
+        }
+        if (newRecords.isNotEmpty()) {
+          additionalBatches = additionalBatches + newRecords
+        }
+      } catch (e: Exception) {
+        e.printStackTrace()
+      }
+    }
   }
 
   // Sample Stock Adjustment History logs for this specific medicine
@@ -526,11 +567,27 @@ fun MedicineDetailEditDialog(
                 ),
                 modifier = Modifier.fillMaxWidth().testTag("input_batch_stock")
               )
+
+              // Primary Batch Expiry Notification Days Field
+              OutlinedTextField(
+                value = primaryExpiryNotificationDays,
+                onValueChange = { primaryExpiryNotificationDays = it.filter { ch -> ch.isDigit() } },
+                label = { Text("Batch Expiry Notification (Alert N days before expiry)") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                  focusedBorderColor = Color(0xFF4F46E5),
+                  unfocusedBorderColor = Color(0xFFC7D2FE),
+                  focusedContainerColor = Color.White,
+                  unfocusedContainerColor = Color.White
+                ),
+                modifier = Modifier.fillMaxWidth().testTag("input_primary_expiry_notification_days")
+              )
             }
           }
 
           // =====================================================================
-          // SECTION 3: 'ADD BATCH' FUNCTIONALITY FOR MULTIPLE BATCH RECORDS
+          // SECTION 3: 'ADD BATCH' & 'IMPORT FROM EXCEL' FUNCTIONALITY
           // =====================================================================
           Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(
@@ -545,28 +602,40 @@ fun MedicineDetailEditDialog(
                   fontWeight = FontWeight.Bold,
                   color = Color(0xFF475569)
                 )
-                Text("Manage multiple manufacturer batches for this medicine", fontSize = 10.sp, color = TextMuted)
+                Text("Manage multiple batches & bulk spreadsheet import", fontSize = 10.sp, color = TextMuted)
               }
 
-              OutlinedButton(
-                onClick = {
-                  val newBatchNum = "BX-" + (1000..9999).random()
-                  val cal = Calendar.getInstance()
-                  cal.add(Calendar.MONTH, 12)
-                  val defaultExp = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(cal.time)
-                  additionalBatches = additionalBatches + AdditionalBatchRecord(
-                    batchNumber = newBatchNum,
-                    expiryDate = defaultExp,
-                    manufacturer = manufacturer,
-                    rackLocation = rackLocation,
-                    stock = "10"
-                  )
-                },
-                modifier = Modifier.testTag("btn_add_additional_batch")
-              ) {
-                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(14.dp), tint = RoyalMagenta)
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("Add Batch", fontSize = 11.sp, color = RoyalMagenta)
+              Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                OutlinedButton(
+                  onClick = { showExcelImportDialog = true },
+                  modifier = Modifier.testTag("btn_import_batches_excel")
+                ) {
+                  Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color(0xFF047857))
+                  Spacer(modifier = Modifier.width(4.dp))
+                  Text("Import Excel", fontSize = 11.sp, color = Color(0xFF047857))
+                }
+
+                OutlinedButton(
+                  onClick = {
+                    val newBatchNum = "BX-" + (1000..9999).random()
+                    val cal = Calendar.getInstance()
+                    cal.add(Calendar.MONTH, 12)
+                    val defaultExp = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(cal.time)
+                    additionalBatches = additionalBatches + AdditionalBatchRecord(
+                      batchNumber = newBatchNum,
+                      expiryDate = defaultExp,
+                      manufacturer = manufacturer,
+                      rackLocation = rackLocation,
+                      stock = "10",
+                      expiryNotificationDays = "30"
+                    )
+                  },
+                  modifier = Modifier.testTag("btn_add_additional_batch")
+                ) {
+                  Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(14.dp), tint = RoyalMagenta)
+                  Spacer(modifier = Modifier.width(4.dp))
+                  Text("Add Batch", fontSize = 11.sp, color = RoyalMagenta)
+                }
               }
             }
 
@@ -666,10 +735,65 @@ fun MedicineDetailEditDialog(
                       singleLine = true,
                       modifier = Modifier.weight(1f)
                     )
+
+                    OutlinedTextField(
+                      value = batchRecord.expiryNotificationDays,
+                      onValueChange = { newVal ->
+                        additionalBatches = additionalBatches.mapIndexed { idx, b ->
+                          if (idx == index) b.copy(expiryNotificationDays = newVal.filter { c -> c.isDigit() }) else b
+                        }
+                      },
+                      label = { Text("Alert Days") },
+                      keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                      singleLine = true,
+                      modifier = Modifier.weight(0.9f)
+                    )
                   }
                 }
               }
             }
+          }
+
+          // Excel Import Dialog
+          if (showExcelImportDialog) {
+            AlertDialog(
+              onDismissRequest = { showExcelImportDialog = false },
+              title = { Text("Import Batches from Spreadsheet", fontWeight = FontWeight.Bold, fontSize = 16.sp) },
+              text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                  Text("Upload an Excel (.xlsx/.xls) or CSV spreadsheet containing batch records. Format required:\nBatchNo, ExpiryDate, Manufacturer, Rack, Stock, AlertDays", fontSize = 12.sp, color = TextMuted)
+
+                  Button(
+                    onClick = {
+                      showExcelImportDialog = false
+                      excelFileLauncher.launch("*/*")
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                  ) {
+                    Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Select CSV / Excel File from Device")
+                  }
+
+                  OutlinedButton(
+                    onClick = {
+                      showExcelImportDialog = false
+                      val sample1 = AdditionalBatchRecord(batchNumber = "IMP-881", expiryDate = "2027-08-30", manufacturer = "Sun Pharma", rackLocation = "Rack B-2", stock = "45", expiryNotificationDays = "30")
+                      val sample2 = AdditionalBatchRecord(batchNumber = "IMP-882", expiryDate = "2027-10-15", manufacturer = "Cipla", rackLocation = "Rack B-3", stock = "30", expiryNotificationDays = "15")
+                      additionalBatches = additionalBatches + listOf(sample1, sample2)
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                  ) {
+                    Text("Load Sample Bulk Spreadsheet Data")
+                  }
+                }
+              },
+              confirmButton = {
+                TextButton(onClick = { showExcelImportDialog = false }) {
+                  Text("Close")
+                }
+              }
+            )
           }
 
         } else {
