@@ -17,15 +17,24 @@ data class MedicineQrPayload(
   val barcode: String
 ) {
   fun toJsonString(): String {
+    val finalRate = if (saleRate > 0) saleRate else mrp
     return JSONObject().apply {
+      put("type", "BATCH_QR")
       put("rxId", id)
       put("name", name)
+      put("medicineName", name)
       put("batch", batch)
+      put("batchNumber", batch)
+      put("batchNo", batch)
       put("exp", exp)
+      put("expiryDate", exp)
+      put("expiry", exp)
       put("mrp", mrp)
-      put("rate", saleRate)
+      put("price", finalRate)
+      put("rate", finalRate)
       put("rack", rack)
       put("code", barcode)
+      put("barcode", barcode)
     }.toString()
   }
 
@@ -45,16 +54,23 @@ data class MedicineQrPayload(
 
     fun fromJsonString(jsonStr: String): MedicineQrPayload? {
       return try {
-        val o = JSONObject(jsonStr)
+        val trimmed = jsonStr.trim()
+        if (!trimmed.startsWith("{") || !trimmed.endsWith("}")) return null
+        val o = JSONObject(trimmed)
+        val medName = o.optString("name", o.optString("medicineName", "Unknown Medicine"))
+        val batchNo = o.optString("batch", o.optString("batchNumber", o.optString("batchNo", "")))
+        val expiry = o.optString("exp", o.optString("expiryDate", o.optString("expiry", "")))
+        val rawMrp = if (o.has("mrp")) o.optDouble("mrp", 0.0) else o.optDouble("price", 0.0)
+        val rawRate = if (o.has("rate")) o.optDouble("rate", 0.0) else (if (o.has("price")) o.optDouble("price", 0.0) else rawMrp)
         MedicineQrPayload(
-          id = o.optLong("rxId", 0L),
-          name = o.optString("name", "Unknown Medicine"),
-          batch = o.optString("batch", ""),
-          exp = o.optString("exp", ""),
-          mrp = o.optDouble("mrp", 0.0),
-          saleRate = o.optDouble("rate", 0.0),
+          id = o.optLong("rxId", o.optLong("id", 0L)),
+          name = medName,
+          batch = batchNo,
+          exp = expiry,
+          mrp = rawMrp,
+          saleRate = rawRate,
           rack = o.optString("rack", "Rack A-1"),
-          barcode = o.optString("code", "")
+          barcode = o.optString("code", o.optString("barcode", ""))
         )
       } catch (_: Exception) {
         null

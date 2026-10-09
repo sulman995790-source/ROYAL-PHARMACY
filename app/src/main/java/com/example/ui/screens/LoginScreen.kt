@@ -232,6 +232,61 @@ fun LoginScreen(
                   .fillMaxWidth()
                   .clickable { showResetPasswordDialog = true }
               )
+            } else {
+              // 1-Tap Quick Staff Sign-In Cards
+              Card(
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = if (isDarkMode) Color(0xFF0F172A) else Color(0xFFF0F9FF)),
+                border = BorderStroke(1.dp, Color(0xFFBAE6FD)),
+                modifier = Modifier.fillMaxWidth()
+              ) {
+                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                  Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                  ) {
+                    Text("💼 1-Tap Quick Staff Sign-In", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = RoyalNavy)
+                    Text("Instant Access", fontSize = 10.sp, color = TextMuted, fontWeight = FontWeight.SemiBold)
+                  }
+                  
+                  val staffList by viewModel.staffMembers.collectAsState()
+                  staffList.forEach { staff ->
+                    Row(
+                      modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (isDarkMode) Color(0xFF1E293B) else Color.White)
+                        .clickable {
+                          viewModel.loginWithPhone(staff.phone, staff.name, UserRole.STAFF)
+                          viewModel.activeStaffPermission.value = staff.permission
+                          Toast.makeText(context, "Logged in as ${staff.name} (${staff.permission})", Toast.LENGTH_SHORT).show()
+                        }
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                      horizontalArrangement = Arrangement.SpaceBetween,
+                      verticalAlignment = Alignment.CenterVertically
+                    ) {
+                      Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                          modifier = Modifier
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFE0F2FE)),
+                          contentAlignment = Alignment.Center
+                        ) {
+                          Text(staff.name.take(2).uppercase(), fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFF0284C7))
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                          Text(staff.name, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextDark)
+                          Text("${staff.designation} • ${staff.permission}", fontSize = 10.sp, color = TextMuted)
+                        }
+                      }
+                      Text("⚡ Enter", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = RoyalNavy)
+                    }
+                  }
+                }
+              }
             }
 
             if (isSignUpMode) {
@@ -421,12 +476,30 @@ fun LoginScreen(
                 } else {
                   if (otpInput == generatedOtp || otpInput == "123456" || otpInput.isBlank()) {
                     isAuthenticating = true
+                    val cleanPhone = phoneInput.replace(Regex("\\D"), "")
+                    val matchedStaff = viewModel.staffMembers.value.firstOrNull {
+                      it.phone.replace(Regex("\\D"), "").endsWith(cleanPhone)
+                    }
+                    val finalUserName = if (isSignUpMode) {
+                      nameInput
+                    } else if (selectedLoginRole == UserRole.STAFF) {
+                      matchedStaff?.name ?: "Staff Chemist (${phoneInput.takeLast(4)})"
+                    } else {
+                      "Suleman Hoque"
+                    }
+
+                    if (matchedStaff != null) {
+                      viewModel.activeStaffPermission.value = matchedStaff.permission
+                    } else if (selectedLoginRole == UserRole.STAFF) {
+                      viewModel.activeStaffPermission.value = "POS-only access"
+                    }
+
                     viewModel.loginWithPhone(
                       phone = "+91 $phoneInput",
-                      userName = if (isSignUpMode) nameInput else "Suleman Hoque",
+                      userName = finalUserName,
                       role = selectedLoginRole
                     )
-                    Toast.makeText(context, "Sign In Successful as ${selectedLoginRole.label}!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Sign In Successful as ${selectedLoginRole.label}: $finalUserName!", Toast.LENGTH_SHORT).show()
                   } else {
                     Toast.makeText(context, "Invalid OTP Code! Please enter '$generatedOtp' or '123456'", Toast.LENGTH_SHORT).show()
                   }

@@ -908,6 +908,11 @@ fun UserRoleAuthDialog(
                 errorMessage = "Incorrect Owner PIN! Enter default PIN '1234'."
                 return@Button
               }
+              // If switching to Staff without new credentials, apply switch immediately
+              if (selectedRole == UserRole.STAFF && emailInput.isBlank() && phoneInput.isBlank()) {
+                onDismiss()
+                return@Button
+              }
             }
             if (loginMode == AuthLoginType.GMAIL && emailInput.isBlank()) {
               errorMessage = "Gmail address cannot be empty!"
@@ -923,7 +928,7 @@ fun UserRoleAuthDialog(
           },
           colors = ButtonDefaults.buttonColors(containerColor = RoyalMagenta)
         ) {
-          Text("Get OTP Code")
+          Text(if (selectedRole == UserRole.STAFF && emailInput.isBlank() && phoneInput.isBlank()) "Switch to Staff Mode" else "Get OTP Code")
         }
       },
       dismissButton = {

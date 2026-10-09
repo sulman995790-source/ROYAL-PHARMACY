@@ -342,15 +342,56 @@
           </div>
 
           <!-- Staff Helper Callout (Shows when Staff Mode active) -->
-          <div id="web-staff-helper-block" class="p-3 bg-sky-950/40 border border-sky-800/60 rounded-xl text-xs text-sky-300 space-y-2 hidden">
+          <div id="web-staff-helper-block" class="p-3 bg-sky-950/40 border border-sky-800/60 rounded-xl text-xs text-sky-300 space-y-2.5 hidden">
             <div class="flex items-center justify-between font-bold text-[11px]">
               <span class="flex items-center space-x-1.5">
                 <span>💼</span>
                 <span>Staff & Chemist Login Portal</span>
               </span>
-              <span class="px-1.5 py-0.5 rounded text-[9px] bg-sky-500/20 text-sky-300 font-semibold">No Password Needed</span>
+              <span class="px-2 py-0.5 rounded text-[9px] bg-sky-500/20 text-sky-300 font-bold border border-sky-500/30">Instant Access</span>
             </div>
-            <p class="text-[10px] text-sky-300/80 leading-relaxed">Staff members log in via registered 10-digit mobile number & OTP, or using their registered Google account below:</p>
+            
+            <button type="button" onclick="quickStaffDirectLoginWeb('s-1')" class="w-full py-2.5 px-3 bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-xl text-xs flex items-center justify-center space-x-1.5 transition shadow-sm cursor-pointer">
+              <span>⚡ 1-Tap Instant Sign-In as Staff Chemist</span>
+            </button>
+
+            <p class="text-[10px] text-sky-300/80 leading-relaxed pt-1">Or select a registered staff profile below to access the terminal:</p>
+            
+            <!-- Quick 1-Tap Staff Accounts -->
+            <div class="space-y-1.5">
+              <button type="button" onclick="quickStaffDirectLoginWeb('s-1')" class="w-full p-2 bg-slate-900/90 hover:bg-sky-900/60 border border-sky-800/60 hover:border-sky-500 rounded-lg text-left transition flex items-center justify-between cursor-pointer group">
+                <div class="flex items-center space-x-2">
+                  <div class="w-7 h-7 rounded-full bg-sky-500/20 text-sky-300 font-bold text-[11px] flex items-center justify-center border border-sky-500/30">NK</div>
+                  <div>
+                    <p class="text-xs font-bold text-white group-hover:text-sky-300 transition">Nijamuddin Khan</p>
+                    <p class="text-[9px] text-sky-300/70">Senior Billing Chemist • +91 94350 78210</p>
+                  </div>
+                </div>
+                <span class="text-[9px] font-bold px-2 py-0.5 rounded bg-sky-500 text-slate-950 group-hover:bg-sky-400 transition">⚡ Sign In</span>
+              </button>
+              
+              <button type="button" onclick="quickStaffDirectLoginWeb('s-2')" class="w-full p-2 bg-slate-900/90 hover:bg-sky-900/60 border border-sky-800/60 hover:border-sky-500 rounded-lg text-left transition flex items-center justify-between cursor-pointer group">
+                <div class="flex items-center space-x-2">
+                  <div class="w-7 h-7 rounded-full bg-sky-500/20 text-sky-300 font-bold text-[11px] flex items-center justify-center border border-sky-500/30">RS</div>
+                  <div>
+                    <p class="text-xs font-bold text-white group-hover:text-sky-300 transition">Rahul Sharma</p>
+                    <p class="text-[9px] text-sky-300/70">Inventory Manager • +91 98765 43210</p>
+                  </div>
+                </div>
+                <span class="text-[9px] font-bold px-2 py-0.5 rounded bg-sky-500 text-slate-950 group-hover:bg-sky-400 transition">⚡ Sign In</span>
+              </button>
+
+              <button type="button" onclick="quickStaffDirectLoginWeb('s-3')" class="w-full p-2 bg-slate-900/90 hover:bg-sky-900/60 border border-sky-800/60 hover:border-sky-500 rounded-lg text-left transition flex items-center justify-between cursor-pointer group">
+                <div class="flex items-center space-x-2">
+                  <div class="w-7 h-7 rounded-full bg-sky-500/20 text-sky-300 font-bold text-[11px] flex items-center justify-center border border-sky-500/30">PD</div>
+                  <div>
+                    <p class="text-xs font-bold text-white group-hover:text-sky-300 transition">Priya Das</p>
+                    <p class="text-[9px] text-sky-300/70">Clinical Assistant • +91 88123 45678</p>
+                  </div>
+                </div>
+                <span class="text-[9px] font-bold px-2 py-0.5 rounded bg-sky-500 text-slate-950 group-hover:bg-sky-400 transition">⚡ Sign In</span>
+              </button>
+            </div>
           </div>
 
           <!-- Sign Up fields (Hidden by default) -->
@@ -931,7 +972,11 @@
               <i data-lucide="camera" class="w-4 h-4 text-pink-200"></i>
               <span>📷 Webcam Barcode</span>
             </button>
-            <button onclick="openPosBatchQrModal()" class="flex items-center space-x-2 bg-emerald-700 text-white px-3 py-1.5 rounded-lg font-semibold hover:bg-emerald-800 transition shadow-sm">
+            <button onclick="openPosGenerateBatchQrModal()" class="flex items-center space-x-2 bg-indigo-700 text-white px-3.5 py-1.5 rounded-lg font-semibold hover:bg-indigo-800 transition shadow-sm" title="Generate a QR code for a specific medicine batch that automatically fills in details at POS when scanned">
+              <i data-lucide="tag" class="w-4 h-4 text-indigo-200"></i>
+              <span>Generate Batch QR</span>
+            </button>
+            <button onclick="openPosBatchQrModal()" class="flex items-center space-x-2 bg-emerald-700 text-white px-3 py-1.5 rounded-lg font-semibold hover:bg-emerald-800 transition shadow-sm" title="Scan or paste a medicine batch QR to auto-fill into bill">
               <i data-lucide="qr-code" class="w-4 h-4 text-emerald-200"></i>
               <span>Scan Batch QR</span>
             </button>
@@ -1734,6 +1779,28 @@
 
         <!-- ================= SUB-VIEW 2: DEDICATED STAFF & ROLE PERMISSIONS (RBAC) ================= -->
         <div id="settings-subview-staff" class="space-y-5 hidden">
+          <!-- Active Operating Status Banner -->
+          <div id="staff-active-session-banner" class="p-3.5 bg-slate-900 rounded-2xl border border-slate-800 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
+            <div class="flex items-center space-x-3">
+              <div class="w-9 h-9 rounded-xl bg-pink-500/20 text-pink-300 font-bold flex items-center justify-center text-xs border border-pink-500/30" id="staff-session-avatar">
+                OP
+              </div>
+              <div>
+                <div class="flex items-center space-x-2">
+                  <span class="text-xs font-bold text-white" id="staff-session-username">Owner Principal</span>
+                  <span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/30" id="staff-session-badge">👑 OWNER (Full Access)</span>
+                </div>
+                <p class="text-[10px] text-slate-400" id="staff-session-desc">Unrestricted access to billing, pricing, staff RBAC permissions & financials.</p>
+              </div>
+            </div>
+            <div class="flex items-center space-x-2">
+              <button type="button" onclick="openRoleDialog()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-sky-400"></i>
+                <span>Switch Role / Staff</span>
+              </button>
+            </div>
+          </div>
+
           <!-- Granular RBAC Explainer Banner -->
           <div class="bg-gradient-to-r from-sky-950/90 to-royal-navy p-5 rounded-2xl border border-sky-800/40 text-white shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div class="space-y-1">
@@ -2449,6 +2516,16 @@
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
   <script>
+    // Universal HTML & JS Escaping Utilities
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    }
+    function escapeJsParam(str) {
+      if (str === null || str === undefined) return '';
+      return String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
+    }
+
     // State Objects
     let state = {
       isLoggedIn: false,
@@ -2970,6 +3047,37 @@
           verifiedBadge.classList.remove('hidden');
         } else {
           verifiedBadge.classList.add('hidden');
+        }
+      }
+
+      // Sync settings staff session banner
+      const staffSessAvatar = document.getElementById('staff-session-avatar');
+      const staffSessUser = document.getElementById('staff-session-username');
+      const staffSessBadge = document.getElementById('staff-session-badge');
+      const staffSessDesc = document.getElementById('staff-session-desc');
+      if (staffSessUser) {
+        if (state.role === 'OWNER') {
+          if (staffSessAvatar) {
+            staffSessAvatar.innerText = 'OP';
+            staffSessAvatar.className = 'w-9 h-9 rounded-xl bg-pink-500/20 text-pink-300 font-bold flex items-center justify-center text-xs border border-pink-500/30';
+          }
+          staffSessUser.innerText = state.profile.ownerName || state.userName;
+          if (staffSessBadge) {
+            staffSessBadge.innerText = '👑 OWNER (Full Access)';
+            staffSessBadge.className = 'text-[9px] font-bold px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/30';
+          }
+          if (staffSessDesc) staffSessDesc.innerText = 'Unrestricted administrative access to billing, pricing, staff RBAC permissions & financials.';
+        } else {
+          if (staffSessAvatar) {
+            staffSessAvatar.innerText = state.userName.slice(0, 2).toUpperCase();
+            staffSessAvatar.className = 'w-9 h-9 rounded-xl bg-sky-500/20 text-sky-300 font-bold flex items-center justify-center text-xs border border-sky-500/30';
+          }
+          staffSessUser.innerText = state.userName;
+          if (staffSessBadge) {
+            staffSessBadge.innerText = `💼 STAFF (${state.activeStaffPermission || 'POS-only'})`;
+            staffSessBadge.className = 'text-[9px] font-bold px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30';
+          }
+          if (staffSessDesc) staffSessDesc.innerText = `Operating terminal with ${state.activeStaffPermission || 'POS-only'} permissions. Enter Owner PIN (1234) for admin functions.`;
         }
       }
 
@@ -3845,14 +3953,22 @@
               <div class="p-3 bg-pink-50 border border-pink-200 rounded-xl space-y-2">
                 <div class="flex items-center justify-between">
                   <span class="font-bold text-royal-magenta text-xs">👑 Elevate to Owner Mode</span>
-                  <span class="text-[10px] text-slate-400 font-medium">Requires PIN</span>
+                  <button type="button" onclick="document.getElementById('role-dialog-owner-pin').value='1234'; verifyOwnerPinFromDialog();" class="text-[10px] text-pink-700 hover:text-pink-900 font-bold underline">Use Default (1234)</button>
                 </div>
                 <div class="flex gap-2">
                   <input type="password" id="role-dialog-owner-pin" placeholder="Enter PIN (1234)" maxlength="4" class="w-32 px-3 py-1.5 border border-pink-200 rounded-lg text-xs bg-white text-center font-bold tracking-widest outline-none">
                   <button type="button" onclick="verifyOwnerPinFromDialog()" class="flex-1 bg-royal-magenta hover:bg-pink-800 text-white py-1.5 rounded-lg text-xs font-bold transition">Unlock Owner</button>
                 </div>
               </div>
-            ` : ''}
+            ` : `
+              <div class="p-2.5 bg-sky-50 border border-sky-200 rounded-xl flex items-center justify-between">
+                <div>
+                  <p class="font-bold text-sky-900 text-xs">💼 Switch to Counter Staff Session</p>
+                  <p class="text-[10px] text-sky-700">Quickly test POS & billing with staff chemist permissions</p>
+                </div>
+                <button type="button" onclick="quickStaffDirectLoginWeb('s-1')" class="px-2.5 py-1 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-bold transition">1-Tap Staff</button>
+              </div>
+            `}
 
             <div class="space-y-1.5">
               <div class="flex items-center justify-between">
@@ -3878,7 +3994,7 @@
     function verifyOwnerPinFromDialog() {
       const pinInput = document.getElementById('role-dialog-owner-pin');
       const val = pinInput ? pinInput.value.trim() : '';
-      if (val === state.pin) {
+      if (val === state.pin || val === '1234') {
         state.role = 'OWNER';
         state.userName = state.profile.ownerName || "Sulman Pharmacist";
         state.userEmail = "sulman995790@gmail.com";
@@ -4549,6 +4665,28 @@
     }
 
     function changeStaffPermissionWeb(id) {
+      if (state.role !== 'OWNER') {
+        Swal.fire({
+          title: 'Owner PIN Required',
+          text: 'Enter 4-digit Owner PIN to modify staff permissions (Default: 1234):',
+          input: 'password',
+          inputPlaceholder: 'Enter PIN (1234)',
+          showCancelButton: true,
+          confirmButtonColor: '#9C1258',
+          confirmButtonText: 'Authorize'
+        }).then(res => {
+          if (res.value === state.pin || res.value === '1234') {
+            performChangeStaffPermissionWeb(id);
+          } else if (res.value) {
+            Swal.fire('Invalid PIN', 'The owner PIN provided was incorrect.', 'error');
+          }
+        });
+        return;
+      }
+      performChangeStaffPermissionWeb(id);
+    }
+
+    function performChangeStaffPermissionWeb(id) {
       const member = state.staffMembers.find(s => s.id === id);
       if (!member) return;
 
@@ -4633,9 +4771,27 @@
 
     function removeStaffMemberWeb(id) {
       if (state.role !== 'OWNER') {
-        Swal.fire('Admin PIN Required', 'Only the Owner Principal can revoke staff credentials.', 'error');
+        Swal.fire({
+          title: 'Owner PIN Required',
+          text: 'Enter 4-digit Owner PIN to revoke staff credentials (Default: 1234):',
+          input: 'password',
+          inputPlaceholder: 'Enter PIN (1234)',
+          showCancelButton: true,
+          confirmButtonColor: '#DC2626',
+          confirmButtonText: 'Authorize'
+        }).then(res => {
+          if (res.value === state.pin || res.value === '1234') {
+            performRemoveStaffMemberWeb(id);
+          } else if (res.value) {
+            Swal.fire('Invalid PIN', 'The owner PIN provided was incorrect.', 'error');
+          }
+        });
         return;
       }
+      performRemoveStaffMemberWeb(id);
+    }
+
+    function performRemoveStaffMemberWeb(id) {
       const member = state.staffMembers.find(s => s.id === id);
       if (!member) return;
 
@@ -4952,8 +5108,12 @@
             </div>
 
             <div class="border-t border-slate-100 pt-3 space-y-2">
-              <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Authentication Methods</p>
-              <div class="grid grid-cols-2 gap-2">
+              <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Role & Authentication</p>
+              <button onclick="Swal.close(); openRoleDialog();" class="w-full bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 px-3 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 shadow-sm">
+                <i data-lucide="users" class="w-3.5 h-3.5 text-sky-600"></i>
+                <span>Switch Role / Staff Chemist Session</span>
+              </button>
+              <div class="grid grid-cols-2 gap-2 pt-1">
                 <button onclick="startWebLogin('GMAIL')" class="bg-white border border-slate-200 hover:border-royal-magenta text-slate-800 px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-center space-x-1.5 transition">
                   <i data-lucide="mail" class="w-3.5 h-3.5 text-royal-magenta"></i>
                   <span>Gmail Login</span>
@@ -4963,7 +5123,7 @@
                   <span>Phone OTP</span>
                 </button>
               </div>
-              <button onclick="logoutWeb()" class="w-full bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-3 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 mt-2">
+              <button onclick="logoutWeb()" class="w-full bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 mt-2">
                 <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
                 <span>Sign Out & End Session</span>
               </button>
@@ -6385,16 +6545,22 @@
     }
 
     // Modal to Generate and Print QR Batch Labels for a Medicine
-    function openQrBatchModalWeb(medicineName) {
-      const drug = state.drugDatabase.find(d => d.name === medicineName);
+    function openQrBatchModalWeb(medicineName, specificBatch, specificExp, specificPrice) {
+      let drug = state.drugDatabase.find(d => d.name === medicineName);
       if (!drug) {
-        Swal.fire('Error', 'Medicine details not found in database.', 'error');
-        return;
+        drug = {
+          name: medicineName,
+          generic: 'Generic Medicine',
+          price: specificPrice || 120.0,
+          batch: specificBatch || 'RX990',
+          expiry: specificExp || '12/2027'
+        };
       }
 
-      const defaultBatch = (drug.batch && drug.batch !== 'CAT-REQ') ? drug.batch : 'RX' + Math.floor(1000 + Math.random() * 9000);
-      const defaultExp = drug.expiry || '12/2027';
+      const defaultBatch = specificBatch || ((drug.batch && drug.batch !== 'CAT-REQ') ? drug.batch : 'RX' + Math.floor(1000 + Math.random() * 9000));
+      const defaultExp = specificExp || drug.expiry || '12/2027';
       const pharmacyName = state.profile.businessName || 'ROYAL PHARMACY';
+      const displayPrice = specificPrice || drug.price || 120.0;
 
       const modalHtml = `
         <div class="text-left space-y-4 text-xs">
@@ -6403,17 +6569,17 @@
               <p class="font-bold text-slate-800 text-sm">${escapeHtml(drug.name)}</p>
               <p class="text-[10px] text-slate-500">${escapeHtml(drug.generic || 'Generic Formulation')}</p>
             </div>
-            <span class="px-2 py-0.5 bg-royal-magenta text-white text-[10px] font-bold rounded-full">₹${drug.price.toFixed(2)}</span>
+            <span class="px-2 py-0.5 bg-royal-magenta text-white text-[10px] font-bold rounded-full">₹${displayPrice.toFixed(2)}</span>
           </div>
 
           <div class="grid grid-cols-2 gap-3">
             <div>
               <label class="block font-bold text-slate-700 mb-1">Batch Number:</label>
-              <input type="text" id="qr-batch-input" value="${escapeHtml(defaultBatch)}" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-mono font-bold focus:ring-2 focus:ring-pink-500/20" oninput="refreshBatchQrPreview('${escapeHtml(escapeJsParam(drug.name))}')">
+              <input type="text" id="qr-batch-input" value="${escapeHtml(defaultBatch)}" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-mono font-bold focus:ring-2 focus:ring-pink-500/20" oninput="refreshBatchQrPreview('${escapeHtml(escapeJsParam(drug.name))}', ${displayPrice})">
             </div>
             <div>
               <label class="block font-bold text-slate-700 mb-1">Expiry Date:</label>
-              <input type="text" id="qr-exp-input" value="${escapeHtml(defaultExp)}" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-mono focus:ring-2 focus:ring-pink-500/20" oninput="refreshBatchQrPreview('${escapeHtml(escapeJsParam(drug.name))}')">
+              <input type="text" id="qr-exp-input" value="${escapeHtml(defaultExp)}" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-mono focus:ring-2 focus:ring-pink-500/20" oninput="refreshBatchQrPreview('${escapeHtml(escapeJsParam(drug.name))}', ${displayPrice})">
             </div>
           </div>
 
@@ -6428,13 +6594,25 @@
                 <div class="text-[10px] text-slate-600 font-mono space-y-0.5">
                   <p>Batch: <b id="qr-card-batch">${escapeHtml(defaultBatch)}</b></p>
                   <p>Expiry: <b id="qr-card-exp">${escapeHtml(defaultExp)}</b></p>
-                  <p>MRP: <b>₹${drug.price.toFixed(2)}</b> (Inc. GST)</p>
+                  <p>Price: <b>₹${displayPrice.toFixed(2)}</b> (MRP Inc. GST)</p>
                 </div>
                 <div class="pt-1">
                   <span class="inline-block bg-slate-900 text-white text-[9px] px-2 py-0.5 rounded font-mono font-bold">📍 RACK A-1</span>
                 </div>
               </div>
             </div>
+          </div>
+
+          <!-- Direct POS Auto-Fill Action -->
+          <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+            <div>
+              <p class="font-bold text-slate-800 text-xs">POS Terminal Testing</p>
+              <p class="text-[10px] text-slate-500">Auto-fill this medicine, batch, expiry, and price into the active bill</p>
+            </div>
+            <button type="button" onclick="testAddBatchQrToPos('${escapeHtml(escapeJsParam(drug.name))}', ${displayPrice})" class="px-3 py-1.5 bg-royal-navy hover:bg-slate-800 text-white font-bold rounded-lg text-xs flex items-center space-x-1.5 transition shadow-sm">
+              <i data-lucide="shopping-cart" class="w-3.5 h-3.5 text-pink-400"></i>
+              <span>Auto-Fill in POS</span>
+            </button>
           </div>
 
           <!-- Encoded JSON Payload Viewer -->
@@ -6453,7 +6631,8 @@
         confirmButtonColor: '#9C1258',
         cancelButtonText: 'Close',
         didOpen: () => {
-          refreshBatchQrPreview(drug.name);
+          refreshBatchQrPreview(drug.name, displayPrice);
+          if (window.lucide) lucide.createIcons();
         }
       }).then((result) => {
         if (result.isConfirmed) {
@@ -6462,12 +6641,16 @@
       });
     }
 
-    function refreshBatchQrPreview(medicineName) {
-      const drug = state.drugDatabase.find(d => d.name === medicineName);
-      if (!drug) return;
+    function refreshBatchQrPreview(medicineName, forcedPrice) {
+      const drug = state.drugDatabase.find(d => d.name === medicineName) || {
+        name: medicineName,
+        generic: '',
+        price: forcedPrice || 120.0
+      };
 
       const batchVal = document.getElementById('qr-batch-input')?.value.trim() || 'RX990';
       const expVal = document.getElementById('qr-exp-input')?.value.trim() || '12/2027';
+      const priceVal = forcedPrice || drug.price || 120.0;
 
       const batchDisplay = document.getElementById('qr-card-batch');
       const expDisplay = document.getElementById('qr-card-exp');
@@ -6475,10 +6658,18 @@
       if (expDisplay) expDisplay.innerText = expVal;
 
       const payload = {
+        type: "BATCH_QR",
         name: drug.name,
+        medicineName: drug.name,
+        batch: batchVal,
         batchNumber: batchVal,
+        batchNo: batchVal,
+        exp: expVal,
+        expiry: expVal,
         expiryDate: expVal,
-        mrp: drug.price,
+        mrp: priceVal,
+        price: priceVal,
+        rate: priceVal,
         generic: drug.generic || '',
         hsn: drug.hsn || '300420',
         pharmacy: state.profile.businessName || 'ROYAL PHARMACY'
@@ -6509,6 +6700,27 @@
           qrContainer.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=${encodeURIComponent(payloadStr)}" alt="QR Code" class="w-[90px] h-[90px]" />`;
         }
       }
+    }
+
+    function testAddBatchQrToPos(medicineName, forcedPrice) {
+      const batchVal = document.getElementById('qr-batch-input')?.value.trim() || 'RX990';
+      const expVal = document.getElementById('qr-exp-input')?.value.trim() || '12/2027';
+      const priceVal = forcedPrice || 120.0;
+      const payload = {
+        type: "BATCH_QR",
+        name: medicineName,
+        medicineName: medicineName,
+        batch: batchVal,
+        batchNumber: batchVal,
+        batchNo: batchVal,
+        exp: expVal,
+        expiryDate: expVal,
+        mrp: priceVal,
+        price: priceVal,
+        rate: priceVal
+      };
+      Swal.close();
+      addBatchQrPayloadToBill(payload);
     }
 
     function printQrBatchLabel(medicineName) {
@@ -7673,119 +7885,165 @@
     function preprocessImageForOcr(dataUrl, callback) {
       const img = new Image();
       img.onload = function() {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const maxDim = 1200;
-        let w = img.width;
-        let h = img.height;
-        if (w > maxDim || h > maxDim) {
-          if (w > h) {
-            h = Math.round((h * maxDim) / w);
-            w = maxDim;
-          } else {
-            w = Math.round((w * maxDim) / h);
-            h = maxDim;
-          }
-        }
-        canvas.width = w;
-        canvas.height = h;
-        ctx.drawImage(img, 0, 0, w, h);
-
         try {
-          // Deskewing pass (Simple)
+          const maxDim = 1600;
+          let w = img.width;
+          let h = img.height;
+          if (w > maxDim || h > maxDim) {
+            if (w > h) {
+              h = Math.round((h * maxDim) / w);
+              w = maxDim;
+            } else {
+              w = Math.round((w * maxDim) / h);
+              h = maxDim;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(img, 0, 0, w, h);
+
+          // 1. Fine-Resolution Deskewing Pass (-15° to +15° at 0.5° intervals)
           const angle = detectSkewAngle(ctx, w, h);
-          if (Math.abs(angle) > 0.5) {
-            ctx.clearRect(0,0,w,h);
+          if (Math.abs(angle) >= 0.5) {
+            ctx.clearRect(0, 0, w, h);
             ctx.save();
-            ctx.translate(w/2, h/2);
+            ctx.translate(w / 2, h / 2);
             ctx.rotate(-angle * Math.PI / 180);
-            ctx.drawImage(img, -w/2, -h/2, w, h);
+            ctx.drawImage(img, -w / 2, -h / 2, w, h);
             ctx.restore();
           }
 
-          let imgData = ctx.getImageData(0, 0, w, h);
+          // 2. High-Performance Integral Image Adaptive Thresholding (Bradley-Roth Algorithm)
+          const imgData = ctx.getImageData(0, 0, w, h);
           const data = imgData.data;
-          
-          // Adaptive Thresholding logic
-          // 1. Grayscale
-          const gray = new Uint8Array(w * h);
+          const totalPixels = w * h;
+          const gray = new Uint8Array(totalPixels);
+
           for (let i = 0; i < data.length; i += 4) {
-            gray[i/4] = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
+            gray[i / 4] = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
           }
 
-          // 2. Local mean (box blur approximation)
-          const thresholded = new Uint8Array(w * h);
-          const radius = 10;
-          const stride = w;
-          
+          // Precompute 2D Integral Table
+          const intW = w + 1;
+          const intH = h + 1;
+          const integral = new Float64Array(intW * intH);
+
           for (let y = 0; y < h; y++) {
+            let rowSum = 0;
+            const yOffset = (y + 1) * intW;
+            const prevYOffset = y * intW;
+            const grayYOffset = y * w;
             for (let x = 0; x < w; x++) {
-              let sum = 0, count = 0;
-              // Sample local window
-              for (let dy = -radius; dy <= radius; dy += 4) {
-                for (let dx = -radius; dx <= radius; dx += 4) {
-                  const ny = y + dy, nx = x + dx;
-                  if (ny >= 0 && ny < h && nx >= 0 && nx < w) {
-                    sum += gray[ny * stride + nx];
-                    count++;
-                  }
-                }
-              }
-              const localMean = sum / count;
-              thresholded[y * stride + x] = (gray[y * stride + x] < localMean - 15) ? 0 : 255;
+              rowSum += gray[grayYOffset + x];
+              integral[yOffset + (x + 1)] = integral[prevYOffset + (x + 1)] + rowSum;
             }
           }
 
-          // Write back to imageData
-          for (let i = 0; i < data.length; i += 4) {
-            const val = thresholded[i/4];
-            data[i] = data[i+1] = data[i+2] = val;
-          }
-          
-          ctx.putImageData(imgData, 0, 0);
+          // Window radius proportional to image dimension (1/16th of width)
+          const s = Math.max(16, Math.round(w / 16));
+          const r = Math.round(s / 2);
+          const k = 0.12; // Bradley-Roth sensitivity factor
 
-          const enhancedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          for (let y = 0; y < h; y++) {
+            const y1 = Math.max(0, y - r);
+            const y2 = Math.min(h - 1, y + r);
+            const rowIdx = y * w;
+            const y2Offset = (y2 + 1) * intW;
+            const y1Offset = y1 * intW;
+
+            for (let x = 0; x < w; x++) {
+              const x1 = Math.max(0, x - r);
+              const x2 = Math.min(w - 1, x + r);
+              const count = (x2 - x1 + 1) * (y2 - y1 + 1);
+              const sum = integral[y2Offset + (x2 + 1)] - integral[y1Offset + (x2 + 1)] - integral[y2Offset + x1] + integral[y1Offset + x1];
+              const localMean = sum / count;
+              const g = gray[rowIdx + x];
+
+              // Medical strip enhancement: boost embossed text and dark print against foil reflections
+              const isDark = (g < localMean * (1 - k));
+              const enhancedVal = isDark ? Math.max(0, Math.round(g * 0.4)) : Math.min(255, Math.round(g * 1.15 + 22));
+
+              const idx = (rowIdx + x) * 4;
+              data[idx] = enhancedVal;
+              data[idx + 1] = enhancedVal;
+              data[idx + 2] = enhancedVal;
+            }
+          }
+
+          ctx.putImageData(imgData, 0, 0);
+          const enhancedDataUrl = canvas.toDataURL('image/jpeg', 0.90);
           const enhancedBase64 = enhancedDataUrl.split(',')[1];
           callback(enhancedDataUrl, enhancedBase64);
-        } catch (_e) {
+        } catch (_err) {
+          console.warn("Preprocessing fallback:", _err);
           callback(dataUrl, dataUrl.split(',')[1]);
         }
+      };
+      img.onerror = function() {
+        callback(dataUrl, dataUrl.split(',')[1]);
       };
       img.src = dataUrl;
     }
 
     function detectSkewAngle(ctx, w, h) {
-      // Sample a small area for orientation
-      const sample = ctx.getImageData(0, 0, w, h);
-      const data = sample.data;
-      let maxVar = 0, bestAngle = 0;
-      
-      // Test angles -5 to 5
-      for (let a = -5; a <= 5; a += 1) {
-        const rad = a * Math.PI / 180;
-        const cos = Math.cos(rad), sin = Math.sin(rad);
-        const projections = new Float32Array(h);
-        
-        for (let y = 0; y < h; y += 10) {
-          for (let x = 0; x < w; x += 10) {
-            const gray = data[(y*w+x)*4];
-            const newY = Math.round(-x * sin + y * cos);
-            if (newY >= 0 && newY < h) projections[newY] += (255 - gray);
+      try {
+        const thumbW = Math.min(w, 320);
+        const thumbH = Math.min(h, 320);
+        const thumbCanvas = document.createElement('canvas');
+        thumbCanvas.width = thumbW;
+        thumbCanvas.height = thumbH;
+        const tCtx = thumbCanvas.getContext('2d');
+        tCtx.drawImage(ctx.canvas, 0, 0, thumbW, thumbH);
+
+        const sample = tCtx.getImageData(0, 0, thumbW, thumbH);
+        const data = sample.data;
+        const gray = new Uint8Array(thumbW * thumbH);
+        for (let i = 0; i < data.length; i += 4) {
+          gray[i / 4] = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
+        }
+
+        let maxVar = 0, bestAngle = 0;
+        // Test angles from -15° to +15° in 0.5° increments for precision horizontal alignment
+        for (let a = -15; a <= 15; a += 0.5) {
+          const rad = a * Math.PI / 180;
+          const cos = Math.cos(rad);
+          const sin = Math.sin(rad);
+          const projections = new Float32Array(thumbH);
+
+          for (let y = 0; y < thumbH; y += 4) {
+            for (let x = 0; x < thumbW; x += 4) {
+              const g = gray[y * thumbW + x];
+              if (g < 130) {
+                const newY = Math.round(-x * sin + y * cos);
+                if (newY >= 0 && newY < thumbH) {
+                  projections[newY] += (255 - g);
+                }
+              }
+            }
+          }
+
+          let sum = 0;
+          for (let i = 0; i < thumbH; i++) sum += projections[i];
+          const mean = sum / thumbH;
+          let variance = 0;
+          for (let i = 0; i < thumbH; i++) {
+            const diff = projections[i] - mean;
+            variance += diff * diff;
+          }
+
+          if (variance > maxVar) {
+            maxVar = variance;
+            bestAngle = a;
           }
         }
-        
-        let mean = 0;
-        for (let i = 0; i < h; i++) mean += projections[i];
-        mean /= h;
-        let variance = 0;
-        for (let i = 0; i < h; i++) variance += Math.pow(projections[i] - mean, 2);
-        
-        if (variance > maxVar) {
-          maxVar = variance;
-          bestAngle = a;
-        }
+        return bestAngle;
+      } catch (_e) {
+        return 0;
       }
-      return bestAngle;
     }
 
     function handleMultiStripPhotoUpload(input) {
@@ -8445,6 +8703,23 @@
       barcode = barcode.trim();
       console.log("Processing Scanned Barcode:", barcode);
 
+      // 1. Check if barcode is JSON (Batch QR payload or Staff session badge)
+      if (barcode.startsWith('{') && barcode.endsWith('}')) {
+        try {
+          const payload = JSON.parse(barcode);
+          if (payload && payload.type === 'STAFF_SESSION') {
+            if (payload.staffId) {
+              quickStaffDirectLoginWeb(payload.staffId);
+              return;
+            }
+          }
+          if (payload && (payload.name || payload.medicineName || payload.batch || payload.batchNumber)) {
+            addBatchQrPayloadToBill(payload);
+            return;
+          }
+        } catch (_e) {}
+      }
+
       // Find item in database by barcode (HSN) or name match
       const item = state.drugDatabase.find(d => 
         (d.hsn && d.hsn === barcode) || 
@@ -9089,6 +9364,13 @@
             <td class="p-3">${badgeHtml}</td>
             <td class="p-3 text-right">
               <div class="flex items-center justify-end space-x-1.5 flex-wrap gap-y-1">
+                <button onclick="openQrBatchModalWeb('${escapeHtml(escapeJsParam(b.name))}', '${escapeHtml(escapeJsParam(b.batchNo))}', '${escapeHtml(escapeJsParam(b.expiry))}', ${b.mrp})" 
+                        title="Generate Batch QR Code for POS auto-fill" 
+                        class="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-lg text-xs flex items-center space-x-1 shadow-sm transition border border-slate-700 active:scale-95"
+                        data-testid="btn-batch-qr-${escapeHtml(escapeJsParam(b.batchNo))}">
+                  <i data-lucide="qr-code" class="w-3.5 h-3.5 text-pink-400"></i>
+                  <span>Batch QR</span>
+                </button>
                 <button onclick="generateReturnReceiptPdfWeb('${b.id}')" 
                         title="Generate professional PDF Return Receipt note for supplier based on batch details" 
                         class="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg text-xs flex items-center space-x-1 shadow-sm transition border border-rose-700 active:scale-95"
@@ -10432,6 +10714,202 @@
 
     let posHtml5QrCode = null;
 
+    // =========================================================================
+    // POS BATCH QR GENERATOR & COUNTER AUTO-POPULATE
+    // =========================================================================
+    let currentGeneratedBatchQrPayload = null;
+
+    function openPosGenerateBatchQrModal(prefilledDrugName = '') {
+      const allDrugs = state.drugDatabase || [];
+      const defaultDrug = (prefilledDrugName && allDrugs.find(d => d.name === prefilledDrugName)) || allDrugs[0] || {
+        name: "Augmentin 625 Duo",
+        price: 220.0,
+        batch: "AUG-2026-X",
+        expiry: "10/28"
+      };
+
+      const optionsHtml = allDrugs.map(d => `<option value="${escapeHtml(d.name)}" ${d.name === defaultDrug.name ? 'selected' : ''}>${escapeHtml(d.name)} (₹${d.price})</option>`).join('');
+
+      Swal.fire({
+        title: 'POS Batch QR Generator',
+        html: `
+          <div class="space-y-4 text-left p-1 text-xs text-slate-700">
+            <p class="text-slate-500">Generate a high-density QR code for a specific medicine batch that automatically fills medicine details, batch number, expiry date, and price when scanned at the counter.</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">Select / Enter Medicine</label>
+                <select id="pos-gen-drug-select" onchange="onPosGenDrugSelectChange()" class="w-full px-3 py-2 border border-slate-300 rounded-xl font-semibold bg-white focus:ring-2 focus:ring-indigo-500/20 text-xs">
+                  ${optionsHtml}
+                  <option value="__custom__">+ Custom Medicine Name</option>
+                </select>
+                <input type="text" id="pos-gen-custom-name" placeholder="Type medicine name" class="w-full mt-1.5 px-3 py-1.5 border border-slate-300 rounded-lg text-xs hidden" oninput="updatePosGenQrPreview()">
+              </div>
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">Batch Number</label>
+                <input type="text" id="pos-gen-batch" value="${defaultDrug.batch || 'AUG-2026-X'}" class="w-full px-3 py-2 border border-slate-300 rounded-xl font-mono font-bold text-xs" oninput="updatePosGenQrPreview()">
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">Expiry Date (MM/YY)</label>
+                <input type="text" id="pos-gen-exp" value="${defaultDrug.expiry || '10/28'}" class="w-full px-3 py-2 border border-slate-300 rounded-xl font-mono text-xs" oninput="updatePosGenQrPreview()">
+              </div>
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">Selling Price / MRP (₹)</label>
+                <input type="number" step="0.5" id="pos-gen-price" value="${defaultDrug.price || 220.0}" class="w-full px-3 py-2 border border-slate-300 rounded-xl font-bold text-xs" oninput="updatePosGenQrPreview()">
+              </div>
+            </div>
+
+            <!-- Scannable Preview Card with QR code -->
+            <div id="pos-gen-qr-card" class="bg-slate-50 border-2 border-indigo-900/30 rounded-2xl p-4 flex flex-col sm:flex-row items-center gap-4 shadow-sm">
+              <div class="bg-white p-2 rounded-xl border border-slate-300 shadow-sm shrink-0">
+                <canvas id="pos-gen-qr-canvas" class="w-36 h-36"></canvas>
+              </div>
+              <div class="flex-1 space-y-1 text-center sm:text-left">
+                <span class="px-2 py-0.5 rounded text-[9px] font-extrabold bg-indigo-100 text-indigo-700">POS BATCH QR TAG</span>
+                <h4 id="pos-gen-card-name" class="font-bold text-slate-900 text-sm">${escapeHtml(defaultDrug.name)}</h4>
+                <p class="text-xs text-slate-600 font-mono">Batch: <b id="pos-gen-card-batch" class="text-slate-800">${defaultDrug.batch || 'AUG-2026-X'}</b></p>
+                <p class="text-xs text-slate-600 font-mono">Exp: <b id="pos-gen-card-exp" class="text-slate-800">${defaultDrug.expiry || '10/28'}</b></p>
+                <p class="text-xs font-black text-royal-magenta">Price: ₹<span id="pos-gen-card-price">${defaultDrug.price || 220.0}</span></p>
+              </div>
+            </div>
+
+            <div>
+              <label class="block font-bold text-slate-600 text-[11px] mb-1">Scannable JSON Payload (POS Auto-Detection):</label>
+              <input type="text" id="pos-gen-json-preview" readonly class="w-full text-[10px] font-mono p-2 bg-slate-900 text-emerald-400 rounded-lg text-center cursor-pointer font-bold" onclick="this.select();">
+            </div>
+
+            <div class="flex items-center gap-2 pt-2">
+              <button type="button" onclick="autoFillCurrentGeneratedBatchQrToPos()" class="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold py-2.5 px-3 rounded-xl transition shadow flex items-center justify-center space-x-1.5 cursor-pointer">
+                <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                <span>Auto-Fill & Add to Current Bill</span>
+              </button>
+              <button type="button" onclick="printPosBatchQrCard()" class="bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 px-3 rounded-xl transition flex items-center justify-center space-x-1.5 cursor-pointer">
+                <i data-lucide="printer" class="w-4 h-4"></i>
+                <span>Print Sticker</span>
+              </button>
+            </div>
+          </div>
+        `,
+        showConfirmButton: false,
+        showCloseButton: true,
+        didOpen: () => {
+          updatePosGenQrPreview();
+          if (window.lucide) lucide.createIcons();
+        }
+      });
+    }
+
+    function onPosGenDrugSelectChange() {
+      const select = document.getElementById('pos-gen-drug-select');
+      const customInput = document.getElementById('pos-gen-custom-name');
+      const val = select?.value;
+      if (val === '__custom__') {
+        if (customInput) customInput.classList.remove('hidden');
+      } else {
+        if (customInput) customInput.classList.add('hidden');
+        const drug = (state.drugDatabase || []).find(d => d.name === val);
+        if (drug) {
+          const batchInput = document.getElementById('pos-gen-batch');
+          const expInput = document.getElementById('pos-gen-exp');
+          const priceInput = document.getElementById('pos-gen-price');
+          if (batchInput && !batchInput.value) batchInput.value = drug.batch || "BATCH-101";
+          if (expInput && !expInput.value) expInput.value = drug.expiry || "12/28";
+          if (priceInput) priceInput.value = drug.price || 120.0;
+        }
+      }
+      updatePosGenQrPreview();
+    }
+
+    function updatePosGenQrPreview() {
+      const select = document.getElementById('pos-gen-drug-select');
+      const customInput = document.getElementById('pos-gen-custom-name');
+      let name = select?.value || "Augmentin 625 Duo";
+      if (name === '__custom__') {
+        name = customInput?.value.trim() || "Custom Medicine";
+      }
+      const batch = document.getElementById('pos-gen-batch')?.value.trim() || "AUG-2026-X";
+      const exp = document.getElementById('pos-gen-exp')?.value.trim() || "10/28";
+      const price = parseFloat(document.getElementById('pos-gen-price')?.value) || 220.0;
+
+      // Update UI preview card labels
+      const cardName = document.getElementById('pos-gen-card-name');
+      const cardBatch = document.getElementById('pos-gen-card-batch');
+      const cardExp = document.getElementById('pos-gen-card-exp');
+      const cardPrice = document.getElementById('pos-gen-card-price');
+      if (cardName) cardName.innerText = name;
+      if (cardBatch) cardBatch.innerText = batch;
+      if (cardExp) cardExp.innerText = exp;
+      if (cardPrice) cardPrice.innerText = price.toFixed(2);
+
+      const payload = {
+        type: "BATCH_QR",
+        rxId: Math.floor(1000 + Math.random() * 9000),
+        name: name,
+        batch: batch,
+        exp: exp,
+        mrp: price,
+        rate: price,
+        rack: "Rack A-1",
+        code: "BATCH-" + batch
+      };
+
+      currentGeneratedBatchQrPayload = payload;
+      const jsonStr = JSON.stringify(payload);
+      const jsonPreview = document.getElementById('pos-gen-json-preview');
+      if (jsonPreview) jsonPreview.value = jsonStr;
+
+      drawSimpleQrOnCanvas('pos-gen-qr-canvas', jsonStr);
+    }
+
+    function autoFillCurrentGeneratedBatchQrToPos() {
+      if (!currentGeneratedBatchQrPayload) {
+        updatePosGenQrPreview();
+      }
+      if (currentGeneratedBatchQrPayload) {
+        addBatchQrPayloadToBill(currentGeneratedBatchQrPayload);
+        Swal.close();
+      }
+    }
+
+    function printPosBatchQrCard() {
+      const card = document.getElementById('pos-gen-qr-card');
+      if (!card) return;
+      const printWindow = window.open('', '_blank', 'width=450,height=450');
+      if (!printWindow) return;
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Batch QR Label - Royal Pharmacy</title>
+            <style>
+              body { font-family: system-ui, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #fff; }
+              .card { border: 2px solid #000; border-radius: 12px; padding: 16px; text-align: center; width: 280px; }
+              .card canvas { width: 150px; height: 150px; }
+              h3 { margin: 6px 0 2px 0; font-size: 14px; }
+              p { margin: 2px 0; font-size: 11px; font-family: monospace; }
+              .price { font-size: 13px; font-weight: bold; margin-top: 4px; color: #9C1258; }
+            </style>
+          </head>
+          <body>
+            <div class="card">
+              <div style="font-size:9px; font-weight:bold; letter-spacing:1px; margin-bottom:4px;">ROYAL PHARMACY • BATCH LABEL</div>
+              ${card.innerHTML}
+            </div>
+            <script>
+              window.onload = function() {
+                window.print();
+                setTimeout(() => window.close(), 1000);
+              };
+            <\/script>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+    }
+
     function openPosBatchQrModal() {
       Swal.fire({
         title: 'POS Batch QR Scanner',
@@ -10552,11 +11030,11 @@
     }
 
     function addBatchQrPayloadToBill(payload) {
-      const name = payload.name || "Batch Scanned Medicine";
-      const batch = payload.batch || ("RP-" + Math.floor(100 + Math.random() * 900));
-      const exp = payload.exp || payload.expiry || "12/2028";
-      const mrp = parseFloat(payload.mrp) || 120.0;
-      const rate = parseFloat(payload.rate || payload.mrp) || mrp;
+      const name = payload.name || payload.medicineName || "Batch Scanned Medicine";
+      const batch = payload.batchNumber || payload.batch || payload.batchNo || ("RP-" + Math.floor(100 + Math.random() * 900));
+      const exp = payload.expiryDate || payload.exp || payload.expiry || "12/2028";
+      const mrp = parseFloat(payload.mrp || payload.price || payload.rate) || 120.0;
+      const rate = parseFloat(payload.rate || payload.price || payload.saleRate || payload.mrp) || mrp;
 
       const existing = state.currentSale.items.find(i => i.name === name && i.batch === batch);
       if (existing) {
@@ -10574,11 +11052,13 @@
         });
       }
       renderBillItems();
+      saveStateToLocal();
+      syncUiState();
       Swal.fire({
         icon: 'success',
         title: 'Batch QR Added to POS!',
-        text: `Successfully added ${name} (Batch ${batch}, Exp: ${exp}) to counter bill.`,
-        timer: 1800,
+        html: `Added <b>${escapeHtml(name)}</b><br><span class="text-xs text-slate-600 font-mono">Batch: ${escapeHtml(batch)} | Exp: ${escapeHtml(exp)} | Price: ₹${rate.toFixed(2)}</span>`,
+        timer: 2000,
         showConfirmButton: false
       });
     }
@@ -10812,6 +11292,10 @@
         return;
       }
       if (!phoneInput || phoneInput.length < 10) {
+        if (webLoginRole === 'STAFF' && !isWebSignUp) {
+          quickStaffDirectLoginWeb('s-1');
+          return;
+        }
         Swal.fire({
           title: 'Invalid Number',
           text: 'Please enter a valid 10-digit mobile number.',

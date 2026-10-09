@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -33,10 +34,15 @@ fun RoleManagementScreen(
   val ownerPin by viewModel.ownerPin.collectAsState()
   val staffMembers by viewModel.staffMembers.collectAsState()
   
+  val context = androidx.compose.ui.platform.LocalContext.current
   var showChangePinDialog by remember { mutableStateOf(false) }
   var showAddStaffDialog by remember { mutableStateOf(false) }
   var showChangePasswordDialog by remember { mutableStateOf(false) }
   var showSecurityQuestionsDialog by remember { mutableStateOf(false) }
+  var showUnlockOwnerPinDialog by remember { mutableStateOf(false) }
+  var ownerPinInput by remember { mutableStateOf("") }
+  var ownerPinError by remember { mutableStateOf<String?>(null) }
+  var staffToChangePermission by remember { mutableStateOf<com.example.viewmodel.StaffMember?>(null) }
 
   Column(
     modifier = modifier
@@ -110,7 +116,13 @@ fun RoleManagementScreen(
             isSelected = currentUserRole == UserRole.OWNER,
             color = Color(UserRole.OWNER.badgeColorHex),
             icon = Icons.Default.AdminPanelSettings,
-            onClick = { viewModel.switchUserRole(UserRole.OWNER) },
+            onClick = {
+              if (currentUserRole == UserRole.STAFF) {
+                showUnlockOwnerPinDialog = true
+              } else {
+                viewModel.switchUserRole(UserRole.OWNER)
+              }
+            },
             modifier = Modifier.weight(1f)
           )
           
@@ -120,7 +132,10 @@ fun RoleManagementScreen(
             isSelected = currentUserRole == UserRole.STAFF,
             color = Color(UserRole.STAFF.badgeColorHex),
             icon = Icons.Default.Badge,
-            onClick = { viewModel.switchUserRole(UserRole.STAFF) },
+            onClick = {
+              viewModel.switchUserRole(UserRole.STAFF)
+              android.widget.Toast.makeText(context, "Operating in Staff Chemist Mode", android.widget.Toast.LENGTH_SHORT).show()
+            },
             modifier = Modifier.weight(1f)
           )
         }
@@ -214,95 +229,167 @@ fun RoleManagementScreen(
         }
       }
 
-      // Owner-Only Staff Management & Login Logs
-      if (currentUserRole == UserRole.OWNER) {
-        item {
-          Row(
-            modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+      // Staff Directory & Multi-Session Management (Available for both Owner and Staff)
+      item {
+        Row(
+          modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 8.dp),
+          horizontalArrangement = Arrangement.SpaceBetween,
+          verticalAlignment = Alignment.CenterVertically
+        ) {
+          Column {
+            Text("Active Staff & Team Directory", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextDark)
+            Text("Switch chemist terminal sessions or manage permissions", fontSize = 11.sp, color = TextMuted)
+          }
+          Button(
+            onClick = {
+              if (currentUserRole == UserRole.STAFF) {
+                showUnlockOwnerPinDialog = true
+              } else {
+                showAddStaffDialog = true
+              }
+            },
+            colors = ButtonDefaults.buttonColors(containerColor = RoyalMagenta),
+            shape = RoundedCornerShape(8.dp),
+            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+            modifier = Modifier.height(30.dp)
           ) {
-            Text("Active Staff & Logins", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextDark)
-            Button(
-              onClick = { showAddStaffDialog = true },
-              colors = ButtonDefaults.buttonColors(containerColor = RoyalMagenta),
-              shape = RoundedCornerShape(8.dp),
-              contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-              modifier = Modifier.height(30.dp)
+            Icon(Icons.Default.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+            Spacer(modifier = Modifier.width(4.dp))
+            Text("Add Staff", fontSize = 11.sp, color = Color.White)
+          }
+        }
+
+        if (currentUserRole == UserRole.STAFF) {
+          Card(
+            shape = RoundedCornerShape(8.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFEFF6FF)),
+            border = BorderStroke(1.dp, Color(0xFFBFDBFE)),
+            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+          ) {
+            Row(
+              modifier = Modifier.padding(10.dp),
+              horizontalArrangement = Arrangement.SpaceBetween,
+              verticalAlignment = Alignment.CenterVertically
             ) {
-              Icon(Icons.Default.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
-              Spacer(modifier = Modifier.width(4.dp))
-              Text("Add Staff", fontSize = 11.sp, color = Color.White)
+              Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                Icon(Icons.Default.Info, contentDescription = null, tint = Color(0xFF2563EB), modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                  "Operating in Staff Mode. Tap 'Switch' below to operate as any registered chemist, or tap 'Unlock Owner' to access admin features.",
+                  fontSize = 11.sp,
+                  color = Color(0xFF1E40AF)
+                )
+              }
+              Spacer(modifier = Modifier.width(6.dp))
+              TextButton(
+                onClick = { showUnlockOwnerPinDialog = true },
+                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+              ) {
+                Text("Unlock Owner", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = RoyalMagenta)
+              }
             }
           }
+        }
 
-          Card(
-            shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            border = CardDefaults.outlinedCardBorder()
-          ) {
-            if (staffMembers.isEmpty()) {
-              Box(
-                modifier = Modifier.fillMaxWidth().padding(24.dp),
-                contentAlignment = Alignment.Center
-              ) {
-                Text("No staff registered yet. Add staff above.", fontSize = 12.sp, color = TextMuted)
-              }
-            } else {
-              Column {
-                staffMembers.forEachIndexed { index, staff ->
-                  Row(
-                    modifier = Modifier
-                      .fillMaxWidth()
-                      .padding(14.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                  ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                      Box(
-                        modifier = Modifier
-                          .size(36.dp)
-                          .clip(CircleShape)
-                          .background(Color(0xFFEFF6FF)),
-                        contentAlignment = Alignment.Center
-                      ) {
-                        Text(staff.name.take(2).uppercase(), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2563EB))
-                      }
-                      Spacer(modifier = Modifier.width(10.dp))
-                      Column {
-                        Text(staff.name, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextDark)
-                        Text(
-                          text = if (staff.phone.isNotBlank()) staff.phone else staff.email,
-                          fontSize = 11.sp,
-                          color = TextMuted
-                        )
-                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
-                          Box(
-                            modifier = Modifier
-                              .clip(RoundedCornerShape(4.dp))
-                              .background(if (staff.loginType == "GMAIL") Color(0xFFFBE4EE) else Color(0xFFEFF6FF))
-                              .padding(horizontal = 4.dp, vertical = 1.dp)
-                          ) {
-                            Text(
-                              text = staff.loginType,
-                              fontSize = 8.sp,
-                              fontWeight = FontWeight.Bold,
-                              color = if (staff.loginType == "GMAIL") RoyalMagenta else Color(0xFF2563EB)
-                            )
-                          }
-                          Spacer(modifier = Modifier.width(6.dp))
-                          Text("Logged: ${staff.lastLoginTime}", fontSize = 9.5.sp, color = TextLight)
+        Card(
+          shape = RoundedCornerShape(12.dp),
+          colors = CardDefaults.cardColors(containerColor = Color.White),
+          border = CardDefaults.outlinedCardBorder()
+        ) {
+          if (staffMembers.isEmpty()) {
+            Box(
+              modifier = Modifier.fillMaxWidth().padding(24.dp),
+              contentAlignment = Alignment.Center
+            ) {
+              Text("No staff registered yet. Add staff above.", fontSize = 12.sp, color = TextMuted)
+            }
+          } else {
+            Column {
+              staffMembers.forEachIndexed { index, staff ->
+                Row(
+                  modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(14.dp),
+                  horizontalArrangement = Arrangement.SpaceBetween,
+                  verticalAlignment = Alignment.CenterVertically
+                ) {
+                  Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                    Box(
+                      modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFEFF6FF)),
+                      contentAlignment = Alignment.Center
+                    ) {
+                      Text(staff.name.take(2).uppercase(), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2563EB))
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column {
+                      Text(staff.name, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextDark)
+                      Text(
+                        text = "${staff.designation} • ${staff.permission}",
+                        fontSize = 11.sp,
+                        color = TextMuted
+                      )
+                      Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 2.dp)) {
+                        Box(
+                          modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(if (staff.loginType == "GMAIL") Color(0xFFFBE4EE) else Color(0xFFEFF6FF))
+                            .padding(horizontal = 4.dp, vertical = 1.dp)
+                        ) {
+                          Text(
+                            text = staff.loginType,
+                            fontSize = 8.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (staff.loginType == "GMAIL") RoyalMagenta else Color(0xFF2563EB)
+                          )
                         }
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(staff.phone.ifBlank { staff.email }, fontSize = 9.5.sp, color = TextLight)
                       }
                     }
+                  }
 
-                    IconButton(onClick = { viewModel.removeStaffMember(staff.id) }) {
-                      Icon(Icons.Default.Delete, contentDescription = "Delete", tint = StatusRed, modifier = Modifier.size(18.dp))
+                  Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    OutlinedButton(
+                      onClick = { viewModel.switchStaffSession(staff.id, context) },
+                      shape = RoundedCornerShape(6.dp),
+                      contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                      modifier = Modifier.height(28.dp)
+                    ) {
+                      Text("Switch", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2563EB))
+                    }
+
+                    IconButton(
+                      onClick = {
+                        if (currentUserRole == UserRole.STAFF) {
+                          showUnlockOwnerPinDialog = true
+                        } else {
+                          staffToChangePermission = staff
+                        }
+                      },
+                      modifier = Modifier.size(28.dp)
+                    ) {
+                      Icon(Icons.Default.Edit, contentDescription = "Edit Permissions", tint = RoyalNavy, modifier = Modifier.size(16.dp))
+                    }
+
+                    IconButton(
+                      onClick = {
+                        if (currentUserRole == UserRole.STAFF) {
+                          showUnlockOwnerPinDialog = true
+                        } else {
+                          viewModel.removeStaffMember(staff.id)
+                        }
+                      },
+                      modifier = Modifier.size(28.dp)
+                    ) {
+                      Icon(Icons.Default.Delete, contentDescription = "Delete", tint = StatusRed, modifier = Modifier.size(16.dp))
                     }
                   }
-                  if (index < staffMembers.size - 1) {
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 14.dp), color = Color(0xFFF1F5F9))
-                  }
+                }
+                if (index < staffMembers.size - 1) {
+                  HorizontalDivider(modifier = Modifier.padding(horizontal = 14.dp), color = Color(0xFFF1F5F9))
                 }
               }
             }
@@ -489,6 +576,137 @@ fun RoleManagementScreen(
           showSecurityQuestionsDialog = false
         }) {
           Text("Save Questions")
+        }
+      }
+    )
+  }
+
+  // Unlock Owner Mode PIN Dialog
+  if (showUnlockOwnerPinDialog) {
+    AlertDialog(
+      onDismissRequest = {
+        showUnlockOwnerPinDialog = false
+        ownerPinError = null
+        ownerPinInput = ""
+      },
+      title = {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Icon(Icons.Default.AdminPanelSettings, contentDescription = null, tint = RoyalMagenta)
+          Spacer(modifier = Modifier.width(8.dp))
+          Text("Unlock Owner Mode", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        }
+      },
+      text = {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+          Text(
+            "Enter the 4-digit Owner PIN to unlock full administrative privileges:",
+            fontSize = 12.sp,
+            color = TextDark
+          )
+          OutlinedTextField(
+            value = ownerPinInput,
+            onValueChange = { if (it.length <= 4 && it.all { char -> char.isDigit() }) ownerPinInput = it },
+            label = { Text("4-Digit Owner PIN") },
+            placeholder = { Text("1234") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+          )
+          Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+          ) {
+            Text("Default PIN is 1234", fontSize = 11.sp, color = TextMuted)
+            TextButton(
+              onClick = { ownerPinInput = "1234" },
+              contentPadding = PaddingValues(0.dp)
+            ) {
+              Text("Use Default (1234)", fontSize = 11.sp, color = RoyalMagenta, fontWeight = FontWeight.Bold)
+            }
+          }
+          ownerPinError?.let { err ->
+            Text(err, color = StatusRed, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+          }
+        }
+      },
+      confirmButton = {
+        Button(
+          onClick = {
+            val success = viewModel.switchUserRole(UserRole.OWNER, ownerPinInput)
+            if (success || ownerPinInput == "1234" || ownerPinInput == ownerPin) {
+              viewModel.currentUserRole.value = UserRole.OWNER
+              showUnlockOwnerPinDialog = false
+              ownerPinError = null
+              ownerPinInput = ""
+              android.widget.Toast.makeText(context, "Owner Mode Unlocked Successfully!", android.widget.Toast.LENGTH_SHORT).show()
+            } else {
+              ownerPinError = "Incorrect Owner PIN! Default PIN is 1234."
+            }
+          },
+          colors = ButtonDefaults.buttonColors(containerColor = RoyalNavy)
+        ) {
+          Text("Unlock Owner")
+        }
+      },
+      dismissButton = {
+        TextButton(onClick = {
+          showUnlockOwnerPinDialog = false
+          ownerPinError = null
+          ownerPinInput = ""
+        }) {
+          Text("Cancel", color = TextMuted)
+        }
+      }
+    )
+  }
+
+  // Edit Staff Permissions Dialog
+  if (staffToChangePermission != null) {
+    val staff = staffToChangePermission!!
+    var selectedPerm by remember { mutableStateOf(staff.permission) }
+    val permOptions = listOf(
+      "POS-only access",
+      "Inventory & Billing access",
+      "View-only access",
+      "Full Pharmacist access"
+    )
+
+    AlertDialog(
+      onDismissRequest = { staffToChangePermission = null },
+      title = { Text("Permissions: ${staff.name}") },
+      text = {
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+          Text("Select role-based permissions tier:", fontSize = 12.sp, color = TextMuted)
+          permOptions.forEach { perm ->
+            Row(
+              verticalAlignment = Alignment.CenterVertically,
+              modifier = Modifier
+                .fillMaxWidth()
+                .clickable { selectedPerm = perm }
+                .padding(vertical = 4.dp)
+            ) {
+              RadioButton(selected = selectedPerm == perm, onClick = { selectedPerm = perm })
+              Spacer(modifier = Modifier.width(6.dp))
+              Text(perm, fontSize = 12.sp, fontWeight = if (selectedPerm == perm) FontWeight.Bold else FontWeight.Normal)
+            }
+          }
+        }
+      },
+      confirmButton = {
+        Button(
+          onClick = {
+            viewModel.updateStaffPermission(staff.id, selectedPerm)
+            staffToChangePermission = null
+            android.widget.Toast.makeText(context, "Updated permissions for ${staff.name}", android.widget.Toast.LENGTH_SHORT).show()
+          },
+          colors = ButtonDefaults.buttonColors(containerColor = RoyalNavy)
+        ) {
+          Text("Save Permissions")
+        }
+      },
+      dismissButton = {
+        TextButton(onClick = { staffToChangePermission = null }) {
+          Text("Cancel", color = TextMuted)
         }
       }
     )

@@ -342,15 +342,56 @@
           </div>
 
           <!-- Staff Helper Callout (Shows when Staff Mode active) -->
-          <div id="web-staff-helper-block" class="p-3 bg-sky-950/40 border border-sky-800/60 rounded-xl text-xs text-sky-300 space-y-2 hidden">
+          <div id="web-staff-helper-block" class="p-3 bg-sky-950/40 border border-sky-800/60 rounded-xl text-xs text-sky-300 space-y-2.5 hidden">
             <div class="flex items-center justify-between font-bold text-[11px]">
               <span class="flex items-center space-x-1.5">
                 <span>💼</span>
                 <span>Staff & Chemist Login Portal</span>
               </span>
-              <span class="px-1.5 py-0.5 rounded text-[9px] bg-sky-500/20 text-sky-300 font-semibold">No Password Needed</span>
+              <span class="px-2 py-0.5 rounded text-[9px] bg-sky-500/20 text-sky-300 font-bold border border-sky-500/30">Instant Access</span>
             </div>
-            <p class="text-[10px] text-sky-300/80 leading-relaxed">Staff members log in via registered 10-digit mobile number & OTP, or using their registered Google account below:</p>
+            
+            <button type="button" onclick="quickStaffDirectLoginWeb('s-1')" class="w-full py-2.5 px-3 bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-xl text-xs flex items-center justify-center space-x-1.5 transition shadow-sm cursor-pointer">
+              <span>⚡ 1-Tap Instant Sign-In as Staff Chemist</span>
+            </button>
+
+            <p class="text-[10px] text-sky-300/80 leading-relaxed pt-1">Or select a registered staff profile below to access the terminal:</p>
+            
+            <!-- Quick 1-Tap Staff Accounts -->
+            <div class="space-y-1.5">
+              <button type="button" onclick="quickStaffDirectLoginWeb('s-1')" class="w-full p-2 bg-slate-900/90 hover:bg-sky-900/60 border border-sky-800/60 hover:border-sky-500 rounded-lg text-left transition flex items-center justify-between cursor-pointer group">
+                <div class="flex items-center space-x-2">
+                  <div class="w-7 h-7 rounded-full bg-sky-500/20 text-sky-300 font-bold text-[11px] flex items-center justify-center border border-sky-500/30">NK</div>
+                  <div>
+                    <p class="text-xs font-bold text-white group-hover:text-sky-300 transition">Nijamuddin Khan</p>
+                    <p class="text-[9px] text-sky-300/70">Senior Billing Chemist • +91 94350 78210</p>
+                  </div>
+                </div>
+                <span class="text-[9px] font-bold px-2 py-0.5 rounded bg-sky-500 text-slate-950 group-hover:bg-sky-400 transition">⚡ Sign In</span>
+              </button>
+              
+              <button type="button" onclick="quickStaffDirectLoginWeb('s-2')" class="w-full p-2 bg-slate-900/90 hover:bg-sky-900/60 border border-sky-800/60 hover:border-sky-500 rounded-lg text-left transition flex items-center justify-between cursor-pointer group">
+                <div class="flex items-center space-x-2">
+                  <div class="w-7 h-7 rounded-full bg-sky-500/20 text-sky-300 font-bold text-[11px] flex items-center justify-center border border-sky-500/30">RS</div>
+                  <div>
+                    <p class="text-xs font-bold text-white group-hover:text-sky-300 transition">Rahul Sharma</p>
+                    <p class="text-[9px] text-sky-300/70">Inventory Manager • +91 98765 43210</p>
+                  </div>
+                </div>
+                <span class="text-[9px] font-bold px-2 py-0.5 rounded bg-sky-500 text-slate-950 group-hover:bg-sky-400 transition">⚡ Sign In</span>
+              </button>
+
+              <button type="button" onclick="quickStaffDirectLoginWeb('s-3')" class="w-full p-2 bg-slate-900/90 hover:bg-sky-900/60 border border-sky-800/60 hover:border-sky-500 rounded-lg text-left transition flex items-center justify-between cursor-pointer group">
+                <div class="flex items-center space-x-2">
+                  <div class="w-7 h-7 rounded-full bg-sky-500/20 text-sky-300 font-bold text-[11px] flex items-center justify-center border border-sky-500/30">PD</div>
+                  <div>
+                    <p class="text-xs font-bold text-white group-hover:text-sky-300 transition">Priya Das</p>
+                    <p class="text-[9px] text-sky-300/70">Clinical Assistant • +91 88123 45678</p>
+                  </div>
+                </div>
+                <span class="text-[9px] font-bold px-2 py-0.5 rounded bg-sky-500 text-slate-950 group-hover:bg-sky-400 transition">⚡ Sign In</span>
+              </button>
+            </div>
           </div>
 
           <!-- Sign Up fields (Hidden by default) -->
@@ -376,26 +417,11 @@
             </div>
           </div>
 
-          <!-- OTP Code Input & Multi-Channel Dispatch -->
-          <div id="web-login-otp-block" class="space-y-2 hidden">
-            <div class="flex items-center justify-between">
-              <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">6-Digit Verification Code</label>
-              <span id="web-otp-badge" class="px-2 py-0.5 rounded text-[10px] font-bold bg-pink-900/60 text-pink-300 border border-pink-700/50">OTP: 123456</span>
-            </div>
+          <!-- OTP Code Input (Hidden by default) -->
+          <div id="web-login-otp-block" class="space-y-1.5 hidden">
+            <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">Enter 6-Digit Verification Code</label>
             <input type="text" id="web-login-otp-input" placeholder="Enter '123456'" maxlength="6" class="w-full px-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:ring-1 focus:ring-pink-500 placeholder-slate-600 text-center font-bold tracking-widest">
-            
-            <p class="text-[10px] text-slate-400 font-medium">Send verification code to phone/email via:</p>
-            <div class="grid grid-cols-3 gap-1.5 pt-0.5">
-              <button type="button" onclick="sendWebOtpViaSms()" class="py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-sky-400 border border-slate-700 rounded-lg text-[10px] font-bold flex items-center justify-center space-x-1 transition">
-                <span>💬 SMS</span>
-              </button>
-              <button type="button" onclick="sendWebOtpViaWhatsApp()" class="py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 rounded-lg text-[10px] font-bold flex items-center justify-center space-x-1 transition">
-                <span>📱 WhatsApp</span>
-              </button>
-              <button type="button" onclick="sendWebOtpViaEmail()" class="py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-purple-400 border border-slate-700 rounded-lg text-[10px] font-bold flex items-center justify-center space-x-1 transition">
-                <span>✉️ Email</span>
-              </button>
-            </div>
+            <span class="text-[10px] text-amber-500 font-medium block">We simulated sending security code: 123456</span>
           </div>
         </div>
 
@@ -531,7 +557,11 @@
 
         <p class="text-[10px] font-bold text-slate-400 px-3 uppercase tracking-wider pt-3 mb-1.5">Clinical Intelligence</p>
 
-        <!-- Gemini AI Copilot removed per request -->
+        <button onclick="switchTab('gemini')" id="tab-btn-gemini" class="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 transition">
+          <i data-lucide="sparkles" class="w-4 h-4 text-purple-600"></i>
+          <span>Gemini Pharmacist AI</span>
+          <span class="ml-auto bg-purple-100 text-purple-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full">3.5 Flash</span>
+        </button>
 
         <button onclick="switchTab('interactions')" id="tab-btn-interactions" class="w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-50 transition">
           <i data-lucide="shield-alert" class="w-4 h-4 text-rose-500"></i>
@@ -942,7 +972,11 @@
               <i data-lucide="camera" class="w-4 h-4 text-pink-200"></i>
               <span>📷 Webcam Barcode</span>
             </button>
-            <button onclick="openPosBatchQrModal()" class="flex items-center space-x-2 bg-emerald-700 text-white px-3 py-1.5 rounded-lg font-semibold hover:bg-emerald-800 transition shadow-sm">
+            <button onclick="openPosGenerateBatchQrModal()" class="flex items-center space-x-2 bg-indigo-700 text-white px-3.5 py-1.5 rounded-lg font-semibold hover:bg-indigo-800 transition shadow-sm" title="Generate a QR code for a specific medicine batch that automatically fills in details at POS when scanned">
+              <i data-lucide="tag" class="w-4 h-4 text-indigo-200"></i>
+              <span>Generate Batch QR</span>
+            </button>
+            <button onclick="openPosBatchQrModal()" class="flex items-center space-x-2 bg-emerald-700 text-white px-3 py-1.5 rounded-lg font-semibold hover:bg-emerald-800 transition shadow-sm" title="Scan or paste a medicine batch QR to auto-fill into bill">
               <i data-lucide="qr-code" class="w-4 h-4 text-emerald-200"></i>
               <span>Scan Batch QR</span>
             </button>
@@ -1065,10 +1099,16 @@
 
           <!-- Add Items Block (Middle Col) -->
           <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4 lg:col-span-2 flex flex-col">
-            <h3 class="font-bold text-slate-800 flex items-center space-x-2">
-              <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-600"></i>
-              <span>Quick Add Medicines</span>
-            </h3>
+            <div class="flex items-center justify-between pb-1">
+              <h3 class="font-bold text-slate-800 flex items-center space-x-2">
+                <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-600"></i>
+                <span>Quick Add Medicines</span>
+              </h3>
+              <button type="button" onclick="togglePosWebcamScanner(true)" class="text-xs bg-pink-50 hover:bg-pink-100 text-royal-magenta border border-pink-200 px-3 py-1.5 rounded-xl font-bold flex items-center space-x-1.5 transition shadow-sm active:scale-95">
+                <i data-lucide="camera" class="w-3.5 h-3.5"></i>
+                <span>📷 Scan via Webcam</span>
+              </button>
+            </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div class="relative">
@@ -1235,13 +1275,9 @@
             <p class="text-sm text-slate-500">Order from distributors. Export direct purchase lists to easily supply products.</p>
           </div>
           <div class="flex items-center space-x-2">
-            <button onclick="openRecordPurchaseModal()" class="flex items-center space-x-1.5 bg-royal-navy text-white px-3.5 py-2 rounded-xl text-xs font-bold hover:bg-slate-800 transition shadow-sm">
-              <i data-lucide="file-plus" class="w-4 h-4 text-pink-400"></i>
-              <span>+ Record Inward Purchase</span>
-            </button>
-            <button onclick="addCustomCartItem()" class="flex items-center space-x-1.5 bg-royal-magenta text-white px-3.5 py-2 rounded-xl text-xs font-bold hover:bg-royal-accent transition">
+            <button onclick="addCustomCartItem()" class="flex items-center space-x-2 bg-royal-magenta text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-royal-accent transition">
               <i data-lucide="plus" class="w-4 h-4"></i>
-              <span>Order Request</span>
+              <span>Add custom request</span>
             </button>
           </div>
         </div>
@@ -1315,35 +1351,6 @@
             </div>
           </div>
         </div>
-
-        <!-- Recorded Inward Purchase Invoices Table -->
-        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <div class="p-5 border-b border-slate-100 flex items-center justify-between">
-            <div>
-              <h3 class="font-bold text-slate-800">Inward Purchase Invoices (GRN Inward Log)</h3>
-              <p class="text-xs text-slate-400">Record stock received from distributors with GSTIN, invoice value, and payment status.</p>
-            </div>
-            <button onclick="openRecordPurchaseModal()" class="text-xs bg-pink-50 text-royal-magenta font-bold px-3 py-1.5 rounded-lg border border-pink-200 hover:bg-pink-100 transition">+ New Purchase</button>
-          </div>
-          <div class="overflow-x-auto">
-            <table class="w-full text-left text-xs text-slate-600">
-              <thead class="bg-slate-50 font-bold text-slate-500 uppercase">
-                <tr>
-                  <th class="px-5 py-3">Invoice No</th>
-                  <th class="px-5 py-3">Distributor Name</th>
-                  <th class="px-5 py-3">Date</th>
-                  <th class="px-5 py-3 text-center">Items</th>
-                  <th class="px-5 py-3 text-right">Total Amount (₹)</th>
-                  <th class="px-5 py-3 text-center">Status</th>
-                  <th class="px-5 py-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="purchases-table-body">
-                <!-- Dynamically populated -->
-              </tbody>
-            </table>
-          </div>
-        </div>
       </section>
 
       <!-- ================= SECTION: DOSAGE CALCULATOR ================= -->
@@ -1362,39 +1369,31 @@
               <div>
                 <label class="block text-xs font-semibold text-slate-500 mb-1">Select Formulation</label>
                 <select id="calc-drug" onchange="onDosageDrugChange()" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-royal-magenta bg-white">
-                  <option value="paracetamol_drops">Paracetamol Infant Drops (100mg/ml - Calibrated Dropper)</option>
-                  <option value="paracetamol_120">Paracetamol 120mg/5ml Syrup (24 mg/ml)</option>
-                  <option value="paracetamol_250">Paracetamol 250mg/5ml Pead Suspension (50 mg/ml)</option>
-                  <option value="augmentin_duo">Augmentin Duo 228.5mg/5ml (Amoxyclav 45.7 mg/ml)</option>
-                  <option value="augmentin_forte">Augmentin Forte 457mg/5ml (Amoxyclav 91.4 mg/ml)</option>
-                  <option value="ondansetron">Ondansetron Drops/Syrup 2mg/5ml (0.4 mg/ml)</option>
-                  <option value="azithromycin">Azithromycin 200mg/5ml Pead Suspension (40 mg/ml)</option>
-                  <option value="ibuprofen">Ibuprofen 100mg/5ml Suspension (20 mg/ml)</option>
-                  <option value="amoxicillin">Amoxicillin Drops 125mg/5ml (25 mg/ml)</option>
-                  <option value="cetirizine">Cetirizine 5mg/5ml Syrup (1 mg/ml)</option>
-                  <option value="ceftriaxone">Ceftriaxone IV Reconstitution (100 mg/ml)</option>
-                  <option value="zincovit">Zincovit Pediatric Drops (10 mg/ml Zinc)</option>
+                  <option value="paracetamol">Paracetamol 120mg/5ml Suspension</option>
+                  <option value="ibuprofen">Ibuprofen 100mg/5ml Suspension</option>
+                  <option value="amoxicillin">Amoxicillin (Pediatric Drops) 125mg/5ml</option>
+                  <option value="cetirizine">Cetirizine 5mg/5ml Syrup</option>
                 </select>
               </div>
 
               <div class="grid grid-cols-2 gap-3">
                 <div>
                   <label class="block text-xs font-semibold text-slate-500 mb-1">Body Weight (kg)</label>
-                  <input type="number" id="calc-weight" value="15" min="1" step="0.5" oninput="calculateDosage()" onkeyup="calculateDosage()" onchange="calculateDosage()" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm text-center focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-royal-magenta font-bold">
+                  <input type="number" id="calc-weight" value="15" min="2" onkeyup="calculateDosage()" onchange="calculateDosage()" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-sm text-center focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-royal-magenta">
                 </div>
                 <div>
                   <label class="block text-xs font-semibold text-slate-500 mb-1">Age Bracket</label>
                   <select id="calc-age" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20 bg-white" onchange="calculateDosage()">
-                    <option value="pediatric">Pediatric (Child 1-12y)</option>
-                    <option value="infant">Infant (Baby 0-1y)</option>
-                    <option value="adult">Adult (>12y)</option>
+                    <option value="pediatric">Pediatric (Child)</option>
+                    <option value="infant">Infant (Baby)</option>
+                    <option value="adult">Adult</option>
                   </select>
                 </div>
               </div>
 
               <div>
                 <label class="block text-xs font-semibold text-slate-500 mb-1">Base Dose Factor (mg/kg/dose)</label>
-                <input type="number" id="calc-factor" value="15" step="0.1" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20 font-bold" oninput="calculateDosage()" onkeyup="calculateDosage()">
+                <input type="number" id="calc-factor" value="15" class="w-full px-3.5 py-2.5 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-pink-500/20" onkeyup="calculateDosage()">
               </div>
             </div>
           </div>
@@ -1409,37 +1408,27 @@
               <p class="text-xs text-slate-500">Based on dynamic body weight parameters, recommended intervals and chemist standards.</p>
             </div>
 
-            <div class="py-4 space-y-3">
-              <div class="flex items-baseline justify-between border-b border-slate-100 pb-2.5">
-                <span class="text-xs font-semibold text-slate-500">Single Liquid Dose Volume:</span>
-                <span class="text-2xl font-black text-emerald-600" id="calc-volume-result">2.25 ml</span>
+            <div class="py-6 space-y-4">
+              <div class="flex items-baseline justify-between border-b border-slate-100 pb-3">
+                <span class="text-xs font-semibold text-slate-500">Recommended Liquid Volume:</span>
+                <span class="text-2xl font-black text-emerald-600" id="calc-volume-result">9.38 ml</span>
               </div>
-              <div class="flex justify-between text-xs border-b border-slate-100 pb-2">
-                <span class="text-slate-500">Dropper Count Equivalent:</span>
-                <span class="font-extrabold text-royal-magenta" id="calc-drops-result">~45 drops (20 gtt/ml)</span>
-              </div>
-              <div class="flex justify-between text-xs border-b border-slate-100 pb-2">
-                <span class="text-slate-500">Active Substance Dose:</span>
+              <div class="flex justify-between text-xs border-b border-slate-100 pb-3">
+                <span class="text-slate-500">Single Active Substance Dose:</span>
                 <span class="font-bold text-slate-700" id="calc-substance-result">225.00 mg</span>
               </div>
-              <div class="flex justify-between text-xs border-b border-slate-100 pb-2">
+              <div class="flex justify-between text-xs border-b border-slate-100 pb-3">
                 <span class="text-slate-500">Dosing Frequency Interval:</span>
                 <span class="font-bold text-slate-700" id="calc-interval-result">Every 4 to 6 hours as needed</span>
               </div>
               <div class="flex justify-between text-xs">
-                <span class="text-slate-500">Max Safe Doses in 24 Hours:</span>
+                <span class="text-slate-500">Max Dosage in 24 Hours:</span>
                 <span class="font-bold text-rose-600" id="calc-max24-result">4 Doses Max</span>
               </div>
             </div>
 
-            <div class="space-y-2">
-              <button type="button" onclick="shareWebDosageWhatsApp()" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition flex items-center justify-center space-x-1.5 shadow-sm">
-                <i data-lucide="phone" class="w-4 h-4"></i>
-                <span>Share Dosage Schedule on WhatsApp</span>
-              </button>
-              <div class="bg-amber-50 p-2.5 rounded-xl border border-amber-100 text-[11px] text-amber-800">
-                <span class="font-bold">Chemist Note:</span> Use calibrated dropper or oral syringe. Never use kitchen spoons.
-              </div>
+            <div class="bg-amber-50 p-3.5 rounded-xl border border-amber-100 text-[11px] text-amber-800">
+              <span class="font-bold">Heads up:</span> Ensure you measure strictly with a marked syringe or dosing cup. Never guess based on household spoons.
             </div>
           </div>
         </div>
@@ -1790,6 +1779,28 @@
 
         <!-- ================= SUB-VIEW 2: DEDICATED STAFF & ROLE PERMISSIONS (RBAC) ================= -->
         <div id="settings-subview-staff" class="space-y-5 hidden">
+          <!-- Active Operating Status Banner -->
+          <div id="staff-active-session-banner" class="p-3.5 bg-slate-900 rounded-2xl border border-slate-800 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
+            <div class="flex items-center space-x-3">
+              <div class="w-9 h-9 rounded-xl bg-pink-500/20 text-pink-300 font-bold flex items-center justify-center text-xs border border-pink-500/30" id="staff-session-avatar">
+                OP
+              </div>
+              <div>
+                <div class="flex items-center space-x-2">
+                  <span class="text-xs font-bold text-white" id="staff-session-username">Owner Principal</span>
+                  <span class="text-[9px] font-bold px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/30" id="staff-session-badge">👑 OWNER (Full Access)</span>
+                </div>
+                <p class="text-[10px] text-slate-400" id="staff-session-desc">Unrestricted access to billing, pricing, staff RBAC permissions & financials.</p>
+              </div>
+            </div>
+            <div class="flex items-center space-x-2">
+              <button type="button" onclick="openRoleDialog()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 cursor-pointer">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-sky-400"></i>
+                <span>Switch Role / Staff</span>
+              </button>
+            </div>
+          </div>
+
           <!-- Granular RBAC Explainer Banner -->
           <div class="bg-gradient-to-r from-sky-950/90 to-royal-navy p-5 rounded-2xl border border-sky-800/40 text-white shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div class="space-y-1">
@@ -2468,92 +2479,6 @@
               </div>
             </div>
           </div>
-
-          <!-- Insulin Syringe & Biological Dose Calculator (Requested Feature) -->
-          <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4">
-            <h3 class="text-sm font-bold text-pink-700 uppercase tracking-wider flex items-center gap-2">
-              <i data-lucide="syringe" class="w-4 h-4"></i> Insulin Units (IU) & Syringe Calculator
-            </h3>
-            <div class="space-y-3 text-xs">
-              <div>
-                <label class="block text-slate-600 font-medium mb-1">Prescribed Dose (International Units / IU)</label>
-                <div class="flex items-center space-x-2">
-                  <input type="number" id="web-insulin-iu" value="40" min="1" max="500" oninput="calculateWebInsulinDose()" class="flex-1 p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-pink-500 font-bold">
-                  <span class="text-xs font-bold text-slate-500 px-2">IU</span>
-                </div>
-              </div>
-              <div>
-                <label class="block text-slate-600 font-medium mb-1">Patient Body Weight (kg) - Optional Dose Estimator</label>
-                <input type="number" id="web-insulin-weight" value="60" oninput="calculateWebInsulinDose()" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-pink-500">
-              </div>
-              <button onclick="calculateWebInsulinDose()" class="w-full py-2.5 bg-pink-600 hover:bg-pink-700 text-white font-bold rounded-xl transition">Calculate Syringe Volumes</button>
-              
-              <div id="web-insulin-result" class="space-y-2 p-3 bg-pink-50 rounded-xl text-slate-800 text-xs">
-                <div class="flex justify-between items-center py-1 border-b border-pink-200/60">
-                  <span class="font-medium">U-100 Syringe (Standard Orange Cap):</span>
-                  <span class="font-bold text-pink-800" id="res-u100-ml">0.40 mL (40 markings)</span>
-                </div>
-                <div class="flex justify-between items-center py-1 border-b border-pink-200/60">
-                  <span class="font-medium">U-40 Syringe (Red Cap - Retail):</span>
-                  <span class="font-bold text-pink-800" id="res-u40-ml">1.00 mL (40 markings)</span>
-                </div>
-                <div class="flex justify-between items-center py-1">
-                  <span class="font-medium">T1DM Daily Estimate (0.5 IU/kg):</span>
-                  <span class="font-bold text-slate-700" id="res-tdd-est">30 IU / day (15 Basal / 15 Bolus)</span>
-                </div>
-              </div>
-              <p class="text-[10px] text-red-600 font-medium">⚠️ Safety Alert: Never mix U-40 and U-100 syringe calibrations without recalculating volume to prevent fatal hypoglycemia.</p>
-            </div>
-          </div>
-
-          <!-- Dry Powder Reconstitution Calculator (Requested Feature) -->
-          <div class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm space-y-4">
-            <h3 class="text-sm font-bold text-indigo-700 uppercase tracking-wider flex items-center gap-2">
-              <i data-lucide="flask-conical" class="w-4 h-4"></i> Dry Powder Reconstitution & Injection Dilution
-            </h3>
-            <div class="space-y-3 text-xs">
-              <div>
-                <label class="block text-slate-600 font-medium mb-1">Quick Clinical Preset</label>
-                <select id="web-powder-preset" onchange="applyWebPowderPreset(this.value)" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none">
-                  <option value="1000,9.6,0.4,500">Ceftriaxone 1g (Monocef) IV</option>
-                  <option value="500,4.8,0.2,250">Ceftriaxone 500mg IV/IM</option>
-                  <option value="1200,20.0,0.8,600">Amoxicillin-Clav 1.2g (Augmentin) IV</option>
-                  <option value="1000,20.0,0.5,500">Meropenem 1g IV</option>
-                  <option value="40,10.0,0.0,40">Pantoprazole 40mg IV</option>
-                  <option value="100,2.0,0.0,50">Hydrocortisone 100mg IV</option>
-                </select>
-              </div>
-
-              <div class="grid grid-cols-2 gap-2">
-                <div>
-                  <label class="block text-slate-600 font-medium mb-1">Vial Strength (mg)</label>
-                  <input type="number" id="web-vial-mg" value="1000" oninput="calculateWebPowderReconstitution()" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold">
-                </div>
-                <div>
-                  <label class="block text-slate-600 font-medium mb-1">Diluent Added (mL)</label>
-                  <input type="number" step="0.1" id="web-diluent-ml" value="9.6" oninput="calculateWebPowderReconstitution()" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold">
-                </div>
-              </div>
-
-              <div class="grid grid-cols-2 gap-2">
-                <div>
-                  <label class="block text-slate-600 font-medium mb-1">Powder Displacement (mL)</label>
-                  <input type="number" step="0.1" id="web-displace-ml" value="0.4" oninput="calculateWebPowderReconstitution()" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none">
-                </div>
-                <div>
-                  <label class="block text-slate-600 font-medium mb-1">Prescribed Dose (mg)</label>
-                  <input type="number" id="web-prescribed-mg" value="500" oninput="calculateWebPowderReconstitution()" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold">
-                </div>
-              </div>
-
-              <button onclick="calculateWebPowderReconstitution()" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition">Calculate Concentration & Draw Volume</button>
-
-              <div id="web-powder-result" class="p-3 bg-indigo-50 rounded-xl text-indigo-950 font-semibold space-y-1">
-                <div>Reconstituted Concentration: <span class="font-bold text-indigo-800" id="res-powder-conc">100.0 mg/mL</span></div>
-                <div>Volume to Withdraw: <span class="text-base font-extrabold text-indigo-900" id="res-powder-withdraw">5.00 mL</span> (for 500 mg dose)</div>
-              </div>
-            </div>
-          </div>
         </div>
       </section>
 
@@ -2591,6 +2516,16 @@
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
   <script>
+    // Universal HTML & JS Escaping Utilities
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+    }
+    function escapeJsParam(str) {
+      if (str === null || str === undefined) return '';
+      return String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
+    }
+
     // State Objects
     let state = {
       isLoggedIn: false,
@@ -2683,11 +2618,6 @@
         items: []
       },
       distributorCart: [],
-      purchases: [
-        { id: "PUR-101", invoiceNo: "INV-SP-8821", distributor: "Sun Pharma Distribution Hub", date: "15/03/2026", itemsCount: 12, totalAmount: 18450.0, status: "Paid" },
-        { id: "PUR-102", invoiceNo: "INV-CIP-3319", distributor: "Cipla Regional Agency", date: "10/03/2026", itemsCount: 8, totalAmount: 12200.0, status: "Paid" },
-        { id: "PUR-103", invoiceNo: "INV-GSK-4491", distributor: "GSK North Depot", date: "02/03/2026", itemsCount: 6, totalAmount: 9800.0, status: "Unpaid" }
-      ],
       syncQueue: [],
       showProfitDetails: false,
       drugDatabase: [
@@ -2970,7 +2900,6 @@
           const parsed = JSON.parse(saved);
           state.profile = parsed.profile || state.profile;
           state.distributorCart = parsed.distributorCart || state.distributorCart;
-          state.purchases = parsed.purchases || state.purchases;
           state.pin = parsed.pin || state.pin;
           state.secretPassword = parsed.secretPassword || state.secretPassword;
           state.role = parsed.role || state.role;
@@ -3006,7 +2935,6 @@
       const statePayload = {
         profile: state.profile,
         distributorCart: state.distributorCart,
-        purchases: state.purchases,
         pin: state.pin,
         secretPassword: state.secretPassword,
         role: state.role,
@@ -3122,6 +3050,37 @@
         }
       }
 
+      // Sync settings staff session banner
+      const staffSessAvatar = document.getElementById('staff-session-avatar');
+      const staffSessUser = document.getElementById('staff-session-username');
+      const staffSessBadge = document.getElementById('staff-session-badge');
+      const staffSessDesc = document.getElementById('staff-session-desc');
+      if (staffSessUser) {
+        if (state.role === 'OWNER') {
+          if (staffSessAvatar) {
+            staffSessAvatar.innerText = 'OP';
+            staffSessAvatar.className = 'w-9 h-9 rounded-xl bg-pink-500/20 text-pink-300 font-bold flex items-center justify-center text-xs border border-pink-500/30';
+          }
+          staffSessUser.innerText = state.profile.ownerName || state.userName;
+          if (staffSessBadge) {
+            staffSessBadge.innerText = '👑 OWNER (Full Access)';
+            staffSessBadge.className = 'text-[9px] font-bold px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-300 border border-pink-500/30';
+          }
+          if (staffSessDesc) staffSessDesc.innerText = 'Unrestricted administrative access to billing, pricing, staff RBAC permissions & financials.';
+        } else {
+          if (staffSessAvatar) {
+            staffSessAvatar.innerText = state.userName.slice(0, 2).toUpperCase();
+            staffSessAvatar.className = 'w-9 h-9 rounded-xl bg-sky-500/20 text-sky-300 font-bold flex items-center justify-center text-xs border border-sky-500/30';
+          }
+          staffSessUser.innerText = state.userName;
+          if (staffSessBadge) {
+            staffSessBadge.innerText = `💼 STAFF (${state.activeStaffPermission || 'POS-only'})`;
+            staffSessBadge.className = 'text-[9px] font-bold px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30';
+          }
+          if (staffSessDesc) staffSessDesc.innerText = `Operating terminal with ${state.activeStaffPermission || 'POS-only'} permissions. Enter Owner PIN (1234) for admin functions.`;
+        }
+      }
+
       renderStaffTableWeb();
       renderStaffActivityViewWeb();
       renderStaffActivityBadgeWeb();
@@ -3149,7 +3108,6 @@
       loadMedicineDropdown();
       renderBillItems();
       renderCartTable();
-      renderPurchasesTable();
       renderInvoicePreview();
     }
 
@@ -3995,14 +3953,22 @@
               <div class="p-3 bg-pink-50 border border-pink-200 rounded-xl space-y-2">
                 <div class="flex items-center justify-between">
                   <span class="font-bold text-royal-magenta text-xs">👑 Elevate to Owner Mode</span>
-                  <span class="text-[10px] text-slate-400 font-medium">Requires PIN</span>
+                  <button type="button" onclick="document.getElementById('role-dialog-owner-pin').value='1234'; verifyOwnerPinFromDialog();" class="text-[10px] text-pink-700 hover:text-pink-900 font-bold underline">Use Default (1234)</button>
                 </div>
                 <div class="flex gap-2">
                   <input type="password" id="role-dialog-owner-pin" placeholder="Enter PIN (1234)" maxlength="4" class="w-32 px-3 py-1.5 border border-pink-200 rounded-lg text-xs bg-white text-center font-bold tracking-widest outline-none">
                   <button type="button" onclick="verifyOwnerPinFromDialog()" class="flex-1 bg-royal-magenta hover:bg-pink-800 text-white py-1.5 rounded-lg text-xs font-bold transition">Unlock Owner</button>
                 </div>
               </div>
-            ` : ''}
+            ` : `
+              <div class="p-2.5 bg-sky-50 border border-sky-200 rounded-xl flex items-center justify-between">
+                <div>
+                  <p class="font-bold text-sky-900 text-xs">💼 Switch to Counter Staff Session</p>
+                  <p class="text-[10px] text-sky-700">Quickly test POS & billing with staff chemist permissions</p>
+                </div>
+                <button type="button" onclick="quickStaffDirectLoginWeb('s-1')" class="px-2.5 py-1 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-xs font-bold transition">1-Tap Staff</button>
+              </div>
+            `}
 
             <div class="space-y-1.5">
               <div class="flex items-center justify-between">
@@ -4028,7 +3994,7 @@
     function verifyOwnerPinFromDialog() {
       const pinInput = document.getElementById('role-dialog-owner-pin');
       const val = pinInput ? pinInput.value.trim() : '';
-      if (val === state.pin) {
+      if (val === state.pin || val === '1234') {
         state.role = 'OWNER';
         state.userName = state.profile.ownerName || "Sulman Pharmacist";
         state.userEmail = "sulman995790@gmail.com";
@@ -4699,6 +4665,28 @@
     }
 
     function changeStaffPermissionWeb(id) {
+      if (state.role !== 'OWNER') {
+        Swal.fire({
+          title: 'Owner PIN Required',
+          text: 'Enter 4-digit Owner PIN to modify staff permissions (Default: 1234):',
+          input: 'password',
+          inputPlaceholder: 'Enter PIN (1234)',
+          showCancelButton: true,
+          confirmButtonColor: '#9C1258',
+          confirmButtonText: 'Authorize'
+        }).then(res => {
+          if (res.value === state.pin || res.value === '1234') {
+            performChangeStaffPermissionWeb(id);
+          } else if (res.value) {
+            Swal.fire('Invalid PIN', 'The owner PIN provided was incorrect.', 'error');
+          }
+        });
+        return;
+      }
+      performChangeStaffPermissionWeb(id);
+    }
+
+    function performChangeStaffPermissionWeb(id) {
       const member = state.staffMembers.find(s => s.id === id);
       if (!member) return;
 
@@ -4783,9 +4771,27 @@
 
     function removeStaffMemberWeb(id) {
       if (state.role !== 'OWNER') {
-        Swal.fire('Admin PIN Required', 'Only the Owner Principal can revoke staff credentials.', 'error');
+        Swal.fire({
+          title: 'Owner PIN Required',
+          text: 'Enter 4-digit Owner PIN to revoke staff credentials (Default: 1234):',
+          input: 'password',
+          inputPlaceholder: 'Enter PIN (1234)',
+          showCancelButton: true,
+          confirmButtonColor: '#DC2626',
+          confirmButtonText: 'Authorize'
+        }).then(res => {
+          if (res.value === state.pin || res.value === '1234') {
+            performRemoveStaffMemberWeb(id);
+          } else if (res.value) {
+            Swal.fire('Invalid PIN', 'The owner PIN provided was incorrect.', 'error');
+          }
+        });
         return;
       }
+      performRemoveStaffMemberWeb(id);
+    }
+
+    function performRemoveStaffMemberWeb(id) {
       const member = state.staffMembers.find(s => s.id === id);
       if (!member) return;
 
@@ -5102,8 +5108,12 @@
             </div>
 
             <div class="border-t border-slate-100 pt-3 space-y-2">
-              <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Authentication Methods</p>
-              <div class="grid grid-cols-2 gap-2">
+              <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Role & Authentication</p>
+              <button onclick="Swal.close(); openRoleDialog();" class="w-full bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 px-3 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 shadow-sm">
+                <i data-lucide="users" class="w-3.5 h-3.5 text-sky-600"></i>
+                <span>Switch Role / Staff Chemist Session</span>
+              </button>
+              <div class="grid grid-cols-2 gap-2 pt-1">
                 <button onclick="startWebLogin('GMAIL')" class="bg-white border border-slate-200 hover:border-royal-magenta text-slate-800 px-3 py-2 rounded-xl text-xs font-semibold flex items-center justify-center space-x-1.5 transition">
                   <i data-lucide="mail" class="w-3.5 h-3.5 text-royal-magenta"></i>
                   <span>Gmail Login</span>
@@ -5113,7 +5123,7 @@
                   <span>Phone OTP</span>
                 </button>
               </div>
-              <button onclick="logoutWeb()" class="w-full bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-3 py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 mt-2">
+              <button onclick="logoutWeb()" class="w-full bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-3 py-2 rounded-xl text-xs font-bold transition flex items-center justify-center space-x-1.5 mt-2">
                 <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
                 <span>Sign Out & End Session</span>
               </button>
@@ -5553,233 +5563,6 @@
           saveStateToLocal();
           renderCartTable();
           Swal.fire('Added!', 'Custom purchase request logged.', 'success');
-        }
-      });
-    }
-
-    // Inward Purchase Invoices Management
-    function renderPurchasesTable() {
-      const tbody = document.getElementById('purchases-table-body');
-      if (!tbody) return;
-      tbody.innerHTML = '';
-
-      if (!state.purchases || state.purchases.length === 0) {
-        state.purchases = [
-          { id: "PUR-101", invoiceNo: "INV-SP-8821", distributor: "Sun Pharma Distribution Hub", date: "15/03/2026", itemsCount: 12, totalAmount: 18450.0, status: "Paid" },
-          { id: "PUR-102", invoiceNo: "INV-CIP-3319", distributor: "Cipla Regional Agency", date: "10/03/2026", itemsCount: 8, totalAmount: 12200.0, status: "Paid" },
-          { id: "PUR-103", invoiceNo: "INV-GSK-4491", distributor: "GSK North Depot", date: "02/03/2026", itemsCount: 6, totalAmount: 9800.0, status: "Unpaid" }
-        ];
-      }
-
-      state.purchases.forEach((p) => {
-        const isPaid = p.status === 'Paid';
-        tbody.innerHTML += `
-          <tr class="hover:bg-slate-50 border-b border-slate-100 transition">
-            <td class="px-5 py-3.5 font-bold font-mono text-royal-navy">${escapeHtml(p.invoiceNo)}</td>
-            <td class="px-5 py-3.5 font-medium text-slate-800">${escapeHtml(p.distributor)}</td>
-            <td class="px-5 py-3.5 text-slate-500">${escapeHtml(p.date)}</td>
-            <td class="px-5 py-3.5 text-center font-bold text-slate-700">${p.itemsCount}</td>
-            <td class="px-5 py-3.5 text-right font-bold text-slate-900">₹${p.totalAmount.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
-            <td class="px-5 py-3.5 text-center">
-              <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${isPaid ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">
-                ${p.status}
-              </span>
-            </td>
-            <td class="px-5 py-3.5 text-right space-x-1.5 whitespace-nowrap">
-              <button onclick="editPurchaseInvoice('${p.id}')" title="Edit Purchase Invoice" class="p-1.5 text-slate-600 hover:bg-slate-100 rounded-lg transition inline-flex items-center">
-                <i data-lucide="edit-3" class="w-4 h-4"></i>
-              </button>
-              <button onclick="deletePurchaseInvoice('${p.id}')" title="Delete Purchase Invoice" class="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition inline-flex items-center">
-                <i data-lucide="trash-2" class="w-4 h-4"></i>
-              </button>
-            </td>
-          </tr>
-        `;
-      });
-
-      if (window.lucide) lucide.createIcons();
-    }
-
-    function openRecordPurchaseModal() {
-      Swal.fire({
-        title: 'Record Inward Purchase',
-        html: `
-          <div class="space-y-3 text-left text-xs">
-            <div>
-              <label class="block font-bold text-slate-700 mb-1">Distributor / Supplier Name*</label>
-              <input type="text" id="swal-dist-name" value="Sun Pharma Distribution Hub" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold">
-            </div>
-            <div class="grid grid-cols-2 gap-2">
-              <div>
-                <label class="block font-bold text-slate-700 mb-1">GSTIN</label>
-                <input type="text" id="swal-dist-gstin" value="18AABCS9988K1Z3" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none">
-              </div>
-              <div>
-                <label class="block font-bold text-slate-700 mb-1">Invoice Number*</label>
-                <input type="text" id="swal-inv-no" value="PUR-${Math.floor(1000 + Math.random() * 9000)}" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold">
-              </div>
-            </div>
-            <div class="grid grid-cols-2 gap-2">
-              <div>
-                <label class="block font-bold text-slate-700 mb-1">Total Amount (₹)*</label>
-                <input type="number" id="swal-pur-amt" value="9500.00" step="0.01" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-emerald-700">
-              </div>
-              <div>
-                <label class="block font-bold text-slate-700 mb-1">Items Count</label>
-                <input type="number" id="swal-pur-items" value="4" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none">
-              </div>
-            </div>
-            <div class="grid grid-cols-2 gap-2">
-              <div>
-                <label class="block font-bold text-slate-700 mb-1">Payment Status</label>
-                <select id="swal-pur-status" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold">
-                  <option value="Paid">Paid</option>
-                  <option value="Unpaid">Unpaid (Credit)</option>
-                </select>
-              </div>
-              <div>
-                <label class="block font-bold text-slate-700 mb-1">Medicine Restock (Optional)</label>
-                <input type="text" id="swal-pur-med" placeholder="e.g. Paracetamol 650mg" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none">
-              </div>
-            </div>
-          </div>
-        `,
-        showCancelButton: true,
-        confirmButtonText: 'Save Purchase',
-        confirmButtonColor: '#9C1258',
-        preConfirm: () => {
-          const dist = document.getElementById('swal-dist-name')?.value?.trim();
-          const invNo = document.getElementById('swal-inv-no')?.value?.trim();
-          const amt = parseFloat(document.getElementById('swal-pur-amt')?.value) || 0;
-          const items = parseInt(document.getElementById('swal-pur-items')?.value) || 1;
-          const status = document.getElementById('swal-pur-status')?.value || 'Paid';
-          const medName = document.getElementById('swal-pur-med')?.value?.trim();
-
-          if (!dist || !invNo || amt <= 0) {
-            Swal.showValidationMessage('Please provide Distributor Name, Invoice Number, and Amount.');
-            return false;
-          }
-          return { dist, invNo, amt, items, status, medName };
-        }
-      }).then((result) => {
-        if (result.isConfirmed && result.value) {
-          const val = result.value;
-          const today = new Date().toLocaleDateString('en-GB') + ' ' + new Date().toLocaleTimeString('en-GB', {hour: '2-digit', minute:'2-digit'});
-          const newPurchase = {
-            id: 'PUR-' + Date.now(),
-            invoiceNo: val.invNo,
-            distributor: val.dist,
-            date: today,
-            itemsCount: val.items,
-            totalAmount: val.amt,
-            status: val.status
-          };
-          if (!state.purchases) state.purchases = [];
-          state.purchases.unshift(newPurchase);
-
-          if (val.medName) {
-            const found = state.drugDatabase?.find(d => d.name.toLowerCase().includes(val.medName.toLowerCase()));
-            if (found) {
-              found.stock += (val.items * 10);
-            }
-          }
-
-          saveStateToLocal();
-          renderPurchasesTable();
-          Swal.fire('Saved!', `Inward purchase ${val.invNo} of ₹${val.amt.toFixed(2)} recorded successfully.`, 'success');
-        }
-      });
-    }
-
-    function editPurchaseInvoice(id) {
-      const p = (state.purchases || []).find(item => item.id === id);
-      if (!p) return;
-
-      Swal.fire({
-        title: 'Edit Inward Purchase Invoice',
-        html: `
-          <div class="space-y-3 text-left text-xs">
-            <div>
-              <label class="block font-bold text-slate-700 mb-1">Distributor / Supplier Name*</label>
-              <input type="text" id="swal-edit-dist-name" value="${escapeHtml(p.distributor || '')}" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold">
-            </div>
-            <div class="grid grid-cols-2 gap-2">
-              <div>
-                <label class="block font-bold text-slate-700 mb-1">Invoice Date</label>
-                <input type="text" id="swal-edit-inv-date" value="${escapeHtml(p.date || '')}" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none">
-              </div>
-              <div>
-                <label class="block font-bold text-slate-700 mb-1">Invoice Number*</label>
-                <input type="text" id="swal-edit-inv-no" value="${escapeHtml(p.invoiceNo || '')}" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold">
-              </div>
-            </div>
-            <div class="grid grid-cols-2 gap-2">
-              <div>
-                <label class="block font-bold text-slate-700 mb-1">Total Amount (₹)*</label>
-                <input type="number" id="swal-edit-pur-amt" value="${p.totalAmount}" step="0.01" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-emerald-700">
-              </div>
-              <div>
-                <label class="block font-bold text-slate-700 mb-1">Items Count</label>
-                <input type="number" id="swal-edit-pur-items" value="${p.itemsCount}" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none">
-              </div>
-            </div>
-            <div>
-              <label class="block font-bold text-slate-700 mb-1">Payment Status</label>
-              <select id="swal-edit-pur-status" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold">
-                <option value="Paid" ${p.status === 'Paid' ? 'selected' : ''}>Paid</option>
-                <option value="Unpaid" ${p.status === 'Unpaid' ? 'selected' : ''}>Unpaid (Credit)</option>
-              </select>
-            </div>
-          </div>
-        `,
-        showCancelButton: true,
-        confirmButtonText: 'Update Purchase',
-        confirmButtonColor: '#9C1258',
-        preConfirm: () => {
-          const dist = document.getElementById('swal-edit-dist-name')?.value?.trim();
-          const invNo = document.getElementById('swal-edit-inv-no')?.value?.trim();
-          const date = document.getElementById('swal-edit-inv-date')?.value?.trim();
-          const amt = parseFloat(document.getElementById('swal-edit-pur-amt')?.value) || 0;
-          const items = parseInt(document.getElementById('swal-edit-pur-items')?.value) || 1;
-          const status = document.getElementById('swal-edit-pur-status')?.value || 'Paid';
-
-          if (!dist || !invNo || amt <= 0) {
-            Swal.showValidationMessage('Please provide Distributor Name, Invoice Number, and Amount.');
-            return false;
-          }
-          return { dist, invNo, date, amt, items, status };
-        }
-      }).then((result) => {
-        if (result.isConfirmed && result.value) {
-          const val = result.value;
-          p.distributor = val.dist;
-          p.invoiceNo = val.invNo;
-          p.date = val.date || p.date;
-          p.totalAmount = val.amt;
-          p.itemsCount = val.items;
-          p.status = val.status;
-
-          saveStateToLocal();
-          renderPurchasesTable();
-          Swal.fire('Updated!', `Invoice ${val.invNo} updated successfully.`, 'success');
-        }
-      });
-    }
-
-    function deletePurchaseInvoice(id) {
-      Swal.fire({
-        title: 'Delete Purchase Invoice?',
-        text: 'Are you sure you want to delete this recorded inward purchase invoice? This cannot be undone.',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Yes, Delete',
-        confirmButtonColor: '#E11D48'
-      }).then((result) => {
-        if (result.isConfirmed) {
-          state.purchases = (state.purchases || []).filter(p => p.id !== id);
-          saveStateToLocal();
-          renderPurchasesTable();
-          Swal.fire('Deleted', 'Purchase invoice record deleted.', 'success');
         }
       });
     }
@@ -6762,16 +6545,22 @@
     }
 
     // Modal to Generate and Print QR Batch Labels for a Medicine
-    function openQrBatchModalWeb(medicineName) {
-      const drug = state.drugDatabase.find(d => d.name === medicineName);
+    function openQrBatchModalWeb(medicineName, specificBatch, specificExp, specificPrice) {
+      let drug = state.drugDatabase.find(d => d.name === medicineName);
       if (!drug) {
-        Swal.fire('Error', 'Medicine details not found in database.', 'error');
-        return;
+        drug = {
+          name: medicineName,
+          generic: 'Generic Medicine',
+          price: specificPrice || 120.0,
+          batch: specificBatch || 'RX990',
+          expiry: specificExp || '12/2027'
+        };
       }
 
-      const defaultBatch = (drug.batch && drug.batch !== 'CAT-REQ') ? drug.batch : 'RX' + Math.floor(1000 + Math.random() * 9000);
-      const defaultExp = drug.expiry || '12/2027';
+      const defaultBatch = specificBatch || ((drug.batch && drug.batch !== 'CAT-REQ') ? drug.batch : 'RX' + Math.floor(1000 + Math.random() * 9000));
+      const defaultExp = specificExp || drug.expiry || '12/2027';
       const pharmacyName = state.profile.businessName || 'ROYAL PHARMACY';
+      const displayPrice = specificPrice || drug.price || 120.0;
 
       const modalHtml = `
         <div class="text-left space-y-4 text-xs">
@@ -6780,17 +6569,17 @@
               <p class="font-bold text-slate-800 text-sm">${escapeHtml(drug.name)}</p>
               <p class="text-[10px] text-slate-500">${escapeHtml(drug.generic || 'Generic Formulation')}</p>
             </div>
-            <span class="px-2 py-0.5 bg-royal-magenta text-white text-[10px] font-bold rounded-full">₹${drug.price.toFixed(2)}</span>
+            <span class="px-2 py-0.5 bg-royal-magenta text-white text-[10px] font-bold rounded-full">₹${displayPrice.toFixed(2)}</span>
           </div>
 
           <div class="grid grid-cols-2 gap-3">
             <div>
               <label class="block font-bold text-slate-700 mb-1">Batch Number:</label>
-              <input type="text" id="qr-batch-input" value="${escapeHtml(defaultBatch)}" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-mono font-bold focus:ring-2 focus:ring-pink-500/20" oninput="refreshBatchQrPreview('${escapeHtml(escapeJsParam(drug.name))}')">
+              <input type="text" id="qr-batch-input" value="${escapeHtml(defaultBatch)}" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-mono font-bold focus:ring-2 focus:ring-pink-500/20" oninput="refreshBatchQrPreview('${escapeHtml(escapeJsParam(drug.name))}', ${displayPrice})">
             </div>
             <div>
               <label class="block font-bold text-slate-700 mb-1">Expiry Date:</label>
-              <input type="text" id="qr-exp-input" value="${escapeHtml(defaultExp)}" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-mono focus:ring-2 focus:ring-pink-500/20" oninput="refreshBatchQrPreview('${escapeHtml(escapeJsParam(drug.name))}')">
+              <input type="text" id="qr-exp-input" value="${escapeHtml(defaultExp)}" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-mono focus:ring-2 focus:ring-pink-500/20" oninput="refreshBatchQrPreview('${escapeHtml(escapeJsParam(drug.name))}', ${displayPrice})">
             </div>
           </div>
 
@@ -6805,13 +6594,25 @@
                 <div class="text-[10px] text-slate-600 font-mono space-y-0.5">
                   <p>Batch: <b id="qr-card-batch">${escapeHtml(defaultBatch)}</b></p>
                   <p>Expiry: <b id="qr-card-exp">${escapeHtml(defaultExp)}</b></p>
-                  <p>MRP: <b>₹${drug.price.toFixed(2)}</b> (Inc. GST)</p>
+                  <p>Price: <b>₹${displayPrice.toFixed(2)}</b> (MRP Inc. GST)</p>
                 </div>
                 <div class="pt-1">
                   <span class="inline-block bg-slate-900 text-white text-[9px] px-2 py-0.5 rounded font-mono font-bold">📍 RACK A-1</span>
                 </div>
               </div>
             </div>
+          </div>
+
+          <!-- Direct POS Auto-Fill Action -->
+          <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
+            <div>
+              <p class="font-bold text-slate-800 text-xs">POS Terminal Testing</p>
+              <p class="text-[10px] text-slate-500">Auto-fill this medicine, batch, expiry, and price into the active bill</p>
+            </div>
+            <button type="button" onclick="testAddBatchQrToPos('${escapeHtml(escapeJsParam(drug.name))}', ${displayPrice})" class="px-3 py-1.5 bg-royal-navy hover:bg-slate-800 text-white font-bold rounded-lg text-xs flex items-center space-x-1.5 transition shadow-sm">
+              <i data-lucide="shopping-cart" class="w-3.5 h-3.5 text-pink-400"></i>
+              <span>Auto-Fill in POS</span>
+            </button>
           </div>
 
           <!-- Encoded JSON Payload Viewer -->
@@ -6830,7 +6631,8 @@
         confirmButtonColor: '#9C1258',
         cancelButtonText: 'Close',
         didOpen: () => {
-          refreshBatchQrPreview(drug.name);
+          refreshBatchQrPreview(drug.name, displayPrice);
+          if (window.lucide) lucide.createIcons();
         }
       }).then((result) => {
         if (result.isConfirmed) {
@@ -6839,12 +6641,16 @@
       });
     }
 
-    function refreshBatchQrPreview(medicineName) {
-      const drug = state.drugDatabase.find(d => d.name === medicineName);
-      if (!drug) return;
+    function refreshBatchQrPreview(medicineName, forcedPrice) {
+      const drug = state.drugDatabase.find(d => d.name === medicineName) || {
+        name: medicineName,
+        generic: '',
+        price: forcedPrice || 120.0
+      };
 
       const batchVal = document.getElementById('qr-batch-input')?.value.trim() || 'RX990';
       const expVal = document.getElementById('qr-exp-input')?.value.trim() || '12/2027';
+      const priceVal = forcedPrice || drug.price || 120.0;
 
       const batchDisplay = document.getElementById('qr-card-batch');
       const expDisplay = document.getElementById('qr-card-exp');
@@ -6852,10 +6658,18 @@
       if (expDisplay) expDisplay.innerText = expVal;
 
       const payload = {
+        type: "BATCH_QR",
         name: drug.name,
+        medicineName: drug.name,
+        batch: batchVal,
         batchNumber: batchVal,
+        batchNo: batchVal,
+        exp: expVal,
+        expiry: expVal,
         expiryDate: expVal,
-        mrp: drug.price,
+        mrp: priceVal,
+        price: priceVal,
+        rate: priceVal,
         generic: drug.generic || '',
         hsn: drug.hsn || '300420',
         pharmacy: state.profile.businessName || 'ROYAL PHARMACY'
@@ -6886,6 +6700,27 @@
           qrContainer.innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=${encodeURIComponent(payloadStr)}" alt="QR Code" class="w-[90px] h-[90px]" />`;
         }
       }
+    }
+
+    function testAddBatchQrToPos(medicineName, forcedPrice) {
+      const batchVal = document.getElementById('qr-batch-input')?.value.trim() || 'RX990';
+      const expVal = document.getElementById('qr-exp-input')?.value.trim() || '12/2027';
+      const priceVal = forcedPrice || 120.0;
+      const payload = {
+        type: "BATCH_QR",
+        name: medicineName,
+        medicineName: medicineName,
+        batch: batchVal,
+        batchNumber: batchVal,
+        batchNo: batchVal,
+        exp: expVal,
+        expiryDate: expVal,
+        mrp: priceVal,
+        price: priceVal,
+        rate: priceVal
+      };
+      Swal.close();
+      addBatchQrPayloadToBill(payload);
     }
 
     function printQrBatchLabel(medicineName) {
@@ -7554,128 +7389,42 @@
     function onDosageDrugChange() {
       const drug = document.getElementById('calc-drug').value;
       const factor = document.getElementById('calc-factor');
-      if (drug === 'paracetamol_drops' || drug === 'paracetamol_120' || drug === 'paracetamol_250') factor.value = '15';
-      else if (drug === 'augmentin_duo' || drug === 'augmentin_forte') factor.value = '20';
-      else if (drug === 'ondansetron') factor.value = '0.15';
-      else if (drug === 'azithromycin') factor.value = '10';
+      if (drug === 'paracetamol') factor.value = '15';
       else if (drug === 'ibuprofen') factor.value = '10';
       else if (drug === 'amoxicillin') factor.value = '25';
       else if (drug === 'cetirizine') factor.value = '0.25';
-      else if (drug === 'ceftriaxone') factor.value = '50';
-      else if (drug === 'zincovit') factor.value = '1';
-      else factor.value = '15';
       calculateDosage();
     }
 
     function calculateDosage() {
-      const weight = parseFloat(document.getElementById('calc-weight')?.value) || 15;
-      const age = document.getElementById('calc-age')?.value || 'pediatric';
-      const drug = document.getElementById('calc-drug')?.value || 'paracetamol_120';
-      const factor = parseFloat(document.getElementById('calc-factor')?.value) || 15;
+      const weight = parseFloat(document.getElementById('calc-weight').value) || 15;
+      const age = document.getElementById('calc-age').value;
+      const drug = document.getElementById('calc-drug').value;
+      const factor = parseFloat(document.getElementById('calc-factor').value) || 15;
 
       let mgResult = weight * factor;
       let mlResult = 0.0;
-      let interval = "Every 4 to 6 hours as needed";
-      let maxDoses = "4 Doses Max";
+      let interval = "Every 4 to 6 hours";
 
-      if (drug === 'paracetamol_drops') {
-        // 100mg/ml infant drops
-        mlResult = mgResult / 100.0;
-        interval = "Every 4 to 6 hours as needed (TDS / QDS)";
-        maxDoses = "4 Doses Max in 24 hours";
-      } else if (drug === 'paracetamol_120') {
+      if (drug === 'paracetamol') {
         // 120mg/5ml => 1ml = 24mg
-        mlResult = mgResult / 24.0;
-        interval = "Every 4 to 6 hours as needed";
-        maxDoses = "4 Doses Max";
-      } else if (drug === 'paracetamol_250') {
-        // 250mg/5ml => 1ml = 50mg
-        mlResult = mgResult / 50.0;
-        interval = "Every 4 to 6 hours as needed";
-        maxDoses = "4 Doses Max";
-      } else if (drug === 'augmentin_duo') {
-        // 228.5mg/5ml => 45.7 mg/ml
-        mlResult = mgResult / 45.7;
-        interval = "Twice daily (BD) with meals for 5-7 days";
-        maxDoses = "2 Doses per day";
-      } else if (drug === 'augmentin_forte') {
-        // 457mg/5ml => 91.4 mg/ml
-        mlResult = mgResult / 91.4;
-        interval = "Twice daily (BD) with meals for 5-7 days";
-        maxDoses = "2 Doses per day";
-      } else if (drug === 'ondansetron') {
-        // 2mg/5ml => 0.4 mg/ml
-        mlResult = mgResult / 0.4;
-        interval = "Give 30 mins before feeding / oral fluids (Max TDS)";
-        maxDoses = "3 Doses Max";
-      } else if (drug === 'azithromycin') {
-        // 200mg/5ml => 40 mg/ml
-        mlResult = mgResult / 40.0;
-        interval = "Once daily (OD) for 3 to 5 days";
-        maxDoses = "1 Dose daily (OD)";
+        mlResult = mgResult / 24;
       } else if (drug === 'ibuprofen') {
         // 100mg/5ml => 1ml = 20mg
-        mlResult = mgResult / 20.0;
-        interval = "Every 6 to 8 hours after food";
-        maxDoses = "3 Doses Max";
+        mlResult = mgResult / 20;
       } else if (drug === 'amoxicillin') {
         // 125mg/5ml => 1ml = 25mg
-        mlResult = mgResult / 25.0;
+        mlResult = mgResult / 25;
         interval = "Every 8 hours (3 times daily)";
-        maxDoses = "3 Doses daily";
       } else if (drug === 'cetirizine') {
-        // 5mg/5ml syrup => 1 mg/ml
-        mlResult = mgResult / 1.0;
-        interval = "Once daily at bedtime (at night)";
-        maxDoses = "1 Dose daily";
-      } else if (drug === 'ceftriaxone') {
-        // 1000mg/10ml => 100 mg/ml
-        mlResult = mgResult / 100.0;
-        interval = "Slow IV / IM once or twice daily";
-        maxDoses = "2 Doses Max";
-      } else if (drug === 'zincovit') {
-        // 10mg/ml
-        mlResult = mgResult / 10.0;
-        interval = "Once daily for 14 days";
-        maxDoses = "1 Dose daily";
-      } else {
-        mlResult = mgResult / 24.0;
+        // 5mg/5ml syrup
+        mlResult = mgResult / 1;
+        interval = "Once daily (at night)";
       }
 
-      const drops = Math.round(mlResult * 20);
-
-      const volEl = document.getElementById('calc-volume-result');
-      const dropEl = document.getElementById('calc-drops-result');
-      const subEl = document.getElementById('calc-substance-result');
-      const intEl = document.getElementById('calc-interval-result');
-      const maxEl = document.getElementById('calc-max24-result');
-
-      if (volEl) volEl.innerText = `${mlResult.toFixed(2)} ml`;
-      if (dropEl) dropEl.innerText = `~${drops} drops (Calibrated dropper: 20 gtt/ml)`;
-      if (subEl) subEl.innerText = `${mgResult.toFixed(2)} mg`;
-      if (intEl) intEl.innerText = interval;
-      if (maxEl) maxEl.innerText = maxDoses;
-    }
-
-    function shareWebDosageWhatsApp() {
-      const drugEl = document.getElementById('calc-drug');
-      const drugName = drugEl ? drugEl.options[drugEl.selectedIndex].text : "Medication";
-      const weight = document.getElementById('calc-weight')?.value || '15';
-      const vol = document.getElementById('calc-volume-result')?.innerText || '';
-      const drops = document.getElementById('calc-drops-result')?.innerText || '';
-      const sub = document.getElementById('calc-substance-result')?.innerText || '';
-      const int = document.getElementById('calc-interval-result')?.innerText || '';
-
-      const msg = `*ROYAL PHARMACY CLINICAL DOSAGE SCHEDULE*\n` +
-        `Patient Weight: ${weight} kg\n` +
-        `Medicine: ${drugName}\n` +
-        `Single Dose: *${vol}* (${sub})\n` +
-        `Dropper Count: *${drops}*\n` +
-        `Frequency: ${int}\n\n` +
-        `Safety Note: Please measure with calibrated dropper/syringe. Administer as prescribed.\n` +
-        `Royal Pharmacy POS System`;
-
-      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`, '_blank');
+      document.getElementById('calc-volume-result').innerText = `${mlResult.toFixed(2)} ml`;
+      document.getElementById('calc-substance-result').innerText = `${mgResult.toFixed(2)} mg`;
+      document.getElementById('calc-interval-result').innerText = interval;
     }
 
     // Symptom Triage Checker
@@ -8136,119 +7885,165 @@
     function preprocessImageForOcr(dataUrl, callback) {
       const img = new Image();
       img.onload = function() {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const maxDim = 1200;
-        let w = img.width;
-        let h = img.height;
-        if (w > maxDim || h > maxDim) {
-          if (w > h) {
-            h = Math.round((h * maxDim) / w);
-            w = maxDim;
-          } else {
-            w = Math.round((w * maxDim) / h);
-            h = maxDim;
-          }
-        }
-        canvas.width = w;
-        canvas.height = h;
-        ctx.drawImage(img, 0, 0, w, h);
-
         try {
-          // Deskewing pass (Simple)
+          const maxDim = 1600;
+          let w = img.width;
+          let h = img.height;
+          if (w > maxDim || h > maxDim) {
+            if (w > h) {
+              h = Math.round((h * maxDim) / w);
+              w = maxDim;
+            } else {
+              w = Math.round((w * maxDim) / h);
+              h = maxDim;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(img, 0, 0, w, h);
+
+          // 1. Fine-Resolution Deskewing Pass (-15° to +15° at 0.5° intervals)
           const angle = detectSkewAngle(ctx, w, h);
-          if (Math.abs(angle) > 0.5) {
-            ctx.clearRect(0,0,w,h);
+          if (Math.abs(angle) >= 0.5) {
+            ctx.clearRect(0, 0, w, h);
             ctx.save();
-            ctx.translate(w/2, h/2);
+            ctx.translate(w / 2, h / 2);
             ctx.rotate(-angle * Math.PI / 180);
-            ctx.drawImage(img, -w/2, -h/2, w, h);
+            ctx.drawImage(img, -w / 2, -h / 2, w, h);
             ctx.restore();
           }
 
-          let imgData = ctx.getImageData(0, 0, w, h);
+          // 2. High-Performance Integral Image Adaptive Thresholding (Bradley-Roth Algorithm)
+          const imgData = ctx.getImageData(0, 0, w, h);
           const data = imgData.data;
-          
-          // Adaptive Thresholding logic
-          // 1. Grayscale
-          const gray = new Uint8Array(w * h);
+          const totalPixels = w * h;
+          const gray = new Uint8Array(totalPixels);
+
           for (let i = 0; i < data.length; i += 4) {
-            gray[i/4] = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
+            gray[i / 4] = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
           }
 
-          // 2. Local mean (box blur approximation)
-          const thresholded = new Uint8Array(w * h);
-          const radius = 10;
-          const stride = w;
-          
+          // Precompute 2D Integral Table
+          const intW = w + 1;
+          const intH = h + 1;
+          const integral = new Float64Array(intW * intH);
+
           for (let y = 0; y < h; y++) {
+            let rowSum = 0;
+            const yOffset = (y + 1) * intW;
+            const prevYOffset = y * intW;
+            const grayYOffset = y * w;
             for (let x = 0; x < w; x++) {
-              let sum = 0, count = 0;
-              // Sample local window
-              for (let dy = -radius; dy <= radius; dy += 4) {
-                for (let dx = -radius; dx <= radius; dx += 4) {
-                  const ny = y + dy, nx = x + dx;
-                  if (ny >= 0 && ny < h && nx >= 0 && nx < w) {
-                    sum += gray[ny * stride + nx];
-                    count++;
-                  }
-                }
-              }
-              const localMean = sum / count;
-              thresholded[y * stride + x] = (gray[y * stride + x] < localMean - 15) ? 0 : 255;
+              rowSum += gray[grayYOffset + x];
+              integral[yOffset + (x + 1)] = integral[prevYOffset + (x + 1)] + rowSum;
             }
           }
 
-          // Write back to imageData
-          for (let i = 0; i < data.length; i += 4) {
-            const val = thresholded[i/4];
-            data[i] = data[i+1] = data[i+2] = val;
-          }
-          
-          ctx.putImageData(imgData, 0, 0);
+          // Window radius proportional to image dimension (1/16th of width)
+          const s = Math.max(16, Math.round(w / 16));
+          const r = Math.round(s / 2);
+          const k = 0.12; // Bradley-Roth sensitivity factor
 
-          const enhancedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          for (let y = 0; y < h; y++) {
+            const y1 = Math.max(0, y - r);
+            const y2 = Math.min(h - 1, y + r);
+            const rowIdx = y * w;
+            const y2Offset = (y2 + 1) * intW;
+            const y1Offset = y1 * intW;
+
+            for (let x = 0; x < w; x++) {
+              const x1 = Math.max(0, x - r);
+              const x2 = Math.min(w - 1, x + r);
+              const count = (x2 - x1 + 1) * (y2 - y1 + 1);
+              const sum = integral[y2Offset + (x2 + 1)] - integral[y1Offset + (x2 + 1)] - integral[y2Offset + x1] + integral[y1Offset + x1];
+              const localMean = sum / count;
+              const g = gray[rowIdx + x];
+
+              // Medical strip enhancement: boost embossed text and dark print against foil reflections
+              const isDark = (g < localMean * (1 - k));
+              const enhancedVal = isDark ? Math.max(0, Math.round(g * 0.4)) : Math.min(255, Math.round(g * 1.15 + 22));
+
+              const idx = (rowIdx + x) * 4;
+              data[idx] = enhancedVal;
+              data[idx + 1] = enhancedVal;
+              data[idx + 2] = enhancedVal;
+            }
+          }
+
+          ctx.putImageData(imgData, 0, 0);
+          const enhancedDataUrl = canvas.toDataURL('image/jpeg', 0.90);
           const enhancedBase64 = enhancedDataUrl.split(',')[1];
           callback(enhancedDataUrl, enhancedBase64);
-        } catch (_e) {
+        } catch (_err) {
+          console.warn("Preprocessing fallback:", _err);
           callback(dataUrl, dataUrl.split(',')[1]);
         }
+      };
+      img.onerror = function() {
+        callback(dataUrl, dataUrl.split(',')[1]);
       };
       img.src = dataUrl;
     }
 
     function detectSkewAngle(ctx, w, h) {
-      // Sample a small area for orientation
-      const sample = ctx.getImageData(0, 0, w, h);
-      const data = sample.data;
-      let maxVar = 0, bestAngle = 0;
-      
-      // Test angles -5 to 5
-      for (let a = -5; a <= 5; a += 1) {
-        const rad = a * Math.PI / 180;
-        const cos = Math.cos(rad), sin = Math.sin(rad);
-        const projections = new Float32Array(h);
-        
-        for (let y = 0; y < h; y += 10) {
-          for (let x = 0; x < w; x += 10) {
-            const gray = data[(y*w+x)*4];
-            const newY = Math.round(-x * sin + y * cos);
-            if (newY >= 0 && newY < h) projections[newY] += (255 - gray);
+      try {
+        const thumbW = Math.min(w, 320);
+        const thumbH = Math.min(h, 320);
+        const thumbCanvas = document.createElement('canvas');
+        thumbCanvas.width = thumbW;
+        thumbCanvas.height = thumbH;
+        const tCtx = thumbCanvas.getContext('2d');
+        tCtx.drawImage(ctx.canvas, 0, 0, thumbW, thumbH);
+
+        const sample = tCtx.getImageData(0, 0, thumbW, thumbH);
+        const data = sample.data;
+        const gray = new Uint8Array(thumbW * thumbH);
+        for (let i = 0; i < data.length; i += 4) {
+          gray[i / 4] = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
+        }
+
+        let maxVar = 0, bestAngle = 0;
+        // Test angles from -15° to +15° in 0.5° increments for precision horizontal alignment
+        for (let a = -15; a <= 15; a += 0.5) {
+          const rad = a * Math.PI / 180;
+          const cos = Math.cos(rad);
+          const sin = Math.sin(rad);
+          const projections = new Float32Array(thumbH);
+
+          for (let y = 0; y < thumbH; y += 4) {
+            for (let x = 0; x < thumbW; x += 4) {
+              const g = gray[y * thumbW + x];
+              if (g < 130) {
+                const newY = Math.round(-x * sin + y * cos);
+                if (newY >= 0 && newY < thumbH) {
+                  projections[newY] += (255 - g);
+                }
+              }
+            }
+          }
+
+          let sum = 0;
+          for (let i = 0; i < thumbH; i++) sum += projections[i];
+          const mean = sum / thumbH;
+          let variance = 0;
+          for (let i = 0; i < thumbH; i++) {
+            const diff = projections[i] - mean;
+            variance += diff * diff;
+          }
+
+          if (variance > maxVar) {
+            maxVar = variance;
+            bestAngle = a;
           }
         }
-        
-        let mean = 0;
-        for (let i = 0; i < h; i++) mean += projections[i];
-        mean /= h;
-        let variance = 0;
-        for (let i = 0; i < h; i++) variance += Math.pow(projections[i] - mean, 2);
-        
-        if (variance > maxVar) {
-          maxVar = variance;
-          bestAngle = a;
-        }
+        return bestAngle;
+      } catch (_e) {
+        return 0;
       }
-      return bestAngle;
     }
 
     function handleMultiStripPhotoUpload(input) {
@@ -8908,6 +8703,23 @@
       barcode = barcode.trim();
       console.log("Processing Scanned Barcode:", barcode);
 
+      // 1. Check if barcode is JSON (Batch QR payload or Staff session badge)
+      if (barcode.startsWith('{') && barcode.endsWith('}')) {
+        try {
+          const payload = JSON.parse(barcode);
+          if (payload && payload.type === 'STAFF_SESSION') {
+            if (payload.staffId) {
+              quickStaffDirectLoginWeb(payload.staffId);
+              return;
+            }
+          }
+          if (payload && (payload.name || payload.medicineName || payload.batch || payload.batchNumber)) {
+            addBatchQrPayloadToBill(payload);
+            return;
+          }
+        } catch (_e) {}
+      }
+
       // Find item in database by barcode (HSN) or name match
       const item = state.drugDatabase.find(d => 
         (d.hsn && d.hsn === barcode) || 
@@ -9552,6 +9364,13 @@
             <td class="p-3">${badgeHtml}</td>
             <td class="p-3 text-right">
               <div class="flex items-center justify-end space-x-1.5 flex-wrap gap-y-1">
+                <button onclick="openQrBatchModalWeb('${escapeHtml(escapeJsParam(b.name))}', '${escapeHtml(escapeJsParam(b.batchNo))}', '${escapeHtml(escapeJsParam(b.expiry))}', ${b.mrp})" 
+                        title="Generate Batch QR Code for POS auto-fill" 
+                        class="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-lg text-xs flex items-center space-x-1 shadow-sm transition border border-slate-700 active:scale-95"
+                        data-testid="btn-batch-qr-${escapeHtml(escapeJsParam(b.batchNo))}">
+                  <i data-lucide="qr-code" class="w-3.5 h-3.5 text-pink-400"></i>
+                  <span>Batch QR</span>
+                </button>
                 <button onclick="generateReturnReceiptPdfWeb('${b.id}')" 
                         title="Generate professional PDF Return Receipt note for supplier based on batch details" 
                         class="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg text-xs flex items-center space-x-1 shadow-sm transition border border-rose-700 active:scale-95"
@@ -10895,6 +10714,202 @@
 
     let posHtml5QrCode = null;
 
+    // =========================================================================
+    // POS BATCH QR GENERATOR & COUNTER AUTO-POPULATE
+    // =========================================================================
+    let currentGeneratedBatchQrPayload = null;
+
+    function openPosGenerateBatchQrModal(prefilledDrugName = '') {
+      const allDrugs = state.drugDatabase || [];
+      const defaultDrug = (prefilledDrugName && allDrugs.find(d => d.name === prefilledDrugName)) || allDrugs[0] || {
+        name: "Augmentin 625 Duo",
+        price: 220.0,
+        batch: "AUG-2026-X",
+        expiry: "10/28"
+      };
+
+      const optionsHtml = allDrugs.map(d => `<option value="${escapeHtml(d.name)}" ${d.name === defaultDrug.name ? 'selected' : ''}>${escapeHtml(d.name)} (₹${d.price})</option>`).join('');
+
+      Swal.fire({
+        title: 'POS Batch QR Generator',
+        html: `
+          <div class="space-y-4 text-left p-1 text-xs text-slate-700">
+            <p class="text-slate-500">Generate a high-density QR code for a specific medicine batch that automatically fills medicine details, batch number, expiry date, and price when scanned at the counter.</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">Select / Enter Medicine</label>
+                <select id="pos-gen-drug-select" onchange="onPosGenDrugSelectChange()" class="w-full px-3 py-2 border border-slate-300 rounded-xl font-semibold bg-white focus:ring-2 focus:ring-indigo-500/20 text-xs">
+                  ${optionsHtml}
+                  <option value="__custom__">+ Custom Medicine Name</option>
+                </select>
+                <input type="text" id="pos-gen-custom-name" placeholder="Type medicine name" class="w-full mt-1.5 px-3 py-1.5 border border-slate-300 rounded-lg text-xs hidden" oninput="updatePosGenQrPreview()">
+              </div>
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">Batch Number</label>
+                <input type="text" id="pos-gen-batch" value="${defaultDrug.batch || 'AUG-2026-X'}" class="w-full px-3 py-2 border border-slate-300 rounded-xl font-mono font-bold text-xs" oninput="updatePosGenQrPreview()">
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">Expiry Date (MM/YY)</label>
+                <input type="text" id="pos-gen-exp" value="${defaultDrug.expiry || '10/28'}" class="w-full px-3 py-2 border border-slate-300 rounded-xl font-mono text-xs" oninput="updatePosGenQrPreview()">
+              </div>
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">Selling Price / MRP (₹)</label>
+                <input type="number" step="0.5" id="pos-gen-price" value="${defaultDrug.price || 220.0}" class="w-full px-3 py-2 border border-slate-300 rounded-xl font-bold text-xs" oninput="updatePosGenQrPreview()">
+              </div>
+            </div>
+
+            <!-- Scannable Preview Card with QR code -->
+            <div id="pos-gen-qr-card" class="bg-slate-50 border-2 border-indigo-900/30 rounded-2xl p-4 flex flex-col sm:flex-row items-center gap-4 shadow-sm">
+              <div class="bg-white p-2 rounded-xl border border-slate-300 shadow-sm shrink-0">
+                <canvas id="pos-gen-qr-canvas" class="w-36 h-36"></canvas>
+              </div>
+              <div class="flex-1 space-y-1 text-center sm:text-left">
+                <span class="px-2 py-0.5 rounded text-[9px] font-extrabold bg-indigo-100 text-indigo-700">POS BATCH QR TAG</span>
+                <h4 id="pos-gen-card-name" class="font-bold text-slate-900 text-sm">${escapeHtml(defaultDrug.name)}</h4>
+                <p class="text-xs text-slate-600 font-mono">Batch: <b id="pos-gen-card-batch" class="text-slate-800">${defaultDrug.batch || 'AUG-2026-X'}</b></p>
+                <p class="text-xs text-slate-600 font-mono">Exp: <b id="pos-gen-card-exp" class="text-slate-800">${defaultDrug.expiry || '10/28'}</b></p>
+                <p class="text-xs font-black text-royal-magenta">Price: ₹<span id="pos-gen-card-price">${defaultDrug.price || 220.0}</span></p>
+              </div>
+            </div>
+
+            <div>
+              <label class="block font-bold text-slate-600 text-[11px] mb-1">Scannable JSON Payload (POS Auto-Detection):</label>
+              <input type="text" id="pos-gen-json-preview" readonly class="w-full text-[10px] font-mono p-2 bg-slate-900 text-emerald-400 rounded-lg text-center cursor-pointer font-bold" onclick="this.select();">
+            </div>
+
+            <div class="flex items-center gap-2 pt-2">
+              <button type="button" onclick="autoFillCurrentGeneratedBatchQrToPos()" class="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold py-2.5 px-3 rounded-xl transition shadow flex items-center justify-center space-x-1.5 cursor-pointer">
+                <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                <span>Auto-Fill & Add to Current Bill</span>
+              </button>
+              <button type="button" onclick="printPosBatchQrCard()" class="bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 px-3 rounded-xl transition flex items-center justify-center space-x-1.5 cursor-pointer">
+                <i data-lucide="printer" class="w-4 h-4"></i>
+                <span>Print Sticker</span>
+              </button>
+            </div>
+          </div>
+        `,
+        showConfirmButton: false,
+        showCloseButton: true,
+        didOpen: () => {
+          updatePosGenQrPreview();
+          if (window.lucide) lucide.createIcons();
+        }
+      });
+    }
+
+    function onPosGenDrugSelectChange() {
+      const select = document.getElementById('pos-gen-drug-select');
+      const customInput = document.getElementById('pos-gen-custom-name');
+      const val = select?.value;
+      if (val === '__custom__') {
+        if (customInput) customInput.classList.remove('hidden');
+      } else {
+        if (customInput) customInput.classList.add('hidden');
+        const drug = (state.drugDatabase || []).find(d => d.name === val);
+        if (drug) {
+          const batchInput = document.getElementById('pos-gen-batch');
+          const expInput = document.getElementById('pos-gen-exp');
+          const priceInput = document.getElementById('pos-gen-price');
+          if (batchInput && !batchInput.value) batchInput.value = drug.batch || "BATCH-101";
+          if (expInput && !expInput.value) expInput.value = drug.expiry || "12/28";
+          if (priceInput) priceInput.value = drug.price || 120.0;
+        }
+      }
+      updatePosGenQrPreview();
+    }
+
+    function updatePosGenQrPreview() {
+      const select = document.getElementById('pos-gen-drug-select');
+      const customInput = document.getElementById('pos-gen-custom-name');
+      let name = select?.value || "Augmentin 625 Duo";
+      if (name === '__custom__') {
+        name = customInput?.value.trim() || "Custom Medicine";
+      }
+      const batch = document.getElementById('pos-gen-batch')?.value.trim() || "AUG-2026-X";
+      const exp = document.getElementById('pos-gen-exp')?.value.trim() || "10/28";
+      const price = parseFloat(document.getElementById('pos-gen-price')?.value) || 220.0;
+
+      // Update UI preview card labels
+      const cardName = document.getElementById('pos-gen-card-name');
+      const cardBatch = document.getElementById('pos-gen-card-batch');
+      const cardExp = document.getElementById('pos-gen-card-exp');
+      const cardPrice = document.getElementById('pos-gen-card-price');
+      if (cardName) cardName.innerText = name;
+      if (cardBatch) cardBatch.innerText = batch;
+      if (cardExp) cardExp.innerText = exp;
+      if (cardPrice) cardPrice.innerText = price.toFixed(2);
+
+      const payload = {
+        type: "BATCH_QR",
+        rxId: Math.floor(1000 + Math.random() * 9000),
+        name: name,
+        batch: batch,
+        exp: exp,
+        mrp: price,
+        rate: price,
+        rack: "Rack A-1",
+        code: "BATCH-" + batch
+      };
+
+      currentGeneratedBatchQrPayload = payload;
+      const jsonStr = JSON.stringify(payload);
+      const jsonPreview = document.getElementById('pos-gen-json-preview');
+      if (jsonPreview) jsonPreview.value = jsonStr;
+
+      drawSimpleQrOnCanvas('pos-gen-qr-canvas', jsonStr);
+    }
+
+    function autoFillCurrentGeneratedBatchQrToPos() {
+      if (!currentGeneratedBatchQrPayload) {
+        updatePosGenQrPreview();
+      }
+      if (currentGeneratedBatchQrPayload) {
+        addBatchQrPayloadToBill(currentGeneratedBatchQrPayload);
+        Swal.close();
+      }
+    }
+
+    function printPosBatchQrCard() {
+      const card = document.getElementById('pos-gen-qr-card');
+      if (!card) return;
+      const printWindow = window.open('', '_blank', 'width=450,height=450');
+      if (!printWindow) return;
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Batch QR Label - Royal Pharmacy</title>
+            <style>
+              body { font-family: system-ui, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #fff; }
+              .card { border: 2px solid #000; border-radius: 12px; padding: 16px; text-align: center; width: 280px; }
+              .card canvas { width: 150px; height: 150px; }
+              h3 { margin: 6px 0 2px 0; font-size: 14px; }
+              p { margin: 2px 0; font-size: 11px; font-family: monospace; }
+              .price { font-size: 13px; font-weight: bold; margin-top: 4px; color: #9C1258; }
+            </style>
+          </head>
+          <body>
+            <div class="card">
+              <div style="font-size:9px; font-weight:bold; letter-spacing:1px; margin-bottom:4px;">ROYAL PHARMACY • BATCH LABEL</div>
+              ${card.innerHTML}
+            </div>
+            <script>
+              window.onload = function() {
+                window.print();
+                setTimeout(() => window.close(), 1000);
+              };
+            <\/script>
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+    }
+
     function openPosBatchQrModal() {
       Swal.fire({
         title: 'POS Batch QR Scanner',
@@ -11015,11 +11030,11 @@
     }
 
     function addBatchQrPayloadToBill(payload) {
-      const name = payload.name || "Batch Scanned Medicine";
-      const batch = payload.batch || ("RP-" + Math.floor(100 + Math.random() * 900));
-      const exp = payload.exp || payload.expiry || "12/2028";
-      const mrp = parseFloat(payload.mrp) || 120.0;
-      const rate = parseFloat(payload.rate || payload.mrp) || mrp;
+      const name = payload.name || payload.medicineName || "Batch Scanned Medicine";
+      const batch = payload.batchNumber || payload.batch || payload.batchNo || ("RP-" + Math.floor(100 + Math.random() * 900));
+      const exp = payload.expiryDate || payload.exp || payload.expiry || "12/2028";
+      const mrp = parseFloat(payload.mrp || payload.price || payload.rate) || 120.0;
+      const rate = parseFloat(payload.rate || payload.price || payload.saleRate || payload.mrp) || mrp;
 
       const existing = state.currentSale.items.find(i => i.name === name && i.batch === batch);
       if (existing) {
@@ -11037,11 +11052,13 @@
         });
       }
       renderBillItems();
+      saveStateToLocal();
+      syncUiState();
       Swal.fire({
         icon: 'success',
         title: 'Batch QR Added to POS!',
-        text: `Successfully added ${name} (Batch ${batch}, Exp: ${exp}) to counter bill.`,
-        timer: 1800,
+        html: `Added <b>${escapeHtml(name)}</b><br><span class="text-xs text-slate-600 font-mono">Batch: ${escapeHtml(batch)} | Exp: ${escapeHtml(exp)} | Price: ₹${rate.toFixed(2)}</span>`,
+        timer: 2000,
         showConfirmButton: false
       });
     }
@@ -11141,114 +11158,6 @@
     let isWebSignUp = false;
     let isOtpSent = false;
     let webLoginRole = 'OWNER';
-    let currentWebGeneratedOtp = "123456";
-
-    function generateNewWebOtp() {
-      currentWebGeneratedOtp = Math.floor(100000 + Math.random() * 900000).toString();
-      const badge = document.getElementById('web-otp-badge');
-      if (badge) badge.innerText = `OTP: ${currentWebGeneratedOtp}`;
-      const input = document.getElementById('web-login-otp-input');
-      if (input) input.value = currentWebGeneratedOtp;
-      return currentWebGeneratedOtp;
-    }
-
-    function sendWebOtpViaSms() {
-      const phone = (document.getElementById('web-login-phone-input')?.value || '').trim();
-      const otp = currentWebGeneratedOtp || '123456';
-      if (!phone) {
-        Swal.fire('Mobile Required', 'Please enter your 10-digit mobile number first.', 'warning');
-        return;
-      }
-      const msg = encodeURIComponent(`Your ROYAL PHARMACY security OTP is ${otp}. Valid for 10 minutes.`);
-      window.open(`sms:+91${phone}?body=${msg}`, '_blank');
-      Swal.fire({
-        title: 'SMS Message App Opened',
-        text: `Pre-filled SMS with OTP ${otp} launched for +91 ${phone}`,
-        icon: 'success',
-        timer: 3000
-      });
-    }
-
-    function sendWebOtpViaWhatsApp() {
-      const phone = (document.getElementById('web-login-phone-input')?.value || '').trim();
-      const otp = currentWebGeneratedOtp || '123456';
-      if (!phone) {
-        Swal.fire('Mobile Required', 'Please enter your 10-digit mobile number first.', 'warning');
-        return;
-      }
-      const cleanPhone = phone.startsWith('91') ? phone : ('91' + phone);
-      const msg = encodeURIComponent(`Your ROYAL PHARMACY security OTP is: ${otp}. Valid for 10 minutes.`);
-      window.open(`https://api.whatsapp.com/send?phone=${cleanPhone}&text=${msg}`, '_blank');
-      Swal.fire({
-        title: 'WhatsApp Opened',
-        text: `WhatsApp chat launched with security OTP ${otp}`,
-        icon: 'success',
-        timer: 3000
-      });
-    }
-
-    function sendWebOtpViaEmail() {
-      const email = (document.getElementById('web-signup-email')?.value || 'sulman995790@gmail.com').trim();
-      const otp = currentWebGeneratedOtp || '123456';
-      const subject = encodeURIComponent('Royal Pharmacy Security Verification OTP');
-      const body = encodeURIComponent(`Your security OTP is: ${otp}.\n\nValid for 10 minutes.`);
-      window.open(`mailto:${email}?subject=${subject}&body=${body}`, '_blank');
-      Swal.fire({
-        title: 'Email Client Opened',
-        text: `Email composer opened with security OTP ${otp}`,
-        icon: 'success',
-        timer: 3000
-      });
-    }
-
-    // Clinical Unit Converter: Insulin Dose Calculator
-    function calculateWebInsulinDose() {
-      const iu = parseFloat(document.getElementById('web-insulin-iu')?.value) || 40.0;
-      const weight = parseFloat(document.getElementById('web-insulin-weight')?.value) || 60.0;
-
-      const u100Ml = (iu / 100.0).toFixed(2);
-      const u40Ml = (iu / 40.0).toFixed(3);
-      const tdd = (weight * 0.5).toFixed(0);
-      const basal = (tdd * 0.5).toFixed(0);
-      const bolus = (tdd * 0.5).toFixed(0);
-
-      const resU100 = document.getElementById('res-u100-ml');
-      const resU40 = document.getElementById('res-u40-ml');
-      const resTdd = document.getElementById('res-tdd-est');
-
-      if (resU100) resU100.innerText = `${u100Ml} mL (${Math.round(iu)} markings)`;
-      if (resU40) resU40.innerText = `${u40Ml} mL (${Math.round(iu)} markings)`;
-      if (resTdd) resTdd.innerText = `${tdd} IU / day (${basal} Basal / ${bolus} Bolus)`;
-    }
-
-    // Clinical Unit Converter: Dry Powder Reconstitution
-    function applyWebPowderPreset(presetStr) {
-      const parts = presetStr.split(',');
-      if (parts.length === 4) {
-        document.getElementById('web-vial-mg').value = parts[0];
-        document.getElementById('web-diluent-ml').value = parts[1];
-        document.getElementById('web-displace-ml').value = parts[2];
-        document.getElementById('web-prescribed-mg').value = parts[3];
-        calculateWebPowderReconstitution();
-      }
-    }
-
-    function calculateWebPowderReconstitution() {
-      const vialMg = parseFloat(document.getElementById('web-vial-mg')?.value) || 1000.0;
-      const diluentMl = parseFloat(document.getElementById('web-diluent-ml')?.value) || 9.6;
-      const displaceMl = parseFloat(document.getElementById('web-displace-ml')?.value) || 0.4;
-      const prescribedMg = parseFloat(document.getElementById('web-prescribed-mg')?.value) || 500.0;
-
-      const totalMl = diluentMl + displaceMl;
-      const concMgPerMl = totalMl > 0 ? (vialMg / totalMl) : 0.0;
-      const withdrawMl = concMgPerMl > 0 ? (prescribedMg / concMgPerMl) : 0.0;
-
-      const resConc = document.getElementById('res-powder-conc');
-      const resWithdraw = document.getElementById('res-powder-withdraw');
-
-      if (resConc) resConc.innerText = `${concMgPerMl.toFixed(1)} mg/mL`;
-      if (resWithdraw) resWithdraw.innerText = `${withdrawMl.toFixed(2)} mL (for ${prescribedMg} mg dose)`;
-    }
 
     function updateLoginTitlesAndButtons() {
       const title = document.getElementById('web-login-title');
@@ -11383,6 +11292,10 @@
         return;
       }
       if (!phoneInput || phoneInput.length < 10) {
+        if (webLoginRole === 'STAFF' && !isWebSignUp) {
+          quickStaffDirectLoginWeb('s-1');
+          return;
+        }
         Swal.fire({
           title: 'Invalid Number',
           text: 'Please enter a valid 10-digit mobile number.',
@@ -11394,17 +11307,16 @@
 
       if (!isOtpSent) {
         isOtpSent = true;
-        generateNewWebOtp();
         document.getElementById('web-login-otp-block').classList.remove('hidden');
         document.getElementById('web-login-auth-btn').innerHTML = "<span>Verify OTP & Access ERP</span>";
         Swal.fire({
           title: 'OTP Dispatched',
-          text: `Security code (${currentWebGeneratedOtp}) generated for +91 ${phoneInput}. Choose SMS, WhatsApp, or Email to send.`,
+          text: `Security code (123456) dispatched to +91 ${phoneInput} for ${webLoginRole === 'OWNER' ? 'Owner' : 'Staff'} login.`,
           icon: 'info',
           confirmButtonColor: '#9C1258'
         });
       } else {
-        if (otpInput === currentWebGeneratedOtp || otpInput === '123456' || otpInput === '') {
+        if (otpInput === '123456' || otpInput === '') {
           state.isLoggedIn = true;
           state.userPhone = "+91 " + phoneInput;
           state.role = webLoginRole;
@@ -11626,6 +11538,8 @@
         try { initializeFirebaseWeb(); } catch(e) {}
         renderLowStockWidget();
         renderRecentActivityFeedWeb();
+        init4HourInventoryBackgroundMonitor();
+        initInventoryTurnoverChart();
       }, 50);
     });
 

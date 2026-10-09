@@ -763,7 +763,18 @@ fun BatchTrackingScreen(
 
   if (showQrForBatch != null) {
     val batch = showQrForBatch!!
-    val qrPayload = remember(batch) { com.example.util.MedicineQrPayload.fromMedicine(batch.medicine).toJsonString() }
+    val qrPayload = remember(batch) {
+      com.example.util.MedicineQrPayload(
+        id = batch.medicine.id,
+        name = batch.medicine.name,
+        batch = batch.batchNumber,
+        exp = batch.expiryDate,
+        mrp = batch.mrp,
+        saleRate = if (batch.saleRate > 0) batch.saleRate else batch.medicine.saleRate,
+        rack = batch.rackLocation.ifBlank { batch.medicine.rackLocation },
+        barcode = batch.medicine.barcode
+      ).toJsonString()
+    }
     val qrBitmap = remember(batch) { com.example.util.QrCodeGeneratorUtil.generateQrBitmap(qrPayload, 320) }
 
     AlertDialog(
@@ -784,19 +795,31 @@ fun BatchTrackingScreen(
           Spacer(modifier = Modifier.height(12.dp))
           Text(batch.medicine.name, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = TextDark)
           Text("Batch: ${batch.batchNumber} | Exp: ${batch.expiryDate}", fontSize = 12.sp, color = TextMuted)
-          Text("Price: ₹${batch.saleRate}", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = RoyalMagenta)
+          Text("Price: ₹${if (batch.saleRate > 0) batch.saleRate else batch.mrp}", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = RoyalMagenta)
           Spacer(modifier = Modifier.height(8.dp))
           Text(
-            "Scan this code at the POS Billing Counter to automatically populate all batch details.",
-            fontSize = 10.sp,
+            "Scan this QR code at POS counter or tap below to auto-fill medicine details, batch number, expiry date, and price.",
+            fontSize = 11.sp,
             color = TextMuted,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center
           )
         }
       },
       confirmButton = {
+        Button(
+          onClick = {
+            viewModel.handleScannedBarcode(qrPayload)
+            Toast.makeText(context, "Added ${batch.medicine.name} (Batch: ${batch.batchNumber}) to POS Bill!", Toast.LENGTH_SHORT).show()
+            showQrForBatch = null
+          },
+          colors = ButtonDefaults.buttonColors(containerColor = RoyalNavy)
+        ) {
+          Text("Add To POS Bill", fontWeight = FontWeight.Bold)
+        }
+      },
+      dismissButton = {
         TextButton(onClick = { showQrForBatch = null }) {
-          Text("Close", color = RoyalNavy, fontWeight = FontWeight.Bold)
+          Text("Close", color = TextMuted)
         }
       }
     )
