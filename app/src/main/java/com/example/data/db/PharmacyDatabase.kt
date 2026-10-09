@@ -6,6 +6,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.example.data.model.BusinessProfile
+import com.example.data.model.CategoryReorderThreshold
 import com.example.data.model.Customer
 import com.example.data.model.Distributor
 import com.example.data.model.Doctor
@@ -34,9 +35,10 @@ import kotlinx.coroutines.launch
     PurchaseOrder::class,
     UdharTransaction::class,
     SyncQueueItem::class,
+    CategoryReorderThreshold::class,
     Doctor::class
   ],
-  version = 9,
+  version = 10,
   exportSchema = false
 )
 abstract class PharmacyDatabase : RoomDatabase() {

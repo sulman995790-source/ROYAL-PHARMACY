@@ -95,6 +95,7 @@ fun AddSaleScreen(
   viewModel: PharmacyViewModel,
   modifier: Modifier = Modifier
 ) {
+  val context = LocalContext.current
   val billingTo by viewModel.billingTo.collectAsState()
   val customerName by viewModel.billingCustomerName.collectAsState()
   val customerPhone by viewModel.billingCustomerPhone.collectAsState()
@@ -103,6 +104,14 @@ fun AddSaleScreen(
   val invoiceNumber by viewModel.billingInvoiceNumber.collectAsState()
   val cartItems by viewModel.billingCartItems.collectAsState()
   val medicines by viewModel.allMedicines.collectAsState()
+  val criticalMedicines by viewModel.criticalLowStockMedicines.collectAsState()
+  val isAudioAlertsEnabled by viewModel.isAudioAlertsEnabled.collectAsState()
+
+  androidx.compose.runtime.LaunchedEffect(Unit) {
+    if (criticalMedicines.isNotEmpty() && isAudioAlertsEnabled) {
+      viewModel.playLowStockAlert(context)
+    }
+  }
 
   val allCustomers by viewModel.allCustomers.collectAsState()
   val allPatients by viewModel.allPatients.collectAsState()
@@ -167,28 +176,40 @@ fun AddSaleScreen(
         Row(
           verticalAlignment = Alignment.CenterVertically,
           modifier = Modifier.padding(end = 4.dp),
-          horizontalArrangement = Arrangement.spacedBy(6.dp)
+          horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
+          OutlinedButton(
+            onClick = { viewModel.clearBillingCart() },
+            shape = RoundedCornerShape(14.dp),
+            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
+            colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(contentColor = StatusRed),
+            modifier = Modifier.testTag("btn_header_clear_bill")
+          ) {
+            Icon(Icons.Default.Delete, contentDescription = null, tint = StatusRed, modifier = Modifier.size(12.dp))
+            Spacer(modifier = Modifier.width(2.dp))
+            Text("Clear", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+          }
+
           OutlinedButton(
             onClick = { viewModel.navigateTo(Screen.CUSTOMER_HISTORY) },
             shape = RoundedCornerShape(14.dp),
-            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
             modifier = Modifier.testTag("btn_header_customer_history")
           ) {
-            Icon(Icons.Default.History, contentDescription = null, tint = RoyalNavy, modifier = Modifier.size(13.dp))
-            Spacer(modifier = Modifier.width(4.dp))
-            Text("History", fontSize = 11.sp, color = RoyalNavy, fontWeight = FontWeight.Bold)
+            Icon(Icons.Default.History, contentDescription = null, tint = RoyalNavy, modifier = Modifier.size(12.dp))
+            Spacer(modifier = Modifier.width(2.dp))
+            Text("History", fontSize = 10.sp, color = RoyalNavy, fontWeight = FontWeight.Bold)
           }
 
           OutlinedButton(
             onClick = { viewModel.navigateTo(Screen.AUTOMATED_TAX_CALC) },
             shape = RoundedCornerShape(14.dp),
-            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp),
             modifier = Modifier.testTag("btn_header_tax_calc")
           ) {
-            Icon(Icons.Default.Calculate, contentDescription = null, tint = RoyalMagenta, modifier = Modifier.size(13.dp))
-            Spacer(modifier = Modifier.width(4.dp))
-            Text("GST Calc", fontSize = 11.sp, color = RoyalMagenta, fontWeight = FontWeight.Bold)
+            Icon(Icons.Default.Calculate, contentDescription = null, tint = RoyalMagenta, modifier = Modifier.size(12.dp))
+            Spacer(modifier = Modifier.width(2.dp))
+            Text("GST", fontSize = 10.sp, color = RoyalMagenta, fontWeight = FontWeight.Bold)
           }
         }
       }
@@ -525,7 +546,8 @@ fun AddSaleScreen(
               item = item,
               showCostPrice = showProfitDetails && userRole == com.example.viewmodel.UserRole.OWNER,
               onQtyChange = { newQty -> viewModel.updateCartItemQty(index, newQty) },
-              onRemove = { viewModel.removeCartItem(index) }
+              onRemove = { viewModel.removeCartItem(index) },
+              onTogglePaid = { viewModel.toggleBillItemPaidStatus(index) }
             )
           }
 
@@ -823,7 +845,8 @@ fun CartItemRow(
   item: BillItem,
   showCostPrice: Boolean = false,
   onQtyChange: (Int) -> Unit,
-  onRemove: () -> Unit
+  onRemove: () -> Unit,
+  onTogglePaid: () -> Unit
 ) {
   Card(
     shape = RoundedCornerShape(8.dp),
@@ -833,100 +856,99 @@ fun CartItemRow(
     ),
     modifier = Modifier.fillMaxWidth()
   ) {
-    Column(modifier = Modifier.padding(12.dp)) {
+    Column(modifier = Modifier.padding(8.dp)) {
       Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.Top
+        verticalAlignment = Alignment.CenterVertically
       ) {
         Column(modifier = Modifier.weight(1f)) {
           Text(
             text = item.medicineName,
-            fontSize = 14.sp,
+            fontSize = 13.sp,
             fontWeight = FontWeight.Bold,
             color = TextDark,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
           )
           Text(
-            text = "Batch: ${item.batchNumber} • Exp: ${item.expiryDate}",
-            fontSize = 11.sp,
+            text = "Batch: ${item.batchNumber} • Exp: ${item.expiryDate} • ₹${item.rate}/u",
+            fontSize = 10.5.sp,
             color = TextMuted
           )
         }
-        IconButton(onClick = onRemove, modifier = Modifier.size(24.dp)) {
-          Icon(Icons.Default.Delete, contentDescription = "Delete", tint = StatusRed, modifier = Modifier.size(16.dp))
+        IconButton(onClick = onRemove, modifier = Modifier.size(26.dp)) {
+          Icon(Icons.Default.Delete, contentDescription = "Delete", tint = StatusRed, modifier = Modifier.size(15.dp))
         }
       }
 
-      Spacer(modifier = Modifier.height(8.dp))
+      Spacer(modifier = Modifier.height(4.dp))
 
       Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
       ) {
+        // Compact Quantity Stepper
         Row(verticalAlignment = Alignment.CenterVertically) {
           Box(
             modifier = Modifier
-              .size(28.dp)
+              .size(24.dp)
               .clip(CircleShape)
               .background(GrayBackground)
               .border(1.dp, CardBorder, CircleShape)
               .clickable { onQtyChange(item.packQty - 1) },
             contentAlignment = Alignment.Center
           ) {
-            Icon(Icons.Default.Remove, contentDescription = "Decrease", tint = TextDark, modifier = Modifier.size(14.dp))
+            Icon(Icons.Default.Remove, contentDescription = "Decrease", tint = TextDark, modifier = Modifier.size(12.dp))
           }
 
-          Spacer(modifier = Modifier.width(10.dp))
+          Spacer(modifier = Modifier.width(6.dp))
           Text(
             text = "${item.packQty}",
-            fontSize = 14.sp,
+            fontSize = 13.sp,
             fontWeight = FontWeight.Bold,
             color = TextDark
           )
-          Spacer(modifier = Modifier.width(10.dp))
+          Spacer(modifier = Modifier.width(6.dp))
 
           Box(
             modifier = Modifier
-              .size(28.dp)
+              .size(24.dp)
               .clip(CircleShape)
               .background(RoyalMagentaLight)
               .clickable { onQtyChange(item.packQty + 1) },
             contentAlignment = Alignment.Center
           ) {
-            Icon(Icons.Default.Add, contentDescription = "Increase", tint = RoyalMagenta, modifier = Modifier.size(14.dp))
+            Icon(Icons.Default.Add, contentDescription = "Increase", tint = RoyalMagenta, modifier = Modifier.size(12.dp))
           }
         }
 
-        Column(horizontalAlignment = Alignment.End) {
-          if (showCostPrice) {
-            Text(
-              text = String.format(Locale.getDefault(), "Cost: ₹%.2f", item.purchaseRate),
-              fontSize = 10.sp,
-              color = TextMuted,
-              fontWeight = FontWeight.Medium
-            )
-            Text(
-              text = String.format(Locale.getDefault(), "Profit: ₹%.2f", (item.rate - item.purchaseRate) * item.packQty),
-              fontSize = 10.sp,
-              color = StatusGreen,
-              fontWeight = FontWeight.Bold
-            )
-          }
+        // Real-time Payable vs Paid Toggle Switch
+        Row(
+          verticalAlignment = Alignment.CenterVertically,
+          horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
           Text(
-            text = String.format(Locale.getDefault(), "₹%.2f", item.total),
-            fontSize = 14.sp,
+            text = if (item.isPaid) "Paid" else "Payable",
+            fontSize = 10.5.sp,
             fontWeight = FontWeight.Bold,
-            color = TextDark
+            color = if (item.isPaid) StatusGreen else Color(0xFFD97706)
           )
-          Text(
-            text = "@ ₹${item.rate}/pack",
-            fontSize = 10.sp,
-            color = TextMuted
+          Switch(
+            checked = item.isPaid,
+            onCheckedChange = { onTogglePaid() },
+            modifier = Modifier.scale(0.7f).testTag("switch_item_paid_${item.medicineName}")
           )
         }
+
+        // Total
+        Text(
+          text = String.format(Locale.getDefault(), "₹%.2f", item.total),
+          fontSize = 13.sp,
+          fontWeight = FontWeight.Bold,
+          color = RoyalNavy
+        )
       }
     }
   }

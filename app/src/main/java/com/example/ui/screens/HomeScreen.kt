@@ -83,6 +83,8 @@ import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -148,6 +150,7 @@ fun HomeScreen(
   val recentActivityLogs by viewModel.staffActivityLogs.collectAsState()
 
   val isDarkMode by viewModel.isDarkMode.collectAsState()
+  val isAudioAlertsEnabled by viewModel.isAudioAlertsEnabled.collectAsState()
   val userRole by viewModel.currentUserRole.collectAsState()
   val visualSyncState by viewModel.visualSyncState.collectAsState()
   var showCustomerUpiQrDialog by remember { mutableStateOf(false) }
@@ -434,6 +437,46 @@ fun HomeScreen(
                   Spacer(modifier = Modifier.width(4.dp))
                   Text("Reorder All", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
                 }
+              }
+
+              Spacer(modifier = Modifier.height(8.dp))
+
+              // Audio Alert Mute/Unmute Toggle Switch for current session
+              Row(
+                modifier = Modifier
+                  .fillMaxWidth()
+                  .background(
+                    if (isDarkMode) Color(0xFF2D1B22) else Color(0xFFFFECEC),
+                    shape = RoundedCornerShape(8.dp)
+                  )
+                  .padding(horizontal = 10.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+              ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                  Icon(
+                    imageVector = Icons.Default.NotificationsActive,
+                    contentDescription = null,
+                    tint = Color(0xFFDC2626),
+                    modifier = Modifier.size(15.dp)
+                  )
+                  Spacer(modifier = Modifier.width(6.dp))
+                  Text(
+                    text = "Audible Warning Sound (${if (isAudioAlertsEnabled) "On" else "Muted"})",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (isDarkMode) Color(0xFFFCA5A5) else Color(0xFF991B1B)
+                  )
+                }
+                Switch(
+                  checked = isAudioAlertsEnabled,
+                  onCheckedChange = { viewModel.toggleAudioAlerts(it) },
+                  colors = SwitchDefaults.colors(
+                    checkedThumbColor = Color.White,
+                    checkedTrackColor = Color(0xFFDC2626)
+                  ),
+                  modifier = Modifier.testTag("switch_widget_audio_alerts")
+                )
               }
 
               Spacer(modifier = Modifier.height(10.dp))

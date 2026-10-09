@@ -75,7 +75,8 @@ data class PurchaseOrder(
   val itemsJson: String = "", // serializable items
   val totalAmount: Double = 0.0,
   val receivedDate: String = "",
-  val supplierInvoiceNumber: String = ""
+  val supplierInvoiceNumber: String = "",
+  val paymentStatus: String = "UNPAID" // PAID, UNPAID, PARTIAL
 )
 
 @Entity(tableName = "udhar_transactions")

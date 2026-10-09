@@ -7,6 +7,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import com.example.data.model.BusinessProfile
+import com.example.data.model.CategoryReorderThreshold
 import com.example.data.model.Customer
 import com.example.data.model.Distributor
 import com.example.data.model.Doctor
@@ -251,4 +252,9 @@ interface PharmacyDao {
 
   @Query("SELECT COUNT(*) FROM sync_queue WHERE status = 'PENDING'")
   fun getPendingSyncCount(): Flow<Int>
+  @Insert(onConflict = OnConflictStrategy.REPLACE)
+  suspend fun insertCategoryThreshold(threshold: CategoryReorderThreshold)
+
+  @Query("SELECT * FROM category_reorder_thresholds")
+  fun getAllCategoryThresholds(): Flow<List<CategoryReorderThreshold>>
 }

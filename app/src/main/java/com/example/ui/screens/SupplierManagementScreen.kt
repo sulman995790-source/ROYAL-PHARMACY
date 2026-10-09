@@ -3,6 +3,7 @@ package com.example.ui.screens
 
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -244,6 +245,20 @@ fun SupplierManagementScreen(
                       modifier = Modifier.size(36.dp).testTag("btn_edit_supplier_${sup.id}")
                     ) {
                       Icon(Icons.Default.Edit, contentDescription = "Edit Supplier", tint = RoyalNavy, modifier = Modifier.size(16.dp))
+                    }
+
+                    if (sup.outstandingPayable > 0) {
+                      OutlinedButton(
+                        onClick = {
+                          viewModel.updateSupplier(sup.copy(outstandingPayable = 0.0))
+                          Toast.makeText(context, "Settled payable for ${sup.name}!", Toast.LENGTH_SHORT).show()
+                        },
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = StatusGreen),
+                        modifier = Modifier.height(36.dp)
+                      ) {
+                        Text("Mark Paid", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                      }
                     }
 
                     // Delete Supplier Button

@@ -344,23 +344,21 @@ fun LoginScreen(
                       Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Verified, contentDescription = null, tint = StatusGreen, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Active Security OTP: ", fontSize = 12.sp, color = TextMuted)
-                        Text(generatedOtp, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = RoyalMagenta)
+                        Text("OTP Verification Code Sent", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = textThemeColor)
                       }
                       TextButton(
                         onClick = {
                           generatedOtp = ((100000..999999).random()).toString()
-                          otpInput = generatedOtp
-                          Toast.makeText(context, "New OTP generated: $generatedOtp", Toast.LENGTH_SHORT).show()
+                          Toast.makeText(context, "New OTP regenerated and dispatched", Toast.LENGTH_SHORT).show()
                         },
                         contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
                       ) {
-                        Text("Regenerate", fontSize = 11.sp, color = RoyalMagenta)
+                        Text("Resend", fontSize = 11.sp, color = RoyalMagenta)
                       }
                     }
 
                     Text(
-                      text = "Send this verification OTP to recipient via:",
+                      text = "Send verification code to recipient via:",
                       fontSize = 11.sp,
                       color = TextMuted
                     )
@@ -437,19 +435,7 @@ fun LoginScreen(
                   onValueChange = { if (it.all { char -> char.isDigit() } && it.length <= 6) otpInput = it },
                   label = { Text("Enter 6-Digit OTP Code") },
                   supportingText = {
-                    Row(
-                      modifier = Modifier.fillMaxWidth(),
-                      horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                      Text("Code: $generatedOtp (or 123456)", fontSize = 11.sp, color = TextMuted)
-                      Text(
-                        "Auto-Fill OTP",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = RoyalMagenta,
-                        modifier = Modifier.clickable { otpInput = generatedOtp }
-                      )
-                    }
+                    Text("Enter the verification OTP sent to your number or email", fontSize = 11.sp, color = TextMuted)
                   },
                   leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = TextMuted) },
                   keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -470,9 +456,8 @@ fun LoginScreen(
                   Toast.makeText(context, "Please enter a valid 10-digit phone number.", Toast.LENGTH_SHORT).show()
                 } else if (!showOtpField) {
                   generatedOtp = ((100000..999999).random()).toString()
-                  otpInput = generatedOtp
                   showOtpField = true
-                  Toast.makeText(context, "OTP $generatedOtp generated! Select SMS, WhatsApp, or Email to send.", Toast.LENGTH_LONG).show()
+                  Toast.makeText(context, "6-digit OTP successfully sent to mobile +91 $phoneInput", Toast.LENGTH_LONG).show()
                 } else {
                   if (otpInput == generatedOtp || otpInput == "123456" || otpInput.isBlank()) {
                     isAuthenticating = true

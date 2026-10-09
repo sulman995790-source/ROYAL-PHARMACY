@@ -47,7 +47,17 @@ object MedicineOcrParser {
     "Lupin Ltd" to listOf("lupin"),
     "Sanofi India" to listOf("sanofi"),
     "Aristo Pharmaceuticals" to listOf("aristo"),
-    "Hindustan Unilever Ltd" to listOf("hindustan unilever", "hul")
+    "Hindustan Unilever Ltd" to listOf("hindustan unilever", "hul"),
+    "Intas Pharmaceuticals" to listOf("intas"),
+    "Glenmark Pharmaceuticals" to listOf("glenmark"),
+    "Zydus Cadila" to listOf("zydus", "cadila"),
+    "Eris Lifesciences" to listOf("eris"),
+    "USV Private Limited" to listOf("usv"),
+    "Biocon" to listOf("biocon"),
+    "Emcure Pharmaceuticals" to listOf("emcure"),
+    "Ajanta Pharma" to listOf("ajanta"),
+    "Macleods Pharmaceuticals" to listOf("macleods"),
+    "Hetero Healthcare" to listOf("hetero")
   )
 
   private val KNOWN_MEDICINE_PATTERNS = listOf(
@@ -103,11 +113,18 @@ object MedicineOcrParser {
     val expRegex = Regex("""(?:EXP(?:\s*DATE)?\.?|Expiry(?:\s*Date)?\.?|Use Before|EXPIRY)\s*[:\-]?\s*([0-9]{1,2}[/\-.][0-9]{2,4}|[A-Za-z]{3}[-/\s]*[0-9]{2,4})""", RegexOption.IGNORE_CASE)
     val expMatch = expRegex.find(clean)
     if (expMatch != null) {
-      detectedExpiry = normalizeExpiry(expMatch.groupValues[1])
-    } else {
-      val looseExp = Regex("""\b(0[1-9]|1[0-2])[/-](2[5-9]|202[5-9])\b""").find(clean)
+      val candidate = normalizeExpiry(expMatch.groupValues[1])
+      if (isValidExpiryFormat(candidate)) {
+        detectedExpiry = candidate
+      }
+    }
+    if (detectedExpiry.isBlank()) {
+      val looseExp = Regex("""\b(0[1-9]|1[0-2])[/-](2[5-9]|20[2-3][0-9])\b""").find(clean)
       if (looseExp != null) {
-        detectedExpiry = looseExp.value
+        val candidateLoose = normalizeExpiry(looseExp.value)
+        if (isValidExpiryFormat(candidateLoose)) {
+          detectedExpiry = candidateLoose
+        }
       }
     }
 
@@ -134,6 +151,24 @@ object MedicineOcrParser {
       }
     }
 
+    if (detectedMfgCompany.isBlank()) {
+      val mfgLineRegex = Regex("""(?:Mfd\.?\s*By|Mfg\.?\s*By|Manufactured\s*By|Marketed\s*By|Mfr\.?|Mfd\.?\s*In\s*India\s*By|Marketed\s*&\s*Distributed\s*By|Distributed\s*By|Mfg\.?\s*Lic\.?No\.?|Manufactured\s*For)\s*[:\-]?\s*([A-Za-z0-9\s\.&,\(\)]{3,45})""", RegexOption.IGNORE_CASE)
+      val mfgMatch = mfgLineRegex.find(clean)
+      if (mfgMatch != null) {
+        detectedMfgCompany = mfgMatch.groupValues[1].trim()
+      }
+    }
+
+    if (detectedMfgCompany.isBlank()) {
+      val lineWithMfg = lines.firstOrNull { l ->
+        val lc = l.lowercase(Locale.getDefault())
+        lc.contains("pharma") || lc.contains("laboratories") || lc.contains("labs") || lc.contains("healthcare") || lc.contains("biotech") || lc.contains("ltd") || lc.contains("pvt")
+      }
+      if (lineWithMfg != null) {
+        detectedMfgCompany = lineWithMfg.trim()
+      }
+    }
+
     // 6. Detect Medicine Name & Salt from Known Patterns or Inventory
     for ((medName, salt) in KNOWN_MEDICINE_PATTERNS) {
       if (lowerText.contains(medName.lowercase(Locale.getDefault()))) {
@@ -144,16 +179,29 @@ object MedicineOcrParser {
     }
 
     // If not matched, try matching against current Room Inventory
+    var matchedInventoryItem: MedicineItem? = null
     if (detectedName.isBlank()) {
       for (med in inventory) {
         if (lowerText.contains(med.name.lowercase(Locale.getDefault()))) {
           detectedName = med.name
           detectedSalt = med.composition.ifBlank { med.saltMolecule }
           detectedCategory = med.category
-          if (detectedMfgCompany.isBlank()) detectedMfgCompany = med.manufacturer
-          if (detectedMrp <= 0.0) detectedMrp = med.mrp
+          matchedInventoryItem = med
           break
         }
+      }
+    } else {
+      matchedInventoryItem = inventory.firstOrNull { it.name.equals(detectedName, ignoreCase = true) }
+    }
+
+    if (matchedInventoryItem != null) {
+      if (detectedMfgCompany.isBlank()) detectedMfgCompany = matchedInventoryItem.manufacturer
+      if (detectedMrp <= 0.0) detectedMrp = matchedInventoryItem.mrp
+      if (detectedBatch.isBlank() || detectedBatch.startsWith("RX")) {
+        detectedBatch = matchedInventoryItem.batchNumber
+      }
+      if (detectedExpiry.isBlank() || !isValidExpiryFormat(detectedExpiry)) {
+        detectedExpiry = matchedInventoryItem.expiryDate
       }
     }
 
@@ -394,6 +442,14 @@ object MedicineOcrParser {
     return if (clean.length == 5 && clean.contains("/")) clean
     else if (clean.length == 7 && clean.contains("/")) clean.substring(clean.length - 5)
     else clean
+  }
+
+  private fun isValidExpiryFormat(exp: String): Boolean {
+    if (exp.length != 5 || !exp.contains("/")) return false
+    val parts = exp.split("/")
+    val mm = parts.getOrNull(0)?.toIntOrNull() ?: return false
+    val yy = parts.getOrNull(1)?.toIntOrNull() ?: return false
+    return mm in 1..12 && yy in 25..35
   }
 
   private fun calculateConfidence(name: String, batch: String, expiry: String, mrp: Double): Int {

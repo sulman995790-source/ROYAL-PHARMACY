@@ -11,6 +11,7 @@ import com.example.data.db.PharmacyDatabase
 import com.example.data.model.BillItem
 import com.example.data.model.BrandMedicine
 import com.example.data.model.BusinessProfile
+import com.example.data.model.CategoryReorderThreshold
 import com.example.data.model.CartItem
 import com.example.data.model.Customer
 import com.example.data.model.Distributor
@@ -199,7 +200,7 @@ data class AnalyticsData(
 )
 
 class PharmacyViewModel(application: Application) : AndroidViewModel(application) {
-  private val repository: PharmacyRepository
+  private lateinit var repository: PharmacyRepository
   private val geminiService = GeminiPharmacistService()
 
   val currentScreen = MutableStateFlow(Screen.HOME)
@@ -227,6 +228,13 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
 
   // Smart Generic & Substitute Finder
   val substituteQuery = MutableStateFlow("Paracetamol 650mg")
+
+  // Category Reorder Thresholds
+  lateinit var allCategoryThresholds: StateFlow<List<CategoryReorderThreshold>>
+
+  fun updateCategoryThreshold(category: String, threshold: Int) {
+    viewModelScope.launch { repository.updateCategoryThreshold(CategoryReorderThreshold(category, threshold)) }
+  }
 
   // Udhar Khata
   val selectedKhataCustomer = MutableStateFlow<Customer?>(null)
@@ -923,6 +931,7 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
 
     val db = PharmacyDatabase.getDatabase(application, viewModelScope)
     repository = PharmacyRepository(db.pharmacyDao())
+    allCategoryThresholds = repository.allCategoryThresholds.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     syncManager = FirebaseSyncManager(application, db.pharmacyDao(), networkMonitor, viewModelScope)
     StockAlertNotificationService.initNotificationChannel(application)
     viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
@@ -1005,6 +1014,22 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
 
   val criticalLowStockMedicines: StateFlow<List<MedicineItem>> = repository.criticalLowStockMedicines
     .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+  // Audible Low Stock Alerts State & Controls
+  val isAudioAlertsEnabled = com.example.service.AudioAlertService.isAudioAlertsEnabled
+  val alertSoundStyle = com.example.service.AudioAlertService.alertSoundStyle
+
+  fun toggleAudioAlerts(enabled: Boolean) {
+    com.example.service.AudioAlertService.toggleAudioAlerts(enabled)
+  }
+
+  fun setAlertSoundStyle(style: String) {
+    com.example.service.AudioAlertService.setSoundStyle(style)
+  }
+
+  fun playLowStockAlert(context: android.content.Context) {
+    com.example.service.AudioAlertService.playLowStockAlert(context)
+  }
 
   val allEssentialMedicines: StateFlow<List<MedicineItem>> = repository.allEssentialMedicines
     .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -1250,6 +1275,15 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
 
   fun clearBillingCart() {
     billingCartItems.value = emptyList()
+  }
+
+  fun toggleBillItemPaidStatus(index: Int) {
+    val current = billingCartItems.value.toMutableList()
+    if (index in current.indices) {
+      val item = current[index]
+      current[index] = item.copy(isPaid = !item.isPaid)
+      billingCartItems.value = current
+    }
   }
 
   fun completeSale(paymentMode: String = "Cash"): SaleInvoice? {
@@ -1901,6 +1935,14 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
     viewModelScope.launch {
       repository.updatePurchaseOrder(po)
       scanFeedbackMessage.value = "Purchase order ${po.poNumber} updated"
+    }
+  }
+
+  fun updatePurchaseOrderPaymentStatus(po: PurchaseOrder, paymentStatus: String) {
+    viewModelScope.launch {
+      val updated = po.copy(paymentStatus = paymentStatus)
+      repository.updatePurchaseOrder(updated)
+      scanFeedbackMessage.value = "PO ${po.poNumber} payment status set to $paymentStatus"
     }
   }
 

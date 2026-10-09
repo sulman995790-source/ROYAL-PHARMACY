@@ -421,6 +421,29 @@ fun QuickScanScreen(
             }
           }
           .addOnCompleteListener { imageProxy.close() }
+      } else if (scanMode == 1) {
+        // Quick Scan / Strip OCR Auto-Capture when medicine or product is properly visible
+        textRecognizer.process(image)
+          .addOnSuccessListener { visionText ->
+            val text = visionText.text
+            val lower = text.lowercase(Locale.getDefault())
+            val hasValidContent = text.length > 10 && (
+              allMedicines.any { med -> lower.contains(med.name.lowercase(Locale.getDefault())) } ||
+              lower.contains("exp") || lower.contains("batch") || lower.contains("mrp") || lower.contains("mg")
+            )
+            if (hasValidContent && !isAnalyzingFrame) {
+              isAnalyzingFrame = true
+              triggerVibration()
+              val bmp = previewViewRef?.bitmap
+              if (bmp != null) {
+                addPhotoToQueue(bmp, "Auto-Captured Package")
+                processAllCapturedPhotos()
+              } else {
+                isAnalyzingFrame = false
+              }
+            }
+          }
+          .addOnCompleteListener { imageProxy.close() }
       } else {
         imageProxy.close()
       }

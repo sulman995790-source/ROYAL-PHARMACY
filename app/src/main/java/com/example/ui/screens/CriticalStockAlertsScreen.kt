@@ -96,6 +96,14 @@ fun CriticalStockAlertsScreen(
   val globalThreshold by viewModel.globalSafetyThreshold.collectAsState()
   val notificationLogs by viewModel.alertNotificationLog.collectAsState()
   val lastAlertTime by viewModel.lastAlertDispatchedTime.collectAsState()
+  val isAudioAlertsEnabled by viewModel.isAudioAlertsEnabled.collectAsState()
+  val alertSoundStyle by viewModel.alertSoundStyle.collectAsState()
+
+  androidx.compose.runtime.LaunchedEffect(criticalMedicines) {
+    if (criticalMedicines.isNotEmpty() && isAudioAlertsEnabled) {
+      viewModel.playLowStockAlert(context)
+    }
+  }
 
   // Android 13+ Notification permission state
   var hasNotificationPermission by remember {
@@ -469,6 +477,83 @@ fun CriticalStockAlertsScreen(
         }
 
         "Threshold Settings" -> {
+          // Audible Low Stock Alert Settings Card
+          item {
+            Card(
+              shape = RoundedCornerShape(12.dp),
+              colors = CardDefaults.cardColors(containerColor = Color.White),
+              border = CardDefaults.outlinedCardBorder().copy(
+                brush = androidx.compose.ui.graphics.SolidColor(CardBorder)
+              ),
+              modifier = Modifier.fillMaxWidth()
+            ) {
+              Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                  modifier = Modifier.fillMaxWidth(),
+                  horizontalArrangement = Arrangement.SpaceBetween,
+                  verticalAlignment = Alignment.CenterVertically
+                ) {
+                  Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                    Icon(Icons.Default.NotificationsActive, contentDescription = null, tint = RoyalMagenta, modifier = Modifier.size(22.dp))
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column {
+                      Text(
+                        text = "Audible Low-Stock Alerts",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextDark
+                      )
+                      Text(
+                        text = "Play sound alert for Billing Counter & Replenishment Dashboard on critical stock-outs",
+                        fontSize = 11.5.sp,
+                        color = TextMuted
+                      )
+                    }
+                  }
+                  Switch(
+                    checked = isAudioAlertsEnabled,
+                    onCheckedChange = { viewModel.toggleAudioAlerts(it) },
+                    colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = RoyalMagenta),
+                    modifier = Modifier.testTag("switch_audio_alerts")
+                  )
+                }
+
+                if (isAudioAlertsEnabled) {
+                  Spacer(modifier = Modifier.height(14.dp))
+                  Text("Alert Sound Style", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = TextDark)
+                  Spacer(modifier = Modifier.height(8.dp))
+                  Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                  ) {
+                    listOf("Beep", "Chime", "Alarm", "Siren").forEach { style ->
+                      FilterChip(
+                        selected = alertSoundStyle == style,
+                        onClick = {
+                          viewModel.setAlertSoundStyle(style)
+                          viewModel.playLowStockAlert(context)
+                        },
+                        label = { Text(style, fontSize = 11.sp) },
+                        colors = FilterChipDefaults.filterChipColors(
+                          selectedContainerColor = RoyalMagentaLight,
+                          selectedLabelColor = RoyalMagenta
+                        ),
+                        modifier = Modifier.testTag("chip_sound_$style")
+                      )
+                    }
+                  }
+                  Spacer(modifier = Modifier.height(10.dp))
+                  OutlinedButton(
+                    onClick = { viewModel.playLowStockAlert(context) },
+                    modifier = Modifier.fillMaxWidth().testTag("btn_test_sound")
+                  ) {
+                    Text("Test Current Alert Sound", fontSize = 12.sp, color = RoyalMagenta, fontWeight = FontWeight.Bold)
+                  }
+                }
+              }
+            }
+          }
+
           // Global Threshold Config Card
           item {
             Card(

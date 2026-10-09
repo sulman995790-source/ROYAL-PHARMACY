@@ -98,6 +98,7 @@ fun PurchasesScreen(
   var poToDelete by remember { mutableStateOf<PurchaseOrder?>(null) }
   var invoiceToDelete by remember { mutableStateOf<PurchaseInvoice?>(null) }
   var invoiceToEdit by remember { mutableStateOf<PurchaseInvoice?>(null) }
+  var distributorToEditBalance by remember { mutableStateOf<Distributor?>(null) }
 
   val filteredDistributors = distributors.filter {
     it.name.contains(searchQuery, ignoreCase = true) || it.gstin.contains(searchQuery, ignoreCase = true)
@@ -298,7 +299,7 @@ fun PurchasesScreen(
               verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
               items(filteredDistributors, key = { it.id }) { dist ->
-                DistributorCard(dist)
+                DistributorCard(dist, onEditBalance = { distributorToEditBalance = dist })
               }
               item { Spacer(modifier = Modifier.height(80.dp)) }
             }
@@ -580,11 +581,51 @@ fun PurchasesScreen(
         }
       )
     }
+
+    // Edit Distributor Balance Dialog
+    distributorToEditBalance?.let { dist ->
+      var newBalanceStr by remember { mutableStateOf(dist.balancePayable.toString()) }
+      AlertDialog(
+        onDismissRequest = { distributorToEditBalance = null },
+        title = { Text("Edit Balance Payable for ${dist.name}") },
+        text = {
+          Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Current Balance: ₹${dist.balancePayable}", fontSize = 12.sp, color = TextMuted)
+            OutlinedTextField(
+              value = newBalanceStr,
+              onValueChange = { newBalanceStr = it },
+              label = { Text("New Balance Amount (₹)") },
+              singleLine = true,
+              modifier = Modifier.fillMaxWidth().testTag("input_edit_dist_balance")
+            )
+          }
+        },
+        confirmButton = {
+          Button(
+            onClick = {
+              val amt = newBalanceStr.toDoubleOrNull() ?: dist.balancePayable
+              viewModel.updateDistributor(dist.copy(balancePayable = amt))
+              distributorToEditBalance = null
+              Toast.makeText(context, "Balance updated successfully for ${dist.name}", Toast.LENGTH_SHORT).show()
+            },
+            colors = ButtonDefaults.buttonColors(containerColor = RoyalNavy),
+            modifier = Modifier.testTag("btn_confirm_edit_dist_balance")
+          ) {
+            Text("Save Balance", color = Color.White)
+          }
+        },
+        dismissButton = {
+          TextButton(onClick = { distributorToEditBalance = null }) {
+            Text("Cancel", color = TextMuted)
+          }
+        }
+      )
+    }
   }
 }
 
 @Composable
-fun DistributorCard(dist: Distributor) {
+fun DistributorCard(dist: Distributor, onEditBalance: (Distributor) -> Unit) {
   val initials = dist.name.split(" ")
     .mapNotNull { it.firstOrNull()?.toString() }
     .take(2)
@@ -625,14 +666,23 @@ fun DistributorCard(dist: Distributor) {
           }
         }
 
-        Column(horizontalAlignment = Alignment.End) {
-          Text(text = "Balance", fontSize = 10.sp, color = TextMuted)
-          Text(
-            text = String.format(Locale.getDefault(), "₹%.2f", dist.balancePayable),
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Bold,
-            color = if (dist.balancePayable > 0) StatusRed else StatusGreen
-          )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+          Column(horizontalAlignment = Alignment.End) {
+            Text(text = "Balance", fontSize = 10.sp, color = TextMuted)
+            Text(
+              text = String.format(Locale.getDefault(), "₹%.2f", dist.balancePayable),
+              fontSize = 14.sp,
+              fontWeight = FontWeight.Bold,
+              color = if (dist.balancePayable > 0) StatusRed else StatusGreen
+            )
+          }
+          Spacer(modifier = Modifier.width(8.dp))
+          IconButton(
+            onClick = { onEditBalance(dist) },
+            modifier = Modifier.size(32.dp).testTag("btn_edit_dist_balance_${dist.id}")
+          ) {
+            Icon(Icons.Default.Edit, contentDescription = "Edit Balance", tint = RoyalNavy, modifier = Modifier.size(16.dp))
+          }
         }
       }
 

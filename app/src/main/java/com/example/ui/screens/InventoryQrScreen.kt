@@ -1,8 +1,16 @@
 package com.example.ui.screens
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.Preview
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -60,6 +68,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -77,6 +86,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
 import com.example.data.model.MedicineItem
 import com.example.ui.theme.CardBorder
 import com.example.ui.theme.GrayBackground
@@ -102,12 +113,30 @@ fun InventoryQrScreen(
   modifier: Modifier = Modifier
 ) {
   val context = LocalContext.current
+  val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
   val medicines by viewModel.allMedicines.collectAsState()
   val profile by viewModel.businessProfile.collectAsState()
 
   var activeTab by remember { mutableStateOf("SCAN") } // "SCAN" or "GENERATE"
   var scannedMedicine by remember { mutableStateOf<MedicineItem?>(medicines.firstOrNull()) }
   var selectedMedicineForQr by remember { mutableStateOf<MedicineItem?>(medicines.firstOrNull()) }
+
+  var hasCameraPermission by remember {
+    mutableStateOf(
+      ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+    )
+  }
+  val cameraPermissionLauncher = rememberLauncherForActivityResult(
+    contract = ActivityResultContracts.RequestPermission()
+  ) { granted ->
+    hasCameraPermission = granted
+  }
+
+  LaunchedEffect(Unit) {
+    if (!hasCameraPermission) {
+      cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+    }
+  }
 
   // Quick Edit Rack Dialog State
   var showEditRackDialog by remember { mutableStateOf(false) }
@@ -220,17 +249,52 @@ fun InventoryQrScreen(
         contentPadding = PaddingValues(vertical = 14.dp)
       ) {
         if (activeTab == "SCAN") {
-          // Live Camera / Scanner Viewport Simulator
+          // Live Camera / Scanner Viewport
           item {
             Card(
               shape = RoundedCornerShape(16.dp),
               colors = CardDefaults.cardColors(containerColor = Color.Black),
               modifier = Modifier
                 .fillMaxWidth()
-                .height(200.dp)
+                .height(220.dp)
             ) {
               Box(modifier = Modifier.fillMaxSize()) {
-                // Scanner laser and corner guides
+                if (hasCameraPermission) {
+                  AndroidView(
+                    factory = { ctx ->
+                      val previewView = PreviewView(ctx)
+                      val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
+                      cameraProviderFuture.addListener({
+                        try {
+                          val cameraProvider = cameraProviderFuture.get()
+                          val preview = Preview.Builder().build().also {
+                            it.surfaceProvider = previewView.surfaceProvider
+                          }
+                          val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+                          cameraProvider.unbindAll()
+                          cameraProvider.bindToLifecycle(lifecycleOwner, cameraSelector, preview)
+                        } catch (_: Exception) {}
+                      }, ContextCompat.getMainExecutor(ctx))
+                      previewView
+                    },
+                    modifier = Modifier.fillMaxSize()
+                  )
+                } else {
+                  Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(16.dp)) {
+                      Text("Camera permission required for live QR scanning", color = Color.White, fontSize = 12.sp, textAlign = TextAlign.Center)
+                      Spacer(modifier = Modifier.height(8.dp))
+                      Button(
+                        onClick = { cameraPermissionLauncher.launch(Manifest.permission.CAMERA) },
+                        colors = ButtonDefaults.buttonColors(containerColor = RoyalMagenta)
+                      ) {
+                        Text("Grant Camera Permission", color = Color.White, fontSize = 12.sp)
+                      }
+                    }
+                  }
+                }
+
+                // Scanner laser and corner guides overlay
                 Column(
                   modifier = Modifier
                     .fillMaxSize()
@@ -254,7 +318,7 @@ fun InventoryQrScreen(
                   Spacer(modifier = Modifier.height(10.dp))
                   Text(
                     "Point Camera at Medicine QR Code or Barcode",
-                    color = Color.White.copy(alpha = 0.8f),
+                    color = Color.White.copy(alpha = 0.9f),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Medium
                   )

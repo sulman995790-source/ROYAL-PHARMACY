@@ -99,6 +99,13 @@ fun InventoryDashboardScreen(
   val batchItems by viewModel.batchExpiryItems.collectAsState()
   val suppliers by viewModel.allSuppliers.collectAsState()
   val profile by viewModel.businessProfile.collectAsState()
+  val isAudioAlertsEnabled by viewModel.isAudioAlertsEnabled.collectAsState()
+
+  androidx.compose.runtime.LaunchedEffect(criticalMedicines) {
+    if (criticalMedicines.isNotEmpty() && isAudioAlertsEnabled) {
+      viewModel.playLowStockAlert(context)
+    }
+  }
 
   var selectedFilterTab by remember { mutableIntStateOf(0) }
 

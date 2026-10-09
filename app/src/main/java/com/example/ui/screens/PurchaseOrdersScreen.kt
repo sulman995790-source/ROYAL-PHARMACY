@@ -370,19 +370,36 @@ fun PurchaseOrdersScreen(
                     )
                   }
 
-                  // Status Badge
-                  Box(
-                    modifier = Modifier
-                      .clip(RoundedCornerShape(6.dp))
-                      .background(if (isReceived) Color(0xFFDCFCE7) else Color(0xFFFEF3C7))
-                      .padding(horizontal = 8.dp, vertical = 3.dp)
-                  ) {
-                    Text(
-                      text = if (isReceived) "COMPLETED (GRN)" else "PENDING DELIVERY",
-                      fontSize = 9.5.sp,
-                      fontWeight = FontWeight.Bold,
-                      color = if (isReceived) StatusGreen else Color(0xFFB45309)
-                    )
+                  // Status Badge and Payment Badge
+                  Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    val isPaid = po.paymentStatus.equals("PAID", ignoreCase = true)
+                    Box(
+                      modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(if (isPaid) Color(0xFFDCFCE7) else Color(0xFFFEE2E2))
+                        .padding(horizontal = 6.dp, vertical = 3.dp)
+                    ) {
+                      Text(
+                        text = if (isPaid) "PAID" else "UNPAID",
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isPaid) StatusGreen else StatusRed
+                      )
+                    }
+
+                    Box(
+                      modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(if (isReceived) Color(0xFFDCFCE7) else Color(0xFFFEF3C7))
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                    ) {
+                      Text(
+                        text = if (isReceived) "COMPLETED" else "PENDING",
+                        fontSize = 9.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isReceived) StatusGreen else Color(0xFFB45309)
+                      )
+                    }
                   }
                 }
 
@@ -492,7 +509,28 @@ fun PurchaseOrdersScreen(
                   ) {
                     Icon(Icons.Default.Phone, contentDescription = null, tint = Color(0xFF16A34A), modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("WhatsApp PO", fontSize = 11.sp, color = Color(0xFF16A34A), fontWeight = FontWeight.Bold)
+                    Text("WhatsApp", fontSize = 11.sp, color = Color(0xFF16A34A), fontWeight = FontWeight.Bold)
+                  }
+
+                  // Mark Paid / Unpaid Button
+                  val isPaid = po.paymentStatus.equals("PAID", ignoreCase = true)
+                  OutlinedButton(
+                    onClick = {
+                      val newStatus = if (isPaid) "UNPAID" else "PAID"
+                      viewModel.updatePurchaseOrderPaymentStatus(po, newStatus)
+                      Toast.makeText(context, "PO marked as $newStatus", Toast.LENGTH_SHORT).show()
+                    },
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                      contentColor = if (isPaid) StatusRed else StatusGreen
+                    ),
+                    modifier = Modifier.height(38.dp)
+                  ) {
+                    Text(
+                      text = if (isPaid) "Unpaid" else "Mark Paid",
+                      fontSize = 10.sp,
+                      fontWeight = FontWeight.Bold
+                    )
                   }
 
                   if (!isReceived) {

@@ -119,6 +119,7 @@ import com.example.ui.theme.RoyalMagenta
 import com.example.ui.theme.RoyalMagentaLight
 import com.example.ui.theme.RoyalNavy
 import com.example.ui.theme.StatusGreen
+import com.example.ui.theme.StatusRed
 import com.example.ui.theme.TextDark
 import com.example.ui.theme.TextLight
 import com.example.ui.theme.TextMuted
@@ -137,9 +138,13 @@ fun BusinessProfileScreen(
   val profile by viewModel.businessProfile.collectAsState()
 
   var selectedTabIndex by remember { mutableIntStateOf(0) }
-  val tabs = listOf("BASIC", "LICENSE", "TAXATION", "LOCATION", "TIMINGS", "STAFF & PERMISSIONS", "DATA IMPORT")
+  val tabs = listOf("BASIC", "LICENSE", "TAXATION", "LOCATION", "TIMINGS", "STAFF & PERMISSIONS", "DATA IMPORT", "THRESHOLDS")
 
   val staffMembers by viewModel.staffMembers.collectAsState()
+  val allMedicines by viewModel.allMedicines.collectAsState()
+  val thresholds by viewModel.allCategoryThresholds.collectAsState()
+  val categories = remember(allMedicines) { allMedicines.map { it.category }.distinct().sorted() }
+  
   val currentUserRole by viewModel.currentUserRole.collectAsState()
   val currentUserEmail by viewModel.currentUserEmail.collectAsState()
   val currentUserPhone by viewModel.currentUserPhone.collectAsState()
@@ -1191,6 +1196,28 @@ fun StaffProfileItemCard(
       }
     }
   }
+}
+
+@Composable
+fun ThresholdRow(category: String, currentThreshold: Int, onUpdate: (Int) -> Unit) {
+    Card(
+        shape = RoundedCornerShape(8.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(category, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextDark)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = { if (currentThreshold > 0) onUpdate(currentThreshold - 1) }) {
+                    Icon(Icons.Default.Delete, contentDescription = "Decrease", tint = StatusRed)
+                }
+                Text("$currentThreshold units", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = RoyalMagenta)
+                IconButton(onClick = { onUpdate(currentThreshold + 1) }) {
+                    Icon(Icons.Default.Add, contentDescription = "Increase", tint = StatusGreen)
+                }
+            }
+        }
+    }
 }
 
 @Composable

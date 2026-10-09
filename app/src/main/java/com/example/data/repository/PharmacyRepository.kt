@@ -2,6 +2,7 @@ package com.example.data.repository
 
 import com.example.data.db.PharmacyDao
 import com.example.data.model.BusinessProfile
+import com.example.data.model.CategoryReorderThreshold
 import com.example.data.model.Customer
 import com.example.data.model.Distributor
 import com.example.data.model.Doctor
@@ -423,4 +424,9 @@ class PharmacyRepository(private val dao: PharmacyDao) {
   suspend fun getDistributorByName(name: String): Distributor? = dao.getDistributorByName(name)
 
   suspend fun updateBusinessProfile(profile: BusinessProfile) = dao.insertBusinessProfile(profile)
+
+  // Category Reorder Thresholds
+  val allCategoryThresholds: Flow<List<CategoryReorderThreshold>> = dao.getAllCategoryThresholds()
+
+  suspend fun updateCategoryThreshold(threshold: CategoryReorderThreshold) = dao.insertCategoryThreshold(threshold)
 }

@@ -41,6 +41,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
@@ -57,6 +58,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -95,6 +97,8 @@ fun BatchExpiryDashboardScreen(
   val allBatchItems by viewModel.batchExpiryItems.collectAsState()
   val distributorCart by viewModel.distributorCart.collectAsState()
   val feedbackMessage by viewModel.scanFeedbackMessage.collectAsState()
+  
+  val selectedBatches = remember { mutableStateListOf<BatchExpiryItem>() }
 
   var selectedTab by remember { mutableIntStateOf(0) } // 0: All At-Risk, 1: Expired, 2: Critical (<30d), 3: Short Expiry (31-60d), 4: Upcoming (61-90d)
   var searchQuery by remember { mutableStateOf("") }
@@ -436,13 +440,21 @@ fun BatchExpiryDashboardScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
               ) {
-                Column(modifier = Modifier.weight(1f)) {
-                  Text(
-                    text = batchItem.medicine.name,
-                    fontSize = 13.5.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextDark
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                  Checkbox(
+                    checked = selectedBatches.contains(batchItem),
+                    onCheckedChange = { isChecked ->
+                      if (isChecked) selectedBatches.add(batchItem)
+                      else selectedBatches.remove(batchItem)
+                    }
                   )
+                  Column {
+                    Text(
+                      text = batchItem.medicine.name,
+                      fontSize = 13.5.sp,
+                      fontWeight = FontWeight.Bold,
+                      color = TextDark
+                    )
                   Text(
                     text = "${batchItem.medicine.manufacturer} • ${batchItem.rackLocation}",
                     fontSize = 11.sp,
