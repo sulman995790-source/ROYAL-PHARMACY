@@ -2512,9 +2512,6 @@
   </div><!-- end of #web-main-app-layout -->
 
   <!-- JS LOGIC CONTROLLER -->
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
   <script>
     // Universal HTML & JS Escaping Utilities
     function escapeHtml(str) {
@@ -2652,107 +2649,18 @@
       customReorderLevels: {}
     };
 
-    // Load state from LocalStorage if present
-    // Firebase Web Integration & Real-time Sync
-    const firebaseConfig = {
-      projectId: "gen-lang-client-0237361589",
-      appId: "1:844575165623:web:86156fda64cf18f738d132",
-      apiKey: "AIzaSyB8ww3Pqdn8Ntu6WArA20SmM3Ck-0VsMpc",
-      authDomain: "gen-lang-client-0237361589.firebaseapp.com",
-      storageBucket: "gen-lang-client-0237361589.firebasestorage.app",
-      messagingSenderId: "844575165623"
-    };
-
-    let fbDb;
+    // Cloud & Local Web Storage Integration
+    let fbDb = null;
     function initializeFirebaseWeb() {
-      if (typeof firebase === 'undefined') return;
-      if (!firebase.apps.length) {
-        firebase.initializeApp(firebaseConfig);
-      }
-      fbDb = firebase.firestore();
-      setupFirestoreListeners();
+      // Firebase removed for GitHub Pages & standalone static deployment
     }
 
     function setupFirestoreListeners() {
-      if (!fbDb) return;
-      fbDb.collection('pharmacy_inventory').onSnapshot(snapshot => {
-        snapshot.docChanges().forEach(change => {
-          const data = change.doc.data();
-          if (!data.name) return;
-          const reorderVal = data.minStockAlert !== undefined ? Number(data.minStockAlert) : 15;
-          if (change.type === 'added' || change.type === 'modified') {
-            state.customReorderLevels = state.customReorderLevels || {};
-            state.customReorderLevels[data.name] = reorderVal;
-            const index = state.drugDatabase.findIndex(d => d.name === data.name);
-            if (index !== -1) {
-              // Safe partial merge: preserve other fields already present on the client
-              const existing = state.drugDatabase[index];
-              if (data.minStockAlert !== undefined) {
-                existing.reorderLevel = Number(data.minStockAlert);
-                existing.minStock = Number(data.minStockAlert);
-              }
-              if (data.stockPacks !== undefined || data.stock !== undefined) {
-                existing.stock = data.stockPacks !== undefined ? Number(data.stockPacks) : Number(data.stock);
-              }
-              if (data.mrp !== undefined || data.price !== undefined) {
-                existing.price = data.mrp !== undefined ? Number(data.mrp) : Number(data.price);
-              }
-              if (data.purchasePrice !== undefined) {
-                existing.purchasePrice = Number(data.purchasePrice);
-              }
-              if (data.category !== undefined) {
-                existing.category = data.category;
-              }
-              if (data.genericName !== undefined || data.generic !== undefined) {
-                existing.generic = data.genericName || data.generic;
-              }
-              if (data.safetyCategory !== undefined || data.safety !== undefined) {
-                existing.safety = data.safetyCategory || data.safety;
-              }
-              if (data.indication !== undefined) {
-                existing.indication = data.indication;
-              }
-            } else {
-              // New medicine not in local list, create fully
-              const med = {
-                name: data.name,
-                generic: data.genericName || data.generic || '',
-                stock: data.stockPacks || data.stock || 0,
-                price: data.mrp || data.price || 0,
-                purchasePrice: data.purchasePrice || 0,
-                category: data.category || 'General',
-                safety: data.safetyCategory || data.safety || 'A',
-                indication: data.indication || '',
-                reorderLevel: reorderVal,
-                minStock: reorderVal
-              };
-              state.drugDatabase.push(med);
-            }
-          }
-        });
-        if (typeof renderLowStockWidget === 'function') renderLowStockWidget();
-        if (typeof loadMedicineDropdown === 'function') loadMedicineDropdown();
-      });
-
-      fbDb.collection('pharmacy_config').doc('business_settings').onSnapshot(doc => {
-        if (doc.exists) {
-          const data = doc.data();
-          if (data.secretPassword) state.secretPassword = data.secretPassword;
-          if (data.pin) state.pin = data.pin;
-          if (data.securityQuestion1) state.securityQuestion1 = data.securityQuestion1;
-          if (data.securityAnswer1) state.securityAnswer1 = data.securityAnswer1;
-          syncUiState();
-        }
-      });
+      // Offline-first LocalStorage & IndexedDB mode
     }
 
     function syncWebChangeToFirestore(collection, id, data) {
-      if (!fbDb) return;
-      fbDb.collection(collection).doc(id).set({
-        ...data,
-        _lastUpdatedBy: 'WEB_PORTAL',
-        _lastUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
-      }, { merge: true });
+      // Local web storage fallback
     }
 
     function changeSecretPasswordWeb() {
@@ -7210,30 +7118,8 @@
       try {
         const medicinesCount = state.drugDatabase.length;
 
-        // 1. Push to Firestore if initialized
-        if (typeof fbDb !== 'undefined' && fbDb) {
-          const batch = fbDb.batch();
-          const invCol = fbDb.collection('pharmacy_inventory');
-          
-          state.drugDatabase.slice(0, 100).forEach(med => {
-            const docId = 'med_' + med.name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
-            const docRef = invCol.doc(docId);
-            batch.set(docRef, {
-              name: med.name,
-              genericName: med.generic || '',
-              stockPacks: Number(med.stock) || 0,
-              mrp: Number(med.price) || 0,
-              purchasePrice: Number(med.purchasePrice) || 0,
-              category: med.category || 'General',
-              safetyCategory: med.safety || 'A',
-              indication: med.indication || '',
-              _lastUpdatedBy: 'WEB_PORTAL',
-              _lastSyncedAt: firebase.firestore.FieldValue.serverTimestamp()
-            }, { merge: true });
-          });
-
-          await batch.commit();
-        }
+        // 1. Local & Cloud Storage snapshot
+        // (Standalone GitHub Pages & local-first offline storage)
 
         // 2. Push snapshot backup to Google Drive state
         state.lastGoogleDriveSync = "Just Now (" + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ")";
@@ -7248,7 +7134,7 @@
 
         // 3. Log staff/system activity
         if (typeof logStaffActivityWeb === 'function') {
-          logStaffActivityWeb('INVENTORY_SYNC', `Pushed full inventory (${medicinesCount} medicines) to Firestore database & Google Drive`);
+          logStaffActivityWeb('INVENTORY_SYNC', `Pushed full inventory (${medicinesCount} medicines) to Local Storage & Google Drive snapshot`);
         }
 
         // 4. Trigger Toast Notification upon success

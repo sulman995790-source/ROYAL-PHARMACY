@@ -2186,7 +2186,7 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
   // --- Cloud Sync & Local-First Offline Controls ---
   fun triggerSyncNow() {
     syncManager.syncNow()
-    scanFeedbackMessage.value = "Synchronizing pending Room database changes to Firebase..."
+    scanFeedbackMessage.value = "Synchronizing pending Room database changes to cloud..."
   }
 
   fun toggleAutoSync(enabled: Boolean) {

@@ -670,7 +670,7 @@ fun VisualSyncStatusDialog(
         }
 
         Text(
-          text = "Real-time sync keeps your pharmacy data backed up to Google Drive & Firebase securely. You can trigger manual sync at any time.",
+          text = "Real-time sync keeps your pharmacy data backed up to Google Drive & Cloud storage securely. You can trigger manual sync at any time.",
           fontSize = 11.5.sp,
           color = TextMuted
         )

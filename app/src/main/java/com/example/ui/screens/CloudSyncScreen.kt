@@ -179,7 +179,7 @@ fun CloudSyncScreen(
           )
         }
         Text(
-          text = if (selectedTab == 0) "Google Drive Backup & Account Sync" else "Room Local-First DB & Firebase Sync",
+          text = if (selectedTab == 0) "Google Drive Backup & Account Sync" else "Room Local-First DB & Cloud Sync",
           fontSize = 12.sp,
           color = Color.White.copy(alpha = 0.85f)
         )
@@ -288,10 +288,10 @@ fun CloudSyncScreen(
           Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.Storage, contentDescription = null, modifier = Modifier.size(16.dp))
             Spacer(modifier = Modifier.width(6.dp))
-            Text("Firebase & Local Room", fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal, fontSize = 13.sp)
+            Text("Cloud & Local Room", fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal, fontSize = 13.sp)
           }
         },
-        modifier = Modifier.testTag("tab_firebase_sync")
+        modifier = Modifier.testTag("tab_cloud_sync")
       )
     }
 
@@ -395,7 +395,7 @@ fun CloudSyncScreen(
                   }
                 }
 
-                // Quadrant 2: Firebase Server
+                // Quadrant 2: Cloud Sync Server
                 Card(
                   shape = RoundedCornerShape(8.dp),
                   colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC)),
@@ -408,7 +408,7 @@ fun CloudSyncScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                       Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(if (isOnline) StatusGreen else Color(0xFFD97706)))
                       Spacer(modifier = Modifier.width(4.dp))
-                      Text("Firebase Cloud", fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = TextDark)
+                      Text("Cloud Storage", fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = TextDark)
                     }
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(if (isOnline) "Real-time Online" else "Local SQLite", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = if (isOnline) RoyalNavy else Color(0xFFB45309))
@@ -1286,7 +1286,7 @@ fun CloudSyncScreen(
         }
       }
     } else {
-      // FIREBASE & LOCAL-FIRST ROOM TAB
+      // LOCAL-FIRST ROOM DB & CLOUD SYNC TAB
       LazyColumn(
         modifier = Modifier
           .fillMaxSize()
@@ -1332,7 +1332,7 @@ fun CloudSyncScreen(
                   color = Color(0xFF1E3A8A)
                 )
                 Text(
-                  text = "All billing, inventory adjustments, and patient ledgers are written immediately to your local SQLite Room database. The app operates with 100% functionality offline, and synchronizes to Firebase automatically once connected.",
+                  text = "All billing, inventory adjustments, and patient ledgers are written immediately to your local SQLite Room database. The app operates with 100% functionality offline, and synchronizes automatically once connected.",
                   fontSize = 11.sp,
                   color = Color(0xFF1E40AF),
                   lineHeight = 15.sp
@@ -1447,7 +1447,7 @@ fun CloudSyncScreen(
           }
         }
 
-        // Firebase Synchronization Status
+        // Synchronization Status
         item {
           Card(
             shape = RoundedCornerShape(12.dp),
@@ -1458,7 +1458,7 @@ fun CloudSyncScreen(
           ) {
             Column(modifier = Modifier.padding(16.dp)) {
               Text(
-                text = "Firebase Cloud Firestore Synchronization",
+                text = "Cloud Database & Storage Synchronization",
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextDark
@@ -1481,12 +1481,12 @@ fun CloudSyncScreen(
                 enabled = !isSyncing && isOnline,
                 shape = RoundedCornerShape(8.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = RoyalMagenta),
-                modifier = Modifier.fillMaxWidth().testTag("btn_trigger_firebase_sync")
+                modifier = Modifier.fillMaxWidth().testTag("btn_trigger_cloud_sync")
               ) {
                 if (isSyncing) {
                   CircularProgressIndicator(color = Color.White, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                   Spacer(modifier = Modifier.width(8.dp))
-                  Text("Syncing to Firebase...", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                  Text("Syncing Changes...", fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 } else {
                   Icon(Icons.Default.CloudUpload, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
                   Spacer(modifier = Modifier.width(8.dp))
@@ -1497,7 +1497,7 @@ fun CloudSyncScreen(
           }
         }
 
-        // Synchronized Collections
+        // Synchronized Entities
         item {
           Card(
             shape = RoundedCornerShape(12.dp),
@@ -1508,7 +1508,7 @@ fun CloudSyncScreen(
           ) {
             Column(modifier = Modifier.padding(16.dp)) {
               Text(
-                text = "Synchronized Firestore Collections",
+                text = "Synchronized Data Entities",
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextDark
