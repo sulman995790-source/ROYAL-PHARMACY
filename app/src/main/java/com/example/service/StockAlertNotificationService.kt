@@ -20,6 +20,10 @@ object StockAlertNotificationService {
   const val CHANNEL_NAME_EXPIRY = "Short Expiry Alerts (60 Days)"
   const val CHANNEL_DESC_EXPIRY = "Push notifications when medicines are within 60 days of expiry date"
 
+  const val CHANNEL_ID_EXPIRY_30 = "medicine_batch_expiry_30_days"
+  const val CHANNEL_NAME_EXPIRY_30 = "Medicine Batch Expiry Alerts (30 Days)"
+  const val CHANNEL_DESC_EXPIRY_30 = "Urgent alerts when a medicine batch is within 30 days of its expiry date"
+
   // Action intents for direct navigation
   const val ACTION_VIEW_STOCK = "com.example.ACTION_VIEW_STOCK"
   const val ACTION_CREATE_PO = "com.example.ACTION_CREATE_PO"
@@ -65,6 +69,22 @@ object StockAlertNotificationService {
           vibrationPattern = longArrayOf(0, 250, 150, 250)
         }
         notificationManager.createNotificationChannel(expiryChannel)
+      }
+
+      val existingExpiry30 = notificationManager.getNotificationChannel(CHANNEL_ID_EXPIRY_30)
+      if (existingExpiry30 == null) {
+        val expiryChannel30 = NotificationChannel(
+          CHANNEL_ID_EXPIRY_30,
+          CHANNEL_NAME_EXPIRY_30,
+          NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+          description = CHANNEL_DESC_EXPIRY_30
+          enableLights(true)
+          lightColor = android.graphics.Color.RED
+          enableVibration(true)
+          vibrationPattern = longArrayOf(0, 300, 100, 300)
+        }
+        notificationManager.createNotificationChannel(expiryChannel30)
       }
     }
   }
@@ -328,6 +348,115 @@ object StockAlertNotificationService {
       category = "Injection"
     )
     sendShortExpiryPushNotification(context, sample, 45)
+  }
+
+  fun send30DayBatchExpiryPushNotification(
+    context: Context,
+    medicine: MedicineItem,
+    daysRemaining: Int
+  ) {
+    initNotificationChannel(context)
+    val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+    val contentIntent = Intent(context, MainActivity::class.java).apply {
+      flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+      putExtra(EXTRA_TARGET_SCREEN, "REPORTS")
+      putExtra(EXTRA_MEDICINE_ID, medicine.id)
+    }
+    val contentPendingIntent = PendingIntent.getActivity(
+      context,
+      (medicine.id + 60000).toInt(),
+      contentIntent,
+      PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+    )
+
+    // Action 1: Add to Return Cart (Debit Note)
+    val cartIntent = Intent(context, MainActivity::class.java).apply {
+      action = ACTION_ADD_TO_CART
+      flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+      putExtra(EXTRA_TARGET_SCREEN, "CART")
+      putExtra(EXTRA_MEDICINE_ID, medicine.id)
+    }
+    val cartPendingIntent = PendingIntent.getActivity(
+      context,
+      (medicine.id + 70000).toInt(),
+      cartIntent,
+      PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+    )
+
+    val urgencyLabel = if (daysRemaining <= 0) "EXPIRED OR EXPIRING TODAY" else "EXPIRES IN $daysRemaining DAYS"
+    val batchLabel = medicine.batchNumber.ifBlank { "B-EXP30" }
+
+    val bigText = buildString {
+      append("🚨 URGENT BATCH EXPIRY ALERT (<30 DAYS)\n")
+      append("${medicine.name} (Batch $batchLabel) is within 30 days of expiry!\n\n")
+      append("• Status: $urgencyLabel\n")
+      append("• Expiry Date: ${medicine.expiryDate}\n")
+      append("• Batch Number: $batchLabel\n")
+      append("• Remaining Stock: ${medicine.stockPacks} pack(s)\n")
+      append("• Manufacturer: ${medicine.manufacturer}\n")
+      append("• Rack Location: ${medicine.rackLocation}\n\n")
+      append("Action Required: Return to distributor for credit memo, liquidate stock, or prepare return debit note.")
+    }
+
+    val notification = NotificationCompat.Builder(context, CHANNEL_ID_EXPIRY_30)
+      .setSmallIcon(android.R.drawable.stat_notify_more)
+      .setContentTitle("⚠️ BATCH EXPIRING (<30d): ${medicine.name}")
+      .setContentText("Batch $batchLabel expires in $daysRemaining days (${medicine.expiryDate}) • ${medicine.stockPacks} packs left")
+      .setStyle(NotificationCompat.BigTextStyle().bigText(bigText))
+      .setPriority(NotificationCompat.PRIORITY_MAX)
+      .setCategory(NotificationCompat.CATEGORY_ALARM)
+      .setColor(0xFFD97706.toInt()) // High-urgency Amber
+      .setContentIntent(contentPendingIntent)
+      .setAutoCancel(true)
+      .addAction(
+        android.R.drawable.ic_input_add,
+        "Add to Return Cart",
+        cartPendingIntent
+      )
+      .addAction(
+        android.R.drawable.ic_menu_agenda,
+        "View Expiry List",
+        contentPendingIntent
+      )
+      .build()
+
+    try {
+      notificationManager.notify((medicine.id + 80000).toInt(), notification)
+    } catch (e: Throwable) {
+      android.util.Log.e("StockAlertNotify", "Could not dispatch 30-day expiry notification: ${e.message}")
+    }
+    lastExpiryAlertTimestamps[medicine.id] = System.currentTimeMillis()
+  }
+
+  fun sendTest30DayExpiryPushNotification(context: Context) {
+    val sample = MedicineItem(
+      id = 999,
+      name = "Augmentin 625 Duo (Batch AG-204)",
+      manufacturer = "GSK Pharma",
+      composition = "Amoxicillin + Clavulanic Acid",
+      expiryDate = "10/24",
+      batchNumber = "AG-2041",
+      stockPacks = 12,
+      category = "Tablet"
+    )
+    send30DayBatchExpiryPushNotification(context, sample, 14)
+  }
+
+  fun checkAndNotify30DayExpiry(
+    context: Context,
+    expiringMedicines: List<Pair<MedicineItem, Int>>,
+    forceAlert: Boolean = false
+  ) {
+    val now = System.currentTimeMillis()
+    expiringMedicines.forEach { (medicine, daysRemaining) ->
+      val lastAlert = lastExpiryAlertTimestamps[medicine.id] ?: 0L
+      val shouldAlert = forceAlert || (now - lastAlert > ALERT_COOLDOWN_MS)
+
+      if (shouldAlert) {
+        send30DayBatchExpiryPushNotification(context, medicine, daysRemaining)
+      }
+    }
   }
 
   fun checkAndNotifyShortExpiry(

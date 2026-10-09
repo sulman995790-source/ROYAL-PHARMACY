@@ -299,8 +299,9 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
   val batchToReturn = MutableStateFlow<com.example.data.model.MedicineBatchDetail?>(null)
   val scannedBarcodeForReturn = MutableStateFlow<String?>(null)
 
-  // Short Expiry Tracking (<60 Days)
+  // Short Expiry Tracking (<60 Days & <30 Days Batch Alert)
   val shortExpiryMedicines60Days = MutableStateFlow<List<Pair<MedicineItem, Int>>>(emptyList())
+  val shortExpiryMedicines30Days = MutableStateFlow<List<Pair<MedicineItem, Int>>>(emptyList())
 
   // Biometric & 4-Digit Security PIN Lock
   val isAppLockEnabled = MutableStateFlow(false)
@@ -946,20 +947,30 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
       }
     }
 
-    // Observe medicines and identify short expiry (<60 days) batches
+    // Observe medicines and identify short expiry (<60 days and <30 days) batches
     viewModelScope.launch {
       repository.allMedicines.collect { meds ->
-        val expiringSoon = meds.mapNotNull { med ->
+        val expiringSoon60 = meds.mapNotNull { med ->
           val days = calculateDaysToExpiry(med.expiryDate)
           if (days <= 60 || med.isExpired) Pair(med, days) else null
         }
-        shortExpiryMedicines60Days.value = expiringSoon
+        val expiringSoon30 = expiringSoon60.filter { it.second <= 30 }
 
-        if (autoAlertServiceEnabled.value && expiringSoon.isNotEmpty()) {
-          StockAlertNotificationService.checkAndNotifyShortExpiry(
-            context = application,
-            expiringMedicines = expiringSoon
-          )
+        shortExpiryMedicines60Days.value = expiringSoon60
+        shortExpiryMedicines30Days.value = expiringSoon30
+
+        if (autoAlertServiceEnabled.value) {
+          if (expiringSoon30.isNotEmpty()) {
+            StockAlertNotificationService.checkAndNotify30DayExpiry(
+              context = application,
+              expiringMedicines = expiringSoon30
+            )
+          } else if (expiringSoon60.isNotEmpty()) {
+            StockAlertNotificationService.checkAndNotifyShortExpiry(
+              context = application,
+              expiringMedicines = expiringSoon60
+            )
+          }
         }
       }
     }
@@ -2407,6 +2418,11 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
   fun triggerTestExpiryPush() {
     StockAlertNotificationService.sendTestExpiryPushNotification(getApplication())
     scanFeedbackMessage.value = "Test 60-day short expiry push notification sent!"
+  }
+
+  fun triggerTest30DayExpiryPush() {
+    StockAlertNotificationService.sendTest30DayExpiryPushNotification(getApplication())
+    scanFeedbackMessage.value = "Test 30-day batch expiry push notification sent!"
   }
 
   fun triggerBatchExpiryPush(context: android.content.Context, item: BatchExpiryItem) {

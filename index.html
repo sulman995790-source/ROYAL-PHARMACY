@@ -837,6 +837,71 @@
         </div>
 
         <!-- ========================================================================= -->
+        <!-- 30-DAY INVENTORY MOVEMENT TREND LINE CHART (TOP 5 FASTEST-MOVING MEDICINES) -->
+        <!-- ========================================================================= -->
+        <div id="fastest-moving-dashboard-container" class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-3 border-b border-slate-100 dark:border-slate-700">
+            <div class="flex items-center space-x-3">
+              <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 text-white flex items-center justify-center font-bold shadow-md shadow-rose-500/20">
+                <i class="ph ph-trend-up text-xl"></i>
+              </div>
+              <div>
+                <div class="flex items-center space-x-2">
+                  <h3 class="font-bold text-slate-900 dark:text-white text-base">30-Day Inventory Movement Trend (Top 5 Fastest-Moving Medicines)</h3>
+                  <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
+                    Velocity Line Chart
+                  </span>
+                </div>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Daily outflow curves, dispensing frequency, and inventory turn-around for top 5 volume medications.</p>
+              </div>
+            </div>
+            <!-- Quick Filter Pill Buttons -->
+            <div class="flex items-center space-x-1.5 flex-wrap gap-y-1.5" id="fastest-moving-filter-btns">
+              <button onclick="updateFastestMovingMedsFilter(-1)" id="btn-fast-mover-all" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-royal-magenta text-white shadow-sm transition">All 5 Medicines</button>
+              <button onclick="updateFastestMovingMedsFilter(0)" id="btn-fast-mover-0" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition">Paracetamol</button>
+              <button onclick="updateFastestMovingMedsFilter(1)" id="btn-fast-mover-1" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition">Azithromycin</button>
+              <button onclick="updateFastestMovingMedsFilter(2)" id="btn-fast-mover-2" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition">Pantoprazole</button>
+              <button onclick="updateFastestMovingMedsFilter(3)" id="btn-fast-mover-3" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition">Amoxicillin</button>
+              <button onclick="updateFastestMovingMedsFilter(4)" id="btn-fast-mover-4" class="px-2.5 py-1 text-xs font-bold rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition">Cetirizine</button>
+            </div>
+          </div>
+
+          <!-- Quick Metrics Ribbon -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div class="bg-rose-50/60 dark:bg-slate-900/40 p-3 rounded-xl border border-rose-100 dark:border-rose-900/30">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-rose-600">Top Velocity Mover</span>
+              <p class="text-base font-black text-slate-900 dark:text-white mt-0.5">Paracetamol 650mg</p>
+              <span class="text-[10px] text-rose-600 font-semibold">420 units / 14.0/day</span>
+            </div>
+            <div class="bg-blue-50/60 dark:bg-slate-900/40 p-3 rounded-xl border border-blue-100 dark:border-blue-900/30">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-blue-600">Avg Turnover Rate</span>
+              <p class="text-base font-black text-slate-900 dark:text-white mt-0.5">5.8x Annualized</p>
+              <span class="text-[10px] text-blue-600 font-semibold">High liquidity cycle</span>
+            </div>
+            <div class="bg-emerald-50/60 dark:bg-slate-900/40 p-3 rounded-xl border border-emerald-100 dark:border-emerald-900/30">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-600">30D Peak Volume</span>
+              <p class="text-base font-black text-slate-900 dark:text-white mt-0.5">25 Units/Day</p>
+              <span class="text-[10px] text-emerald-600 font-semibold">Surge threshold buffer</span>
+            </div>
+            <div class="bg-purple-50/60 dark:bg-slate-900/40 p-3 rounded-xl border border-purple-100 dark:border-purple-900/30">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-purple-600">Fast-Mover Share</span>
+              <p class="text-base font-black text-slate-900 dark:text-white mt-0.5">68.4% of Total Sales</p>
+              <span class="text-[10px] text-purple-600 font-semibold">Core formulary backbone</span>
+            </div>
+          </div>
+
+          <!-- Chart.js Line Chart Area -->
+          <div class="relative h-72">
+            <canvas id="chartFastestMovingMeds"></canvas>
+          </div>
+
+          <!-- Top 5 Medicines Movement Detail Grid -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-2" id="fastest-moving-meds-cards-list">
+            <!-- Dynamically populated detail cards -->
+          </div>
+        </div>
+
+        <!-- ========================================================================= -->
         <!-- INTERACTIVE INVENTORY TURNOVER RATES (30-DAY CHART.JS & DATABASE FILTER) -->
         <!-- ========================================================================= -->
         <div id="turnover-dashboard-container" class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
@@ -1023,9 +1088,9 @@
             </div>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-3 items-center">
-            <!-- Camera Viewport Container -->
-            <div class="md:col-span-2 relative rounded-xl overflow-hidden bg-black flex items-center justify-center min-h-[240px] border border-slate-800">
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 pt-3 items-stretch">
+            <!-- Camera Viewport Container (Col 1-7) -->
+            <div class="lg:col-span-7 relative rounded-xl overflow-hidden bg-black flex items-center justify-center min-h-[260px] border border-slate-800">
               <div id="pos-webcam-reader" class="w-full max-w-[440px]"></div>
               <!-- Targeting Overlay Guide -->
               <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
@@ -1036,11 +1101,14 @@
               </div>
             </div>
 
-            <!-- Last Scanned Live Feedback & Quick Test Simulator -->
-            <div class="bg-slate-800/80 p-3.5 rounded-xl border border-slate-700/80 space-y-3 flex flex-col justify-between h-full">
+            <!-- Last Scanned Feedback & Test Simulator (Col 8-12) -->
+            <div class="lg:col-span-5 bg-slate-800/80 p-3.5 rounded-xl border border-slate-700/80 space-y-3 flex flex-col justify-between">
               <div>
-                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Last Scanned Item Status</p>
-                <div id="pos-last-scanned-container" class="mt-2 p-2.5 bg-slate-900 rounded-lg border border-slate-700/60">
+                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
+                  <span>Last Scanned Item Status</span>
+                  <span id="pos-scanned-count-badge" class="text-[10px] font-mono text-pink-400 font-normal">0 items scanned</span>
+                </p>
+                <div id="pos-last-scanned-container" class="mt-2 p-2.5 bg-slate-900 rounded-lg border border-slate-700/60 transition-all">
                   <p class="text-xs font-bold text-slate-300" id="pos-last-scanned-name">Waiting for barcode scan...</p>
                   <p class="text-[10px] text-slate-500 font-mono mt-0.5" id="pos-last-scanned-code">Point camera at medicine barcode or HSN</p>
                 </div>
@@ -1048,21 +1116,53 @@
 
               <!-- Quick Barcode Simulation Buttons for Rapid Testing -->
               <div>
-                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">⚡ Rapid Barcode Test Simulator:</p>
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                  <span>⚡ Rapid Barcode Simulator:</span>
+                  <span class="text-[9px] text-slate-500 font-normal">Click to test scanner</span>
+                </p>
                 <div class="grid grid-cols-2 gap-1.5">
-                  <button type="button" onclick="simulatePosWebcamScan('3004', 'Paracetamol')" class="text-left p-1.5 bg-slate-900 hover:bg-slate-700 rounded text-[10px] text-pink-300 font-mono truncate border border-slate-700 transition">
-                    + Paracetamol (3004)
+                  <button type="button" onclick="simulatePosWebcamScan('3004', 'Paracetamol')" class="text-left p-1.5 bg-slate-900 hover:bg-slate-700 rounded text-[10px] text-pink-300 font-mono truncate border border-slate-700 transition flex items-center justify-between">
+                    <span>+ Paracetamol</span>
+                    <span class="text-slate-500 text-[9px]">3004</span>
                   </button>
-                  <button type="button" onclick="simulatePosWebcamScan('300420', 'Augmentin')" class="text-left p-1.5 bg-slate-900 hover:bg-slate-700 rounded text-[10px] text-emerald-300 font-mono truncate border border-slate-700 transition">
-                    + Augmentin (300420)
+                  <button type="button" onclick="simulatePosWebcamScan('300420', 'Augmentin')" class="text-left p-1.5 bg-slate-900 hover:bg-slate-700 rounded text-[10px] text-emerald-300 font-mono truncate border border-slate-700 transition flex items-center justify-between">
+                    <span>+ Augmentin</span>
+                    <span class="text-slate-500 text-[9px]">300420</span>
                   </button>
-                  <button type="button" onclick="simulatePosWebcamScan('300490', 'Dolo')" class="text-left p-1.5 bg-slate-900 hover:bg-slate-700 rounded text-[10px] text-amber-300 font-mono truncate border border-slate-700 transition">
-                    + Dolo 650 (300490)
+                  <button type="button" onclick="simulatePosWebcamScan('300490', 'Dolo')" class="text-left p-1.5 bg-slate-900 hover:bg-slate-700 rounded text-[10px] text-amber-300 font-mono truncate border border-slate-700 transition flex items-center justify-between">
+                    <span>+ Dolo 650</span>
+                    <span class="text-slate-500 text-[9px]">300490</span>
                   </button>
-                  <button type="button" onclick="simulatePosWebcamScan('300490', 'Pantoprazole')" class="text-left p-1.5 bg-slate-900 hover:bg-slate-700 rounded text-[10px] text-purple-300 font-mono truncate border border-slate-700 transition">
-                    + Pan 40 (300490)
+                  <button type="button" onclick="simulatePosWebcamScan('300490', 'Pantoprazole')" class="text-left p-1.5 bg-slate-900 hover:bg-slate-700 rounded text-[10px] text-purple-300 font-mono truncate border border-slate-700 transition flex items-center justify-between">
+                    <span>+ Pan 40</span>
+                    <span class="text-slate-500 text-[9px]">300490</span>
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recent Scan History Grid Section -->
+          <div class="mt-4 pt-3 border-t border-slate-800">
+            <div class="flex items-center justify-between mb-2.5">
+              <div class="flex items-center space-x-2">
+                <i data-lucide="history" class="w-4 h-4 text-pink-400"></i>
+                <h4 class="text-xs font-bold text-white tracking-wide uppercase">Recent Scan History</h4>
+                <span class="text-[11px] text-slate-400 font-normal">(Click any scanned card to quickly re-add +1 to bill)</span>
+              </div>
+              <div class="flex items-center space-x-2">
+                <button type="button" onclick="clearPosScanHistory()" class="text-[11px] text-slate-400 hover:text-rose-400 transition flex items-center space-x-1 px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700">
+                  <i data-lucide="trash-2" class="w-3 h-3"></i>
+                  <span>Clear History</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Grid Container of Recent Scans -->
+            <div id="pos-scan-history-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+              <div class="col-span-full py-4 text-center bg-slate-800/40 rounded-xl border border-slate-800/60 text-slate-500 text-xs flex flex-col items-center justify-center space-y-1">
+                <i data-lucide="scan-line" class="w-5 h-5 text-slate-600 mb-0.5"></i>
+                <span>No scan history yet. Scan barcodes or tap test buttons above.</span>
               </div>
             </div>
           </div>
@@ -3120,6 +3220,8 @@
     let chartDailyProfitInstance = null;
     let chartTopMedsInstance = null;
     let chartMonthlyRevenueInstance = null;
+    let chartFastestMovingMedsInstance = null;
+    let fastestMovingFilterIndex = -1;
 
     function initDashboardCharts() {
       const el1 = document.getElementById('chartSalesTrend');
@@ -3179,6 +3281,7 @@
 
       updateMonthlyChart(6);
       initInventoryTurnoverChart();
+      initFastestMovingMedsChart(-1);
     }
 
     function updateMonthlyChart(months) {
@@ -3246,6 +3349,230 @@
           }
         });
       }
+    }
+
+    // =========================================================================
+    // 30-DAY INVENTORY MOVEMENT TREND LINE CHART (TOP 5 FASTEST-MOVING MEDICINES)
+    // =========================================================================
+    const FASTEST_MOVING_MEDS_DATA = [
+      { name: "Paracetamol 650mg", category: "Tablet", color: "#e11d48", bgColor: "rgba(225, 29, 72, 0.12)", stock: 85, totalOutflow: 420, velocity: 14.0, trend: [12, 15, 18, 14, 22, 20, 25] },
+      { name: "Azithromycin 500mg", category: "Antibiotic", color: "#2563eb", bgColor: "rgba(37, 99, 235, 0.12)", stock: 34, totalOutflow: 310, velocity: 10.3, trend: [8, 11, 10, 15, 14, 18, 16] },
+      { name: "Pantoprazole 40mg", category: "Antacid", color: "#059669", bgColor: "rgba(5, 150, 105, 0.12)", stock: 42, totalOutflow: 280, velocity: 9.3, trend: [7, 9, 12, 10, 13, 11, 15] },
+      { name: "Amoxicillin + Clav", category: "Antibiotic", color: "#d97706", bgColor: "rgba(217, 119, 6, 0.12)", stock: 18, totalOutflow: 195, velocity: 6.5, trend: [5, 7, 6, 9, 8, 10, 11] },
+      { name: "Cetirizine 10mg", category: "Antiallergic", color: "#7c3aed", bgColor: "rgba(124, 58, 237, 0.12)", stock: 56, totalOutflow: 150, velocity: 5.0, trend: [4, 5, 6, 7, 8, 7, 9] }
+    ];
+
+    function initFastestMovingMedsChart(filterIdx = -1) {
+      fastestMovingFilterIndex = filterIdx;
+      const el = document.getElementById('chartFastestMovingMeds');
+      if (!el) return;
+
+      const labels = ['Day 1', 'Day 5', 'Day 10', 'Day 15', 'Day 20', 'Day 25', 'Day 30'];
+      
+      const datasets = FASTEST_MOVING_MEDS_DATA.map((med, idx) => {
+        const isSelected = (filterIdx === -1 || filterIdx === idx);
+        return {
+          label: `${med.name} (${med.velocity}/day)`,
+          data: med.trend,
+          borderColor: isSelected ? med.color : 'rgba(148, 163, 184, 0.2)',
+          backgroundColor: isSelected && filterIdx === idx ? med.bgColor : 'transparent',
+          fill: filterIdx === idx,
+          tension: 0.35,
+          borderWidth: filterIdx === idx ? 3.5 : (isSelected ? 2.5 : 1),
+          pointRadius: isSelected ? (filterIdx === idx ? 6 : 4) : 0,
+          pointBackgroundColor: med.color,
+          pointBorderColor: '#ffffff',
+          pointBorderWidth: 1.5,
+          hidden: filterIdx !== -1 && filterIdx !== idx
+        };
+      });
+
+      if (chartFastestMovingMedsInstance) chartFastestMovingMedsInstance.destroy();
+      const ctx = el.getContext('2d');
+      chartFastestMovingMedsInstance = new Chart(ctx, {
+        type: 'line',
+        data: { labels, datasets },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: {
+              position: 'top',
+              labels: {
+                boxWidth: 12,
+                boxHeight: 12,
+                usePointStyle: true,
+                font: { size: 11, weight: '600' }
+              }
+            },
+            tooltip: {
+              backgroundColor: '#0f172a',
+              titleFont: { size: 12, weight: 'bold' },
+              bodyFont: { size: 11 },
+              padding: 10,
+              callbacks: {
+                label: function(context) {
+                  return `${context.dataset.label}: ${context.parsed.y} units dispensed`;
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              suggestedMax: 28,
+              title: { display: true, text: 'Units Dispensed / Day', font: { size: 10, weight: 'bold' }, color: '#64748b' },
+              grid: { color: '#f1f5f9' },
+              ticks: { color: '#64748b', font: { size: 10 } }
+            },
+            x: {
+              grid: { display: false },
+              ticks: { color: '#64748b', font: { size: 10, weight: '500' } }
+            }
+          }
+        }
+      });
+
+      renderFastestMovingMedsCards(filterIdx);
+    }
+
+    function updateFastestMovingMedsFilter(filterIdx) {
+      const buttons = [
+        { id: 'btn-fast-mover-all', idx: -1 },
+        { id: 'btn-fast-mover-0', idx: 0 },
+        { id: 'btn-fast-mover-1', idx: 1 },
+        { id: 'btn-fast-mover-2', idx: 2 },
+        { id: 'btn-fast-mover-3', idx: 3 },
+        { id: 'btn-fast-mover-4', idx: 4 }
+      ];
+
+      buttons.forEach(b => {
+        const btn = document.getElementById(b.id);
+        if (btn) {
+          if (b.idx === filterIdx) {
+            btn.className = 'px-2.5 py-1 text-xs font-bold rounded-lg bg-royal-magenta text-white shadow-sm transition';
+          } else {
+            btn.className = 'px-2.5 py-1 text-xs font-bold rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition';
+          }
+        }
+      });
+
+      initFastestMovingMedsChart(filterIdx);
+    }
+
+    function renderFastestMovingMedsCards(filterIdx) {
+      const container = document.getElementById('fastest-moving-meds-cards-list');
+      if (!container) return;
+
+      container.innerHTML = FASTEST_MOVING_MEDS_DATA.map((med, idx) => {
+        const isSelected = (filterIdx === -1 || filterIdx === idx);
+        const borderStyle = (filterIdx === idx) ? `border: 2px solid ${med.color}; background: ${med.bgColor};` : '';
+        return `
+          <div onclick="updateFastestMovingMedsFilter(${filterIdx === idx ? -1 : idx})" class="cursor-pointer p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-slate-800 transition shadow-sm space-y-1.5" style="${borderStyle}">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-black px-1.5 py-0.5 rounded text-white" style="background-color: ${med.color}">#${idx + 1}</span>
+              <span class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">${escapeHtml(med.category)}</span>
+            </div>
+            <h4 class="font-bold text-xs text-slate-800 dark:text-slate-100 truncate" title="${escapeHtml(med.name)}">${escapeHtml(med.name)}</h4>
+            <div class="flex items-center justify-between pt-1 border-t border-slate-200/60 dark:border-slate-700/60 text-[11px]">
+              <span class="text-slate-500 font-medium">30D Outflow:</span>
+              <strong class="font-bold text-slate-900 dark:text-white">${med.totalOutflow} units</strong>
+            </div>
+            <div class="flex items-center justify-between text-[11px]">
+              <span class="text-slate-500 font-medium">Daily Velocity:</span>
+              <span class="font-bold" style="color: ${med.color}">${med.velocity}/day</span>
+            </div>
+            <div class="flex items-center justify-between text-[10px]">
+              <span class="text-slate-400">Current Stock:</span>
+              <span class="font-semibold ${med.stock < 25 ? 'text-rose-600 font-bold' : 'text-emerald-600'}">${med.stock} packs</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // =========================================================================
+    // 30-DAY MEDICINE BATCH EXPIRY BACKGROUND MONITOR & ALERTS
+    // =========================================================================
+    function check30DayExpiryBatchesWeb(isUserPrompted = false) {
+      const allDrugs = state.drugDatabase || [];
+      const now = new Date();
+      const expiring30 = [];
+
+      allDrugs.forEach(drug => {
+        const expStr = (drug.expiry || drug.expiryDate || "").trim();
+        if (!expStr) return;
+        let expDate = null;
+        const parts = expStr.split(/[-/]/);
+        if (parts.length === 2) {
+          const m = parseInt(parts[0], 10);
+          let y = parseInt(parts[1], 10);
+          if (y < 100) y += 2000;
+          expDate = new Date(y, m, 0); // last day of expiry month
+        } else if (parts.length === 3) {
+          if (parts[0].length === 4) {
+            expDate = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+          } else {
+            let y = parseInt(parts[2], 10);
+            if (y < 100) y += 2000;
+            expDate = new Date(y, parseInt(parts[1], 10) - 1, parseInt(parts[0], 10));
+          }
+        }
+
+        if (expDate && !isNaN(expDate.getTime())) {
+          const diffDays = Math.ceil((expDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+          if (diffDays <= 30) {
+            expiring30.push({ drug, diffDays, expStr });
+          }
+        }
+      });
+
+      if (expiring30.length > 0) {
+        // Dispatch HTML5 Desktop Notification
+        if ("Notification" in window && Notification.permission === "granted") {
+          try {
+            const notif = new Notification(`⏳ 30-Day Batch Expiry Alert: ${expiring30.length} Medicines!`, {
+              body: `${expiring30.length} medicine batch(es) within 30 days of expiry. Earliest: ${expiring30[0].drug.name} (Batch ${expiring30[0].drug.batch || 'B-EXP30'}, ${expiring30[0].diffDays <= 0 ? 'EXPIRED' : expiring30[0].diffDays + 'd left'}). Prepare return debit note or markdown.`,
+              icon: 'https://cdn-icons-png.flaticon.com/512/883/883360.png',
+              tag: 'expiry-batch-alert-30d',
+              renotify: true
+            });
+            notif.onclick = () => {
+              window.focus();
+              switchTab('reports');
+              notif.close();
+            };
+          } catch(e) {}
+        }
+
+        if (typeof showLiveSyncNotification === 'function') {
+          showLiveSyncNotification("30-Day Batch Expiry Alert", `${expiring30.length} batches within 30 days of expiry`, "clock");
+        }
+
+        if (isUserPrompted && window.Swal) {
+          Swal.fire({
+            icon: 'warning',
+            title: `30-Day Expiry Alert (${expiring30.length} Batches)`,
+            html: `
+              <div class="text-left text-xs space-y-2">
+                <p class="font-bold text-amber-700">The following medicine batches are expiring within 30 days:</p>
+                <ul class="list-disc pl-4 space-y-1 text-slate-700 max-h-40 overflow-y-auto">
+                  ${expiring30.map(item => `<li><strong>${escapeHtml(item.drug.name)}</strong> (Batch ${escapeHtml(item.drug.batch || 'N/A')}): Expires <strong>${escapeHtml(item.expStr)}</strong> (${item.diffDays <= 0 ? 'EXPIRED' : item.diffDays + ' days left'}, Stock: ${item.drug.stock} packs)</li>`).join('')}
+                </ul>
+                <p class="text-[11px] text-slate-500 pt-1">Return to distributor for credit memo or add to Return Cart for debit note.</p>
+              </div>
+            `,
+            confirmButtonText: 'Go to Expiry Reports',
+            confirmButtonColor: '#9C1258',
+            showCancelButton: true,
+            cancelButtonText: 'Dismiss'
+          }).then((res) => {
+            if (res.isConfirmed) switchTab('reports');
+          });
+        }
+      }
+      return expiring30;
     }
 
     // =========================================================================
@@ -3725,6 +4052,9 @@
 
     function runInventoryCriticalStatusCheck(isUserPrompted) {
       localStorage.setItem('royal_last_inventory_reorder_check', Date.now().toString());
+
+      // Check medicine batches within 30 days of expiry
+      check30DayExpiryBatchesWeb(isUserPrompted);
 
       const allDrugs = state.drugDatabase || [];
       // Identify items falling into 'Critical' status (stock < 5 or stock <= 0, below reorder threshold)
@@ -10316,6 +10646,172 @@
     let isPosWebcamActive = false;
     let lastScannedPosBarcode = "";
     let lastScannedPosTimestamp = 0;
+    let posScanHistory = []; // Tracks recent scans in webcam session with item details
+
+    function recordPosScanHistory(item) {
+      if (!item || !item.name) return;
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      
+      // Look for existing item in history to bump count and timestamp
+      const existingIdx = posScanHistory.findIndex(h => h.name === item.name && (h.batch === item.batch || !h.batch));
+      if (existingIdx !== -1) {
+        posScanHistory[existingIdx].count = (posScanHistory[existingIdx].count || 1) + 1;
+        posScanHistory[existingIdx].lastTime = timeStr;
+        posScanHistory[existingIdx].code = item.code || posScanHistory[existingIdx].code;
+        // Move to top of array
+        const [existing] = posScanHistory.splice(existingIdx, 1);
+        posScanHistory.unshift(existing);
+      } else {
+        posScanHistory.unshift({
+          name: item.name,
+          generic: item.generic || '',
+          price: Number(item.price || item.mrp || 0),
+          batch: item.batch || 'STD',
+          expiry: item.expiry || '12/27',
+          code: item.code || '',
+          count: 1,
+          lastTime: timeStr,
+          rawPayload: item.rawPayload || null
+        });
+      }
+
+      // Keep recent 18 items max
+      if (posScanHistory.length > 18) {
+        posScanHistory = posScanHistory.slice(0, 18);
+      }
+
+      renderPosScanHistoryGrid();
+    }
+
+    function renderPosScanHistoryGrid() {
+      const grid = document.getElementById('pos-scan-history-grid');
+      const badge = document.getElementById('pos-scanned-count-badge');
+      if (badge) {
+        const totalScans = posScanHistory.reduce((sum, i) => sum + (i.count || 1), 0);
+        badge.innerText = `${posScanHistory.length} unique (${totalScans} total)`;
+      }
+      if (!grid) return;
+
+      if (!posScanHistory || posScanHistory.length === 0) {
+        grid.innerHTML = `
+          <div class="col-span-full py-4 text-center bg-slate-800/40 rounded-xl border border-slate-800/60 text-slate-500 text-xs flex flex-col items-center justify-center space-y-1">
+            <i data-lucide="scan-line" class="w-5 h-5 text-slate-600 mb-0.5"></i>
+            <span>No scan history yet. Scan barcodes or tap test buttons above.</span>
+          </div>
+        `;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+        return;
+      }
+
+      grid.innerHTML = posScanHistory.map((item, idx) => `
+        <div onclick="reAddScanHistoryItem(${idx})" 
+             title="Click to quickly re-add ${escapeHtml(item.name)} (+1) to Memo Bill"
+             class="group relative bg-slate-800/90 hover:bg-slate-700/90 border border-slate-700/80 hover:border-pink-500/70 rounded-xl p-2.5 cursor-pointer transition-all duration-200 transform hover:-translate-y-0.5 shadow-sm hover:shadow-md hover:shadow-pink-500/10 flex flex-col justify-between">
+          <div>
+            <div class="flex items-start justify-between gap-1 mb-1">
+              <span class="text-[9px] font-mono px-1.5 py-0.2 rounded bg-pink-500/20 text-pink-300 font-semibold truncate max-w-[70px]">
+                ${escapeHtml(item.code || item.batch || 'SCAN')}
+              </span>
+              <span class="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300">
+                ×${item.count || 1}
+              </span>
+            </div>
+            <h5 class="text-xs font-bold text-white group-hover:text-pink-300 transition-colors line-clamp-1 mb-0.5">
+              ${escapeHtml(item.name)}
+            </h5>
+            <p class="text-[10px] text-slate-400 line-clamp-1">
+              ${escapeHtml(item.generic || item.batch ? 'Batch: ' + item.batch : '')}
+            </p>
+          </div>
+          
+          <div class="mt-2 pt-1.5 border-t border-slate-700/50 flex items-center justify-between">
+            <span class="text-xs font-bold text-emerald-400">
+              ₹${Number(item.price).toFixed(2)}
+            </span>
+            <span class="text-[10px] font-semibold text-pink-400 group-hover:text-white flex items-center space-x-0.5 bg-pink-600/30 group-hover:bg-pink-600 px-1.5 py-0.5 rounded transition">
+              <span>+1</span>
+              <i data-lucide="plus" class="w-2.5 h-2.5"></i>
+            </span>
+          </div>
+
+          <!-- Micro Timestamp Pill -->
+          <span class="text-[8px] text-slate-500 font-mono mt-1 text-right block">
+            ${escapeHtml(item.lastTime || '')}
+          </span>
+        </div>
+      `).join('');
+
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    function reAddScanHistoryItem(index) {
+      if (index < 0 || index >= posScanHistory.length) return;
+      const item = posScanHistory[index];
+      if (!item) return;
+
+      playPosScanBeep();
+
+      if (item.rawPayload) {
+        addBatchQrPayloadToBill(item.rawPayload);
+      } else {
+        state.currentSale = state.currentSale || { items: [], discountPct: 0, paymentMode: 'CASH' };
+        const existing = (state.currentSale.items || []).find(i => i.name === item.name);
+        if (existing) {
+          existing.qty += 1;
+          existing.total = existing.qty * (existing.mrp || item.price);
+        } else {
+          state.currentSale.items.push({
+            name: item.name,
+            batch: item.batch || ("RP-" + Math.floor(100 + Math.random() * 900)),
+            expiry: item.expiry || "12/2027",
+            qty: 1,
+            mrp: item.price,
+            purchasePrice: item.price * 0.75,
+            total: item.price
+          });
+        }
+        renderBillItems();
+      }
+
+      // Bump history scan count and refresh UI
+      item.count = (item.count || 1) + 1;
+      const now = new Date();
+      item.lastTime = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      renderPosScanHistoryGrid();
+
+      updatePosScanFeedback(item.name, `Re-added from History • ${item.code || 'POS'}`, item.price);
+
+      if (window.Swal) {
+        const Toast = Swal.mixin({
+          toast: true,
+          position: 'top-end',
+          showConfirmButton: false,
+          timer: 1400,
+          timerProgressBar: true
+        });
+        Toast.fire({
+          icon: 'success',
+          title: `+1 ${item.name} re-added to bill!`
+        });
+      }
+    }
+
+    function clearPosScanHistory() {
+      posScanHistory = [];
+      renderPosScanHistoryGrid();
+      const Toast = Swal.mixin({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 1400,
+        timerProgressBar: true
+      });
+      Toast.fire({
+        icon: 'info',
+        title: 'Scan history cleared'
+      });
+    }
 
     function togglePosWebcamScanner(forceOpen) {
       const panel = document.getElementById('pos-webcam-scanner-panel');
@@ -10325,6 +10821,7 @@
 
       if (shouldOpen) {
         panel.classList.remove('hidden');
+        renderPosScanHistoryGrid();
         startLivePosWebcam();
       } else {
         stopLivePosWebcam();
@@ -10461,6 +10958,15 @@
           if (payload && payload.name) {
             playPosScanBeep();
             addBatchQrPayloadToBill(payload);
+            recordPosScanHistory({
+              name: payload.name,
+              generic: payload.generic || payload.composition || '',
+              price: parseFloat(payload.mrp || payload.price || payload.rate) || 120.0,
+              batch: payload.batch || payload.batchNumber || 'QR-BATCH',
+              expiry: payload.exp || payload.expiry || payload.expiryDate || '12/28',
+              code: 'BATCH-QR',
+              rawPayload: payload
+            });
             updatePosScanFeedback(payload.name, `Batch QR: ${payload.batch || 'N/A'} (Exp: ${payload.exp || 'N/A'})`, payload.mrp || payload.rate || 0);
             return;
           }
@@ -10513,6 +11019,15 @@
         }
 
         renderBillItems();
+
+        recordPosScanHistory({
+          name: matched.name,
+          generic: matched.generic || matched.genericName || '',
+          price: matched.price,
+          batch: matched.batch || 'STD',
+          expiry: matched.expiry || '12/27',
+          code: matched.hsn || trimmed
+        });
 
         updatePosScanFeedback(matched.name, `Barcode/HSN: ${matched.hsn || trimmed}`, matched.price);
 

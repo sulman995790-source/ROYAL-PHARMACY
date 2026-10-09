@@ -15,6 +15,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -81,6 +88,7 @@ fun SalesScreen(
   var selectedTab by remember { mutableIntStateOf(0) } // 0: Visual Dashboard, 1: By Customer
   var searchQuery by remember { mutableStateOf("") }
   var monthlyTimeframe by remember { mutableIntStateOf(6) }
+  var selectedFastMovingMedIndex by remember { mutableIntStateOf(-1) }
 
   val filteredCustomers = customers.filter {
     it.name.contains(searchQuery, ignoreCase = true) || it.phone.contains(searchQuery, ignoreCase = true)
@@ -469,6 +477,279 @@ fun SalesScreen(
                           .clip(RoundedCornerShape(3.dp))
                           .background(RoyalMagenta)
                       )
+                    }
+                  }
+                }
+              }
+            }
+          }
+
+          // Chart 3.5: 30-Day Inventory Movement Trend (Top 5 Fastest-Moving Medicines Line Chart)
+          item {
+            Card(
+              shape = RoundedCornerShape(12.dp),
+              colors = CardDefaults.cardColors(containerColor = Color.White),
+              border = androidx.compose.foundation.BorderStroke(1.dp, CardBorder),
+              modifier = Modifier.fillMaxWidth().testTag("chart_card_fastest_moving_medicines")
+            ) {
+              Column(modifier = Modifier.padding(14.dp)) {
+                // Header
+                Row(
+                  modifier = Modifier.fillMaxWidth(),
+                  horizontalArrangement = Arrangement.SpaceBetween,
+                  verticalAlignment = Alignment.CenterVertically
+                ) {
+                  Row(verticalAlignment = Alignment.CenterVertically) {
+                    androidx.compose.material3.Icon(
+                      Icons.Default.TrendingUp,
+                      contentDescription = null,
+                      tint = Color(0xFFE11D48),
+                      modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Column {
+                      Text("30-Day Inventory Movement Trend", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = TextDark)
+                      Text("Outflow velocity line chart for top 5 fastest-moving medicines", fontSize = 9.5.sp, color = TextMuted)
+                    }
+                  }
+                  Box(
+                    modifier = Modifier
+                      .clip(RoundedCornerShape(6.dp))
+                      .background(Color(0xFFFFF1F2))
+                      .padding(horizontal = 6.dp, vertical = 2.dp)
+                  ) {
+                    Text("Top 5 Fast-Movers", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color(0xFFE11D48))
+                  }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Top 5 Medicines Data definition
+                val fastMovingMeds = listOf(
+                  FastMovingMedData("Paracetamol 650mg", "Tablet", Color(0xFFE11D48), 85, 420, 14.0, listOf(12f, 15f, 18f, 14f, 22f, 20f, 25f)),
+                  FastMovingMedData("Azithromycin 500mg", "Antibiotic", Color(0xFF2563EB), 34, 310, 10.3, listOf(8f, 11f, 10f, 15f, 14f, 18f, 16f)),
+                  FastMovingMedData("Pantoprazole 40mg", "Antacid", Color(0xFF059669), 42, 280, 9.3, listOf(7f, 9f, 12f, 10f, 13f, 11f, 15f)),
+                  FastMovingMedData("Amoxicillin + Clav", "Antibiotic", Color(0xFFD97706), 18, 195, 6.5, listOf(5f, 7f, 6f, 9f, 8f, 10f, 11f)),
+                  FastMovingMedData("Cetirizine 10mg", "Antiallergic", Color(0xFF7C3AED), 56, 150, 5.0, listOf(4f, 5f, 6f, 7f, 8f, 7f, 9f))
+                )
+
+                // Interactive Filter Row
+                Row(
+                  modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                  horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                  Box(
+                    modifier = Modifier
+                      .clip(RoundedCornerShape(8.dp))
+                      .background(if (selectedFastMovingMedIndex == -1) Color(0xFF1E293B) else Color(0xFFF1F5F9))
+                      .clickable { selectedFastMovingMedIndex = -1 }
+                      .padding(horizontal = 8.dp, vertical = 4.dp)
+                  ) {
+                    Text(
+                      "All 5 Medicines",
+                      fontSize = 10.sp,
+                      fontWeight = FontWeight.Bold,
+                      color = if (selectedFastMovingMedIndex == -1) Color.White else TextMuted
+                    )
+                  }
+
+                  fastMovingMeds.forEachIndexed { idx, med ->
+                    val isSelected = selectedFastMovingMedIndex == idx
+                    Box(
+                      modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(if (isSelected) med.color.copy(alpha = 0.15f) else Color(0xFFF1F5F9))
+                        .border(
+                          width = if (isSelected) 1.dp else 0.dp,
+                          color = if (isSelected) med.color else Color.Transparent,
+                          shape = RoundedCornerShape(8.dp)
+                        )
+                        .clickable { selectedFastMovingMedIndex = if (isSelected) -1 else idx }
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                      Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                          modifier = Modifier
+                            .size(6.dp)
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(med.color)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                          med.name.take(15),
+                          fontSize = 10.sp,
+                          fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                          color = if (isSelected) med.color else TextDark
+                        )
+                      }
+                    }
+                  }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Line Chart Canvas
+                val daysLabels = listOf("D1", "D5", "D10", "D15", "D20", "D25", "D30")
+                val maxScaleVal = 28f
+
+                Box(
+                  modifier = Modifier
+                    .fillMaxWidth()
+                    .height(160.dp)
+                    .background(Color(0xFFFAFAFA), RoundedCornerShape(8.dp))
+                    .padding(horizontal = 10.dp, vertical = 8.dp)
+                ) {
+                  Canvas(modifier = Modifier.fillMaxSize()) {
+                    val width = size.width
+                    val height = size.height - 20f
+                    val xStep = width / (daysLabels.size - 1)
+
+                    // Horizontal gridlines
+                    val gridLevels = listOf(0f, 10f, 20f)
+                    gridLevels.forEach { level ->
+                      val y = height - (level / maxScaleVal) * height
+                      drawLine(
+                        color = Color(0xFFE2E8F0),
+                        start = Offset(0f, y),
+                        end = Offset(width, y),
+                        strokeWidth = 1f
+                      )
+                    }
+
+                    // Render lines for each fast-moving medicine
+                    fastMovingMeds.forEachIndexed { idx, med ->
+                      val isHighlighted = selectedFastMovingMedIndex == -1 || selectedFastMovingMedIndex == idx
+                      val strokeAlpha = if (isHighlighted) 1.0f else 0.2f
+                      val strokeW = if (selectedFastMovingMedIndex == idx) 3.5f else 2.2f
+
+                      val path = Path()
+                      med.movementTrend30Days.forEachIndexed { ptIdx, value ->
+                        val x = ptIdx * xStep
+                        val y = height - (value / maxScaleVal) * height
+                        if (ptIdx == 0) path.moveTo(x, y) else path.lineTo(x, y)
+                      }
+
+                      // Optional gradient fill under selected medicine line
+                      if (selectedFastMovingMedIndex == idx) {
+                        val fillPath = Path().apply {
+                          addPath(path)
+                          lineTo(width, height)
+                          lineTo(0f, height)
+                          close()
+                        }
+                        drawPath(
+                          path = fillPath,
+                          brush = Brush.verticalGradient(
+                            colors = listOf(med.color.copy(alpha = 0.22f), Color.Transparent),
+                            startY = 0f,
+                            endY = height
+                          )
+                        )
+                      }
+
+                      // Draw line
+                      drawPath(
+                        path = path,
+                        color = med.color.copy(alpha = strokeAlpha),
+                        style = Stroke(width = strokeW * density, cap = StrokeCap.Round)
+                      )
+
+                      // Draw circular nodes
+                      med.movementTrend30Days.forEachIndexed { ptIdx, value ->
+                        val x = ptIdx * xStep
+                        val y = height - (value / maxScaleVal) * height
+                        drawCircle(
+                          color = Color.White,
+                          radius = if (selectedFastMovingMedIndex == idx) 4.5f * density else 3f * density,
+                          center = Offset(x, y)
+                        )
+                        drawCircle(
+                          color = med.color.copy(alpha = strokeAlpha),
+                          radius = if (selectedFastMovingMedIndex == idx) 3.5f * density else 2f * density,
+                          center = Offset(x, y)
+                        )
+                      }
+                    }
+                  }
+
+                  // X-Axis day labels
+                  Row(
+                    modifier = Modifier
+                      .fillMaxWidth()
+                      .align(Alignment.BottomCenter),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                  ) {
+                    daysLabels.forEach { label ->
+                      Text(label, fontSize = 8.5.sp, color = TextMuted, fontWeight = FontWeight.Medium)
+                    }
+                  }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Breakdown list of Top 5 medicines
+                Column(
+                  modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFFF8FAFC), RoundedCornerShape(8.dp))
+                    .padding(8.dp),
+                  verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                  Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                  ) {
+                    Text("Fastest-Moving Medicine", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TextDark)
+                    Text("30D Outflow • Velocity • Stock", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = TextMuted)
+                  }
+
+                  fastMovingMeds.forEachIndexed { index, med ->
+                    val isSelected = selectedFastMovingMedIndex == index
+                    Row(
+                      modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(if (isSelected) med.color.copy(alpha = 0.08f) else Color.Transparent)
+                        .clickable { selectedFastMovingMedIndex = if (isSelected) -1 else index }
+                        .padding(horizontal = 4.dp, vertical = 3.dp),
+                      horizontalArrangement = Arrangement.SpaceBetween,
+                      verticalAlignment = Alignment.CenterVertically
+                    ) {
+                      Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                          modifier = Modifier
+                            .size(8.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(med.color)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Column {
+                          Text(
+                            "#${index + 1} ${med.name}",
+                            fontSize = 10.5.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
+                            color = TextDark
+                          )
+                          Text(med.category, fontSize = 8.5.sp, color = TextMuted)
+                        }
+                      }
+
+                      Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                          "${med.total30DayOutflow} packs (${med.velocityPerDay}/day)",
+                          fontSize = 10.sp,
+                          fontWeight = FontWeight.Bold,
+                          color = med.color
+                        )
+                        Text(
+                          "Stock: ${med.currentStock} left",
+                          fontSize = 8.5.sp,
+                          color = if (med.currentStock < 25) Color(0xFFDC2626) else StatusGreen,
+                          fontWeight = FontWeight.Medium
+                        )
+                      }
                     }
                   }
                 }
@@ -950,3 +1231,13 @@ fun CustomerSaleCard(
     }
   }
 }
+
+data class FastMovingMedData(
+  val name: String,
+  val category: String,
+  val color: Color,
+  val currentStock: Int,
+  val total30DayOutflow: Int,
+  val velocityPerDay: Double,
+  val movementTrend30Days: List<Float>
+)
