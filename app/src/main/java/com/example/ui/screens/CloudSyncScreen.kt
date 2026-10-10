@@ -179,7 +179,11 @@ fun CloudSyncScreen(
           )
         }
         Text(
-          text = if (selectedTab == 0) "Google Drive Backup & Account Sync" else "Room Local-First DB & Cloud Sync",
+          text = when (selectedTab) {
+            0 -> "Google Drive Backup & Account Sync"
+            1 -> "Room Local-First DB & Cloud Sync"
+            else -> "Cloudflare Edge Security & CDN Gateway"
+          },
           fontSize = 12.sp,
           color = Color.White.copy(alpha = 0.85f)
         )
@@ -275,8 +279,8 @@ fun CloudSyncScreen(
         text = {
           Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.CloudUpload, contentDescription = null, modifier = Modifier.size(16.dp))
-            Spacer(modifier = Modifier.width(6.dp))
-            Text("Google Drive Sync", fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal, fontSize = 13.sp)
+            Spacer(modifier = Modifier.width(4.dp))
+            Text("Google Drive", fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal, fontSize = 12.sp)
           }
         },
         modifier = Modifier.testTag("tab_google_drive")
@@ -287,11 +291,23 @@ fun CloudSyncScreen(
         text = {
           Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.Storage, contentDescription = null, modifier = Modifier.size(16.dp))
-            Spacer(modifier = Modifier.width(6.dp))
-            Text("Cloud & Local Room", fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal, fontSize = 13.sp)
+            Spacer(modifier = Modifier.width(4.dp))
+            Text("Cloud & Room", fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal, fontSize = 12.sp)
           }
         },
         modifier = Modifier.testTag("tab_cloud_sync")
+      )
+      Tab(
+        selected = selectedTab == 2,
+        onClick = { selectedTab = 2 },
+        text = {
+          Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(16.dp))
+            Spacer(modifier = Modifier.width(4.dp))
+            Text("Cloudflare", fontWeight = if (selectedTab == 2) FontWeight.Bold else FontWeight.Normal, fontSize = 12.sp)
+          }
+        },
+        modifier = Modifier.testTag("tab_cloudflare")
       )
     }
 
@@ -1285,7 +1301,7 @@ fun CloudSyncScreen(
           }
         }
       }
-    } else {
+    } else if (selectedTab == 1) {
       // LOCAL-FIRST ROOM DB & CLOUD SYNC TAB
       LazyColumn(
         modifier = Modifier
@@ -1573,6 +1589,235 @@ fun CloudSyncScreen(
                   Text(log, fontSize = 11.sp, color = TextDark, lineHeight = 15.sp)
                 }
               }
+            }
+          }
+        }
+      }
+    } else {
+      // CLOUDFLARE EDGE & CDN GATEWAY TAB
+      val cfStatus by viewModel.cloudflareStatus.collectAsState()
+      val cfWorkerEndpoint by viewModel.cloudflareWorkerEndpoint.collectAsState()
+      val cfTurnstileKey by viewModel.cloudflareTurnstileSiteKey.collectAsState()
+      
+      var endpointInput by remember { mutableStateOf(cfWorkerEndpoint) }
+      var turnstileInput by remember { mutableStateOf(cfTurnstileKey) }
+      
+      LazyColumn(
+        modifier = Modifier
+          .fillMaxSize()
+          .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+        contentPadding = PaddingValues(bottom = 80.dp)
+      ) {
+        // Status Card
+        item {
+          Card(
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            border = CardDefaults.outlinedCardBorder().copy(
+              brush = androidx.compose.ui.graphics.SolidColor(CardBorder)
+            ),
+            modifier = Modifier.fillMaxWidth().testTag("card_cloudflare_status")
+          ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+              Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+              ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                  Box(
+                    modifier = Modifier
+                      .size(40.dp)
+                      .clip(CircleShape)
+                      .background(if (cfStatus.isConnected) Color(0xFFFFF7ED) else Color(0xFFF3F4F6)),
+                    contentAlignment = Alignment.Center
+                  ) {
+                    Icon(
+                      imageVector = Icons.Default.Lock,
+                      contentDescription = null,
+                      tint = if (cfStatus.isConnected) Color(0xFFEA580C) else Color(0xFF9CA3AF),
+                      modifier = Modifier.size(22.dp)
+                    )
+                  }
+                  Spacer(modifier = Modifier.width(12.dp))
+                  Column {
+                    Text(
+                      text = "Cloudflare Edge Network",
+                      fontSize = 15.sp,
+                      fontWeight = FontWeight.Bold,
+                      color = TextDark
+                    )
+                    Text(
+                      text = if (cfStatus.isConnected) "Edge Nodes Routing: Active" else "Checking edge routing...",
+                      fontSize = 11.sp,
+                      color = TextMuted
+                    )
+                  }
+                }
+                Box(
+                  modifier = Modifier
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(if (cfStatus.isConnected) Color(0xFFDCFCE7) else Color(0xFFFEF3C7))
+                    .padding(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                  Text(
+                    text = if (cfStatus.isConnected) "CONNECTED" else "STANDBY",
+                    color = if (cfStatus.isConnected) StatusGreen else Color(0xFFD97706),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 10.sp
+                  )
+                }
+              }
+
+              Spacer(modifier = Modifier.height(16.dp))
+              androidx.compose.material3.HorizontalDivider(color = CardBorder)
+              Spacer(modifier = Modifier.height(16.dp))
+
+              // Trace details
+              Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Column {
+                  Text("Nearest Edge Location", fontSize = 11.sp, color = TextMuted)
+                  Text(cfStatus.colo, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextDark)
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                  Text("SSL/TLS Encryption", fontSize = 11.sp, color = TextMuted)
+                  Text(cfStatus.ssl, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextDark)
+                }
+              }
+
+              Spacer(modifier = Modifier.height(12.dp))
+
+              Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Column {
+                  Text("Protocol version", fontSize = 11.sp, color = TextMuted)
+                  Text(cfStatus.httpVersion, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextDark)
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                  Text("Edge Latency", fontSize = 11.sp, color = TextMuted)
+                  Text("${cfStatus.latencyMs} ms", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = StatusGreen)
+                }
+              }
+
+              Spacer(modifier = Modifier.height(12.dp))
+
+              Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Column {
+                  Text("Your Gateway IP Address", fontSize = 11.sp, color = TextMuted)
+                  Text(cfStatus.ip, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = TextDark)
+                }
+              }
+
+              Spacer(modifier = Modifier.height(16.dp))
+
+              Button(
+                onClick = { viewModel.checkCloudflareStatus() },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEA580C)),
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.fillMaxWidth().testTag("btn_refresh_cloudflare_ping")
+              ) {
+                Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("Refresh Cloudflare Edge Connection", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+              }
+            }
+          }
+        }
+
+        // Settings / Config card
+        item {
+          Card(
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            border = CardDefaults.outlinedCardBorder().copy(
+              brush = androidx.compose.ui.graphics.SolidColor(CardBorder)
+            ),
+            modifier = Modifier.fillMaxWidth().testTag("card_cloudflare_settings")
+          ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+              Text(
+                text = "Workers & Security Settings",
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextDark
+              )
+
+              Text(
+                text = "Route AI prescriptions, pharmacist assistant bots, and digital invoices securely through your customized edge Worker proxy.",
+                fontSize = 11.sp,
+                color = TextMuted,
+                lineHeight = 15.sp
+              )
+
+              OutlinedTextField(
+                value = endpointInput,
+                onValueChange = { endpointInput = it },
+                label = { Text("Cloudflare Worker Endpoint") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().testTag("input_cf_worker_endpoint")
+              )
+
+              OutlinedTextField(
+                value = turnstileInput,
+                onValueChange = { turnstileInput = it },
+                label = { Text("Cloudflare Turnstile Site Key") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().testTag("input_cf_turnstile_key")
+              )
+
+              Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(
+                  onClick = {
+                    endpointInput = "https://royal-pharmacy.sulman995790.workers.dev/"
+                    turnstileInput = "0x4AAAAAAX_cloud_flare_pharmacy_key"
+                  },
+                  modifier = Modifier.weight(1f).testTag("btn_cf_reset_defaults")
+                ) {
+                  Text("Defaults", color = TextDark)
+                }
+
+                Button(
+                  onClick = {
+                    viewModel.updateCloudflareWorkerEndpoint(endpointInput)
+                    viewModel.updateCloudflareTurnstileKey(turnstileInput)
+                    Toast.makeText(context, "Cloudflare Settings Saved Successfully!", Toast.LENGTH_SHORT).show()
+                  },
+                  colors = ButtonDefaults.buttonColors(containerColor = RoyalNavy),
+                  modifier = Modifier.weight(1f).testTag("btn_cf_save_settings")
+                ) {
+                  Text("Save Settings")
+                }
+              }
+            }
+          }
+        }
+
+        // Info details Card
+        item {
+          Card(
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFF0FDF4)),
+            border = CardDefaults.outlinedCardBorder().copy(
+              brush = androidx.compose.ui.graphics.SolidColor(Color(0xFFBBF7D0))
+            ),
+            modifier = Modifier.fillMaxWidth()
+          ) {
+            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+              Text(
+                text = "Zero-Trust Edge Acceleration & WAF Protect",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF166534)
+              )
+              Text(
+                text = "✓ 100% SSL offloading at edge locations for lightning-fast speeds.\n" +
+                       "✓ Secure API protection with Cloudflare Turnstile bot deterrence.\n" +
+                       "✓ Mitigates localized server outages with global smart IP routing.\n" +
+                       "✓ Protects pharmacy records from malicious bots and web crawlers.",
+                fontSize = 11.sp,
+                color = Color(0xFF14532D),
+                lineHeight = 16.sp
+              )
             }
           }
         }

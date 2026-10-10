@@ -37,6 +37,8 @@ import com.example.service.BackupFrequency
 import com.example.service.DistributorExportService
 import com.example.service.DriveBackupSnapshot
 import com.example.service.GoogleDriveSyncService
+import com.example.service.CloudflareService
+import com.example.service.CloudflareEdgeStatus
 import com.example.service.StorageUsageBreakdown
 import com.example.service.StockAlertBackgroundService
 import com.example.service.StockAlertNotificationService
@@ -747,6 +749,32 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
   val autoSyncOnLaunch = GoogleDriveSyncService.autoSyncOnLaunch
   val autoSyncPreferredHour = GoogleDriveSyncService.autoSyncPreferredHour
   val syncStatusInfo = GoogleDriveSyncService.syncStatusInfo
+
+  // Cloudflare Zero Trust Gateway & Workers AI Integration
+  private val cloudflareService = CloudflareService(getApplication())
+  val cloudflareStatus = cloudflareService.cloudflareStatus
+  val cloudflareWorkerEndpoint = cloudflareService.workerEndpoint
+  val cloudflareTurnstileSiteKey = cloudflareService.turnstileSiteKey
+
+  init {
+    viewModelScope.launch {
+      cloudflareService.checkCloudflareConnection()
+    }
+  }
+
+  fun checkCloudflareStatus() {
+    viewModelScope.launch {
+      cloudflareService.checkCloudflareConnection()
+    }
+  }
+
+  fun updateCloudflareWorkerEndpoint(endpoint: String) {
+    cloudflareService.updateWorkerEndpoint(endpoint)
+  }
+
+  fun updateCloudflareTurnstileKey(key: String) {
+    cloudflareService.updateTurnstileKey(key)
+  }
 
   // Invoice Printer Selected Document
   val selectedInvoiceForPrinting = MutableStateFlow<SaleInvoice?>(null)
