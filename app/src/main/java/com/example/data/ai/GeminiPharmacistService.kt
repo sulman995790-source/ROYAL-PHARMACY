@@ -65,7 +65,7 @@ class GeminiPharmacistService {
     }
 
     try {
-      val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey"
+      val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=$apiKey"
 
       val contentsArray = JSONArray()
 
@@ -263,7 +263,7 @@ class GeminiPharmacistService {
   }
 
   private suspend fun queryGeminiRaw(prompt: String, apiKey: String): String = withContext(Dispatchers.IO) {
-    val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey"
+    val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=$apiKey"
     val rootJson = JSONObject().apply {
       put("contents", JSONArray().apply {
         put(JSONObject().apply {

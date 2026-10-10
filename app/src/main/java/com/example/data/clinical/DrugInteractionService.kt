@@ -426,7 +426,7 @@ class DrugInteractionService {
     if (!isApiKeyValid(apiKey)) return@withContext null
 
     try {
-      val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey"
+      val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=$apiKey"
       val prompt = """
         You are a clinical pharmacologist. Check drug-drug interactions between these medicines: ${medicines.joinToString(", ")}.
         Return ONLY valid JSON in this exact structure:
