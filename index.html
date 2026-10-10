@@ -1546,6 +1546,11 @@
           <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
             <h3 class="font-bold text-slate-800">Select Symptoms</h3>
             
+            <div class="relative">
+              <input type="text" id="symptom-search-bar" oninput="filterSymptomList(this.value)" placeholder="Search symptoms..." class="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-1 focus:ring-pink-500 mb-2">
+              <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5"></i>
+            </div>
+
             <div class="space-y-2" id="symptom-checkboxes">
               <label class="flex items-center space-x-3 p-2.5 rounded-lg hover:bg-slate-50 cursor-pointer border border-slate-100">
                 <input type="checkbox" value="fever" class="text-pink-600 focus:ring-pink-500 rounded" onchange="runSymptomChecker()">
@@ -1600,6 +1605,13 @@
               <div class="space-y-2">
                 <p class="text-xs font-bold text-slate-400 uppercase tracking-wide">Precautionary Alerts & Safety</p>
                 <p class="text-sm text-slate-600 border-l-4 border-amber-500 pl-3 italic" id="symptom-precaution-text">Safety alerts</p>
+              </div>
+
+              <div class="pt-4 border-t border-slate-100 flex justify-end">
+                <button onclick="generateWebSymptomPdf()" class="bg-royal-navy hover:bg-slate-800 text-white font-bold text-xs py-2.5 px-4 rounded-xl flex items-center space-x-2 transition shadow-sm cursor-pointer">
+                  <i data-lucide="file-text" class="w-4 h-4"></i>
+                  <span>Generate AI Triage Report (PDF)</span>
+                </button>
               </div>
             </div>
           </div>
@@ -7699,6 +7711,131 @@
         `;
         cautionText.innerText = "Advise plenty of warm fluid hydration. Review again if indicators continue over 72 hours.";
       }
+    }
+
+    function filterSymptomList(query) {
+      const q = query.toLowerCase().trim();
+      const labels = document.querySelectorAll('#symptom-checkboxes label');
+      labels.forEach(label => {
+        const text = label.textContent.toLowerCase();
+        if (text.includes(q)) {
+          label.style.display = 'flex';
+        } else {
+          label.style.display = 'none';
+        }
+      });
+    }
+
+    function generateWebSymptomPdf() {
+      const { jsPDF } = window.jspdf ? window.jspdf : { jsPDF: null };
+      if (!jsPDF) {
+        Swal.fire('Error', 'PDF library is not loaded. Please refresh.', 'error');
+        return;
+      }
+
+      const checkboxes = document.querySelectorAll('#symptom-checkboxes input:checked');
+      if (checkboxes.length === 0) {
+        Swal.fire('No Symptoms', 'Please select symptoms to compile report.', 'warning');
+        return;
+      }
+
+      let selectedText = Array.from(checkboxes).map(c => {
+        const labelText = c.closest('label').querySelector('span').innerText;
+        return labelText;
+      }).join(', ');
+
+      const riskTitle = document.getElementById('symptom-risk-title').innerText;
+      const riskDesc = document.getElementById('symptom-risk-desc').innerText;
+      const cautionText = document.getElementById('symptom-precaution-text').innerText;
+      
+      const doc = new jsPDF({
+        orientation: 'p',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      // Header Brand
+      doc.setFillColor(156, 18, 88); // Royal Magenta
+      doc.rect(0, 0, 210, 40, 'F');
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(22);
+      doc.text("ROYAL PHARMACY CLINICAL TRIAGE", 15, 18);
+
+      doc.setFont('Helvetica', 'normal');
+      doc.setFontSize(10);
+      doc.text("AI-Assisted Patient Symptom & Triage Record", 15, 25);
+      doc.text(`Generated: ${new Date().toLocaleString()}`, 15, 30);
+
+      // Section 1: Patient Profile & Presenting Symptoms
+      doc.setTextColor(30, 41, 59); // Royal Slate / Navy
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.text("1. Presenting Clinical Symptoms", 15, 55);
+
+      doc.setDrawColor(226, 232, 240);
+      doc.line(15, 58, 195, 58);
+
+      doc.setFont('Helvetica', 'normal');
+      doc.setFontSize(11);
+      doc.text("Presenting Symptoms:", 15, 66);
+      
+      doc.setFont('Helvetica', 'bold');
+      const splitSymptoms = doc.splitTextToSize(selectedText, 140);
+      doc.text(splitSymptoms, 60, 66);
+
+      let currentY = 66 + (splitSymptoms.length * 6);
+
+      // Section 2: Clinical Evaluation & Triage Decision
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.text("2. Clinical Evaluation & AI Triage Decision", 15, currentY + 10);
+
+      doc.setDrawColor(226, 232, 240);
+      doc.line(15, currentY + 13, 195, currentY + 13);
+
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.setTextColor(156, 18, 88);
+      doc.text(riskTitle, 15, currentY + 22);
+
+      doc.setFont('Helvetica', 'normal');
+      doc.setFontSize(11);
+      doc.setTextColor(51, 65, 85);
+      const splitDesc = doc.splitTextToSize(riskDesc, 175);
+      doc.text(splitDesc, 15, currentY + 28);
+
+      currentY = currentY + 28 + (splitDesc.length * 6);
+
+      // Section 3: Precautionary Alerts & Safety Protocols
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(14);
+      doc.text("3. Safety Alerts & Pharmacy Protocol", 15, currentY + 10);
+
+      doc.setDrawColor(226, 232, 240);
+      doc.line(15, currentY + 13, 195, currentY + 13);
+
+      doc.setFont('Helvetica', 'normal');
+      doc.setFontSize(11);
+      doc.setTextColor(153, 27, 27); // Dark red
+      const splitCaution = doc.splitTextToSize(`Caution Profile: ${cautionText}`, 175);
+      doc.text(splitCaution, 15, currentY + 22);
+
+      currentY = currentY + 22 + (splitCaution.length * 6);
+
+      // Footer disclaimer
+      doc.setDrawColor(226, 232, 240);
+      doc.line(15, 270, 195, 270);
+
+      doc.setFont('Helvetica', 'italic');
+      doc.setFontSize(9);
+      doc.setTextColor(100, 116, 139);
+      doc.text("Disclaimer: This is an AI-assisted pharmacist triage screening summary. It is not an alternative to an expert medical check.", 15, 275);
+      doc.text("All prescriptions and schedule drugs must be clinically evaluated by registered MBBS/MD practitioners.", 15, 280);
+
+      doc.save(`ai-triage-report-${Date.now()}.pdf`);
+      Swal.fire('Success', 'AI Triage Report PDF Generated Successfully!', 'success');
     }
 
     // Smart Invoice printer rendering logic
