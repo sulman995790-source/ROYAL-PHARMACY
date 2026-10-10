@@ -1792,6 +1792,107 @@ fun CloudSyncScreen(
           }
         }
 
+        // Free CDN & Edge Alternatives Selector Card
+        item {
+          Card(
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            border = CardDefaults.outlinedCardBorder().copy(
+              brush = androidx.compose.ui.graphics.SolidColor(CardBorder)
+            ),
+            modifier = Modifier.fillMaxWidth().testTag("card_free_cdn_providers")
+          ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+              Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+              ) {
+                Text(
+                  text = "Free CDN, DNS & Edge Alternatives",
+                  fontSize = 15.sp,
+                  fontWeight = FontWeight.Bold,
+                  color = TextDark
+                )
+                Box(
+                  modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color(0xFFDCFCE7))
+                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                ) {
+                  Text("100% FREE ($0/mo)", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = StatusGreen)
+                }
+              }
+
+              Text(
+                text = "Select any $0 free tier CDN, DNS, static hosting or tunneling provider below. All integrated routes are 100% free with no monthly subscription required:",
+                fontSize = 11.5.sp,
+                color = TextMuted,
+                lineHeight = 15.sp
+              )
+
+              viewModel.freeCdnProvidersList.forEach { provider ->
+                val isSelected = provider.endpointUrl.equals(endpointInput, ignoreCase = true) || provider.name == cfStatus.selectedProvider
+                Card(
+                  shape = RoundedCornerShape(8.dp),
+                  colors = CardDefaults.cardColors(
+                    containerColor = if (isSelected) Color(0xFFEFF6FF) else Color(0xFFF8FAFC)
+                  ),
+                  border = CardDefaults.outlinedCardBorder().copy(
+                    brush = androidx.compose.ui.graphics.SolidColor(
+                      if (isSelected) Color(0xFF3B82F6) else Color(0xFFE2E8F0)
+                    )
+                  ),
+                  modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                      viewModel.selectFreeCdnProvider(provider)
+                      endpointInput = provider.endpointUrl
+                      Toast.makeText(context, "Selected Free Provider: ${provider.name}", Toast.LENGTH_SHORT).show()
+                    }
+                    .testTag("provider_${provider.name.lowercase().replace(" ", "_")}")
+                ) {
+                  Row(
+                    modifier = Modifier
+                      .fillMaxWidth()
+                      .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                  ) {
+                    RadioButton(
+                      selected = isSelected,
+                      onClick = {
+                        viewModel.selectFreeCdnProvider(provider)
+                        endpointInput = provider.endpointUrl
+                        Toast.makeText(context, "Selected Free Provider: ${provider.name}", Toast.LENGTH_SHORT).show()
+                      },
+                      colors = RadioButtonDefaults.colors(selectedColor = RoyalNavy)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                      Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(provider.name, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextDark)
+                        if (provider.isRecommended) {
+                          Spacer(modifier = Modifier.width(6.dp))
+                          Box(
+                            modifier = Modifier
+                              .clip(RoundedCornerShape(4.dp))
+                              .background(Color(0xFFFEF3C7))
+                              .padding(horizontal = 5.dp, vertical = 1.5.dp)
+                          ) {
+                            Text("ACTIVE WORKER", fontSize = 8.5.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD97706))
+                          }
+                        }
+                      }
+                      Text("${provider.category} • ${provider.freeQuotaText}", fontSize = 11.sp, color = TextMuted)
+                      Text(provider.endpointUrl, fontSize = 10.5.sp, color = RoyalNavy, fontWeight = FontWeight.Medium)
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+
         // Info details Card
         item {
           Card(

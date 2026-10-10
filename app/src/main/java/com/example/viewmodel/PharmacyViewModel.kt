@@ -599,8 +599,18 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
     otpUserRole.value = role
     otpAuthType.value = type
     isVerifyingOtp.value = true
-    otpCodeValue.value = "123456" // Standard 6 digit OTP for simulated verification
-    scanFeedbackMessage.value = "OTP Code (123456) dispatched to $target!"
+    val generatedCode = ((100000..999999).random()).toString()
+    otpCodeValue.value = generatedCode
+    scanFeedbackMessage.value = "OTP Code ($generatedCode) dispatched to $target!"
+    viewModelScope.launch {
+      com.example.service.FreeOtpSenderService.autoDispatchOtp(
+        getApplication(),
+        phoneNumber = target,
+        emailAddress = target,
+        otpCode = generatedCode,
+        channel = com.example.service.OtpChannel.ALL_AUTO
+      )
+    }
   }
 
   fun verifyOtpCode(enteredCode: String): Boolean {
@@ -766,6 +776,12 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
     viewModelScope.launch {
       cloudflareService.checkCloudflareConnection()
     }
+  }
+
+  val freeCdnProvidersList = cloudflareService.freeProvidersList
+
+  fun selectFreeCdnProvider(provider: com.example.service.FreeCdnProvider) {
+    cloudflareService.selectFreeProvider(provider)
   }
 
   fun updateCloudflareWorkerEndpoint(endpoint: String) {

@@ -33,9 +33,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.*
+import com.example.service.FreeOtpSenderService
+import com.example.service.OtpChannel
 import com.example.viewmodel.AuthLoginType
 import com.example.viewmodel.PharmacyViewModel
 import com.example.viewmodel.UserRole
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,6 +47,7 @@ fun LoginScreen(
   modifier: Modifier = Modifier
 ) {
   val context = LocalContext.current
+  val scope = rememberCoroutineScope()
   val isDarkMode by viewModel.isDarkMode.collectAsState()
 
   var isSignUpMode by remember { mutableStateOf(false) }
@@ -57,6 +61,7 @@ fun LoginScreen(
   var showGoogleChooser by remember { mutableStateOf(false) }
   var showOtpField by remember { mutableStateOf(false) }
   var generatedOtp by remember { mutableStateOf("123456") }
+  var selectedChannel by remember { mutableStateOf(OtpChannel.SMS) }
   var showResetPasswordDialog by remember { mutableStateOf(false) }
   var isAuthenticating by remember { mutableStateOf(false) }
 
@@ -324,7 +329,7 @@ fun LoginScreen(
               modifier = Modifier.fillMaxWidth().testTag("login_phone_field")
             )
 
-            // OTP Entrance Fields & Multi-channel Dispatch
+            // OTP Entrance Fields & Automated Multi-channel Dispatch
             AnimatedVisibility(visible = showOtpField) {
               Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Spacer(modifier = Modifier.height(4.dp))
@@ -344,89 +349,57 @@ fun LoginScreen(
                       Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Verified, contentDescription = null, tint = StatusGreen, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("OTP Verification Code Sent", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = textThemeColor)
+                        Text("OTP Sent Automatically", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = textThemeColor)
                       }
                       TextButton(
                         onClick = {
                           generatedOtp = ((100000..999999).random()).toString()
-                          Toast.makeText(context, "New OTP regenerated and dispatched", Toast.LENGTH_SHORT).show()
+                          otpInput = generatedOtp
+                          scope.launch {
+                            FreeOtpSenderService.autoDispatchOtp(context, phoneInput, emailInput, generatedOtp, OtpChannel.ALL_AUTO)
+                          }
+                          Toast.makeText(context, "New OTP ($generatedOtp) dispatched & auto-filled!", Toast.LENGTH_SHORT).show()
                         },
                         contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
                       ) {
-                        Text("Resend", fontSize = 11.sp, color = RoyalMagenta)
+                        Text("Resend Code", fontSize = 11.sp, color = RoyalMagenta, fontWeight = FontWeight.Bold)
+                      }
+                    }
+
+                    // Auto-Fill Code & Live OTP Display Banner
+                    Row(
+                      modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFFDCFCE7))
+                        .border(1.dp, Color(0xFF86EFAC), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                      horizontalArrangement = Arrangement.SpaceBetween,
+                      verticalAlignment = Alignment.CenterVertically
+                    ) {
+                      Column {
+                        Text("Auto-Detected Code:", fontSize = 10.sp, color = Color(0xFF166534), fontWeight = FontWeight.Bold)
+                        Text(generatedOtp, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF14532D))
+                      }
+                      Button(
+                        onClick = {
+                          otpInput = generatedOtp
+                          Toast.makeText(context, "OTP $generatedOtp Auto-Filled!", Toast.LENGTH_SHORT).show()
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF166534)),
+                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                        shape = RoundedCornerShape(6.dp),
+                        modifier = Modifier.testTag("btn_autofill_otp")
+                      ) {
+                        Text("⚡ Tap to Auto-Fill", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                       }
                     }
 
                     Text(
-                      text = "Send verification code to recipient via:",
+                      text = "Sent automatically to +91 $phoneInput via SMS & WhatsApp",
                       fontSize = 11.sp,
                       color = TextMuted
                     )
-
-                    // Dispatch Buttons: SMS (Text Message), WhatsApp, Email
-                    Row(
-                      modifier = Modifier.fillMaxWidth(),
-                      horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                      // 1. Text Message (SMS)
-                      OutlinedButton(
-                        onClick = {
-                          val intent = Intent(Intent.ACTION_SENDTO).apply {
-                            data = Uri.parse("smsto:+91$phoneInput")
-                            putExtra("sms_body", "Your ROYAL PHARMACY security OTP is $generatedOtp. Valid for 10 minutes.")
-                          }
-                          try {
-                            context.startActivity(intent)
-                          } catch (_: Exception) {
-                            Toast.makeText(context, "Messaging app not available", Toast.LENGTH_SHORT).show()
-                          }
-                        },
-                        shape = RoundedCornerShape(8.dp),
-                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
-                        modifier = Modifier.weight(1f).testTag("btn_send_otp_sms")
-                      ) {
-                        Text("💬 SMS", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = RoyalNavy)
-                      }
-
-                      // 2. WhatsApp
-                      OutlinedButton(
-                        onClick = {
-                          val cleanPhone = if (phoneInput.startsWith("91")) phoneInput else "91$phoneInput"
-                          val textMsg = Uri.encode("Your ROYAL PHARMACY security OTP is: $generatedOtp. Valid for 10 minutes.")
-                          val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://api.whatsapp.com/send?phone=$cleanPhone&text=$textMsg"))
-                          try {
-                            context.startActivity(intent)
-                          } catch (_: Exception) {
-                            Toast.makeText(context, "WhatsApp not installed", Toast.LENGTH_SHORT).show()
-                          }
-                        },
-                        shape = RoundedCornerShape(8.dp),
-                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
-                        modifier = Modifier.weight(1f).testTag("btn_send_otp_whatsapp")
-                      ) {
-                        Text("📱 WhatsApp", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = StatusGreen)
-                      }
-
-                      // 3. Email
-                      OutlinedButton(
-                        onClick = {
-                          val emailTo = if (emailInput.isNotBlank()) emailInput else "sulman995790@gmail.com"
-                          val mailIntent = Intent(Intent.ACTION_SENDTO).apply {
-                            data = Uri.parse("mailto:$emailTo?subject=" + Uri.encode("Royal Pharmacy Verification OTP") + "&body=" + Uri.encode("Your security OTP is: $generatedOtp. Valid for 10 minutes."))
-                          }
-                          try {
-                            context.startActivity(mailIntent)
-                          } catch (_: Exception) {
-                            Toast.makeText(context, "Email app not available", Toast.LENGTH_SHORT).show()
-                          }
-                        },
-                        shape = RoundedCornerShape(8.dp),
-                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
-                        modifier = Modifier.weight(1f).testTag("btn_send_otp_email")
-                      ) {
-                        Text("✉️ Email", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = RoyalMagenta)
-                      }
-                    }
                   }
                 }
 
@@ -435,7 +408,7 @@ fun LoginScreen(
                   onValueChange = { if (it.all { char -> char.isDigit() } && it.length <= 6) otpInput = it },
                   label = { Text("Enter 6-Digit OTP Code") },
                   supportingText = {
-                    Text("Enter the verification OTP sent to your number or email", fontSize = 11.sp, color = TextMuted)
+                    Text("Verification code auto-sent to your number/email", fontSize = 11.sp, color = TextMuted)
                   },
                   leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null, tint = TextMuted) },
                   keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -445,7 +418,7 @@ fun LoginScreen(
               }
             }
 
-            // Actions Button
+            // Primary Action Button
             Button(
               onClick = {
                 if (selectedLoginRole == UserRole.OWNER && ownerPasswordInput != ownerSecretPassword) {
@@ -457,7 +430,19 @@ fun LoginScreen(
                 } else if (!showOtpField) {
                   generatedOtp = ((100000..999999).random()).toString()
                   showOtpField = true
-                  Toast.makeText(context, "6-digit OTP successfully sent to mobile +91 $phoneInput", Toast.LENGTH_LONG).show()
+                  otpInput = generatedOtp
+
+                  scope.launch {
+                    FreeOtpSenderService.autoDispatchOtp(
+                      context = context,
+                      phoneNumber = phoneInput,
+                      emailAddress = emailInput,
+                      otpCode = generatedOtp,
+                      channel = OtpChannel.ALL_AUTO
+                    )
+                  }
+                  
+                  Toast.makeText(context, "OTP ($generatedOtp) sent automatically to +91 $phoneInput!", Toast.LENGTH_LONG).show()
                 } else {
                   if (otpInput == generatedOtp || otpInput == "123456" || otpInput.isBlank()) {
                     isAuthenticating = true
