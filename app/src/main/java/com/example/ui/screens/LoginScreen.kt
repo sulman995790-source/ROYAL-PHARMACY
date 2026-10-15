@@ -329,6 +329,40 @@ fun LoginScreen(
               modifier = Modifier.fillMaxWidth().testTag("login_phone_field")
             )
 
+            // Preferred OTP Delivery Method Chips
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+              Text("Preferred OTP Delivery Channel:", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextMuted)
+              Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+              ) {
+                listOf(
+                  OtpChannel.ALL_AUTO to "⚡ All Auto",
+                  OtpChannel.WHATSAPP to "💬 WhatsApp",
+                  OtpChannel.SMS to "📱 SMS",
+                  OtpChannel.GMAIL to "✉️ Email"
+                ).forEach { (channel, label) ->
+                  val isSelected = selectedChannel == channel
+                  Box(
+                    modifier = Modifier
+                      .weight(1f)
+                      .clip(RoundedCornerShape(8.dp))
+                      .background(if (isSelected) RoyalNavy else (if (isDarkMode) Color(0xFF334155) else Color(0xFFF1F5F9)))
+                      .clickable { selectedChannel = channel }
+                      .padding(vertical = 6.dp),
+                    contentAlignment = Alignment.Center
+                  ) {
+                    Text(
+                      text = label,
+                      fontSize = 10.5.sp,
+                      fontWeight = FontWeight.Bold,
+                      color = if (isSelected) Color.White else textThemeColor
+                    )
+                  }
+                }
+              }
+            }
+
             // OTP Entrance Fields & Automated Multi-channel Dispatch
             AnimatedVisibility(visible = showOtpField) {
               Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -356,7 +390,7 @@ fun LoginScreen(
                           generatedOtp = ((100000..999999).random()).toString()
                           otpInput = generatedOtp
                           scope.launch {
-                            FreeOtpSenderService.autoDispatchOtp(context, phoneInput, emailInput, generatedOtp, OtpChannel.ALL_AUTO)
+                            FreeOtpSenderService.autoDispatchOtp(context, phoneInput, emailInput, generatedOtp, selectedChannel)
                           }
                           Toast.makeText(context, "New OTP ($generatedOtp) dispatched & auto-filled!", Toast.LENGTH_SHORT).show()
                         },
@@ -395,8 +429,48 @@ fun LoginScreen(
                       }
                     }
 
+                    // 1-Tap Quick Action Buttons (WhatsApp / SMS / Email)
+                    Row(
+                      modifier = Modifier.fillMaxWidth(),
+                      horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                      Button(
+                        onClick = {
+                          FreeOtpSenderService.launchWhatsAppOtp(context, phoneInput, generatedOtp)
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366)),
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
+                        shape = RoundedCornerShape(6.dp),
+                        modifier = Modifier.weight(1f)
+                      ) {
+                        Text("💬 WhatsApp", fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                      }
+                      Button(
+                        onClick = {
+                          FreeOtpSenderService.launchSmsOtp(context, phoneInput, generatedOtp)
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = RoyalNavy),
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
+                        shape = RoundedCornerShape(6.dp),
+                        modifier = Modifier.weight(1f)
+                      ) {
+                        Text("📱 SMS", fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                      }
+                      Button(
+                        onClick = {
+                          FreeOtpSenderService.launchGmailOtp(context, emailInput, generatedOtp)
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626)),
+                        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp),
+                        shape = RoundedCornerShape(6.dp),
+                        modifier = Modifier.weight(1f)
+                      ) {
+                        Text("✉️ Email", fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                      }
+                    }
+
                     Text(
-                      text = "Sent automatically to +91 $phoneInput via SMS & WhatsApp",
+                      text = "Sent automatically to +91 $phoneInput via ${selectedChannel.name.replace("_", " ")}",
                       fontSize = 11.sp,
                       color = TextMuted
                     )
@@ -438,7 +512,7 @@ fun LoginScreen(
                       phoneNumber = phoneInput,
                       emailAddress = emailInput,
                       otpCode = generatedOtp,
-                      channel = OtpChannel.ALL_AUTO
+                      channel = selectedChannel
                     )
                   }
                   

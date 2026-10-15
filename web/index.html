@@ -417,9 +417,20 @@
             </div>
           </div>
 
+          <!-- Channel Selector Chips -->
+          <div>
+            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Preferred OTP Delivery Channel</label>
+            <div class="grid grid-cols-4 gap-1.5" id="web-otp-channel-group">
+              <button type="button" onclick="setWebOtpChannel('ALL')" id="otp-ch-ALL" class="py-1.5 rounded-lg text-[10.5px] font-bold bg-pink-600 text-white border border-pink-500 transition cursor-pointer">⚡ All Auto</button>
+              <button type="button" onclick="setWebOtpChannel('WA')" id="otp-ch-WA" class="py-1.5 rounded-lg text-[10.5px] font-bold bg-slate-800 text-slate-300 hover:text-white transition cursor-pointer">💬 WhatsApp</button>
+              <button type="button" onclick="setWebOtpChannel('SMS')" id="otp-ch-SMS" class="py-1.5 rounded-lg text-[10.5px] font-bold bg-slate-800 text-slate-300 hover:text-white transition cursor-pointer">📱 SMS</button>
+              <button type="button" onclick="setWebOtpChannel('EMAIL')" id="otp-ch-EMAIL" class="py-1.5 rounded-lg text-[10.5px] font-bold bg-slate-800 text-slate-300 hover:text-white transition cursor-pointer">✉️ Email</button>
+            </div>
+          </div>
+
           <!-- OTP Code Input Block (Real App Automated OTP) -->
           <div id="web-login-otp-block" class="space-y-2.5 hidden">
-            <div class="p-3 bg-slate-900 border border-emerald-500/40 rounded-xl space-y-1.5 text-left">
+            <div class="p-3 bg-slate-900 border border-emerald-500/40 rounded-xl space-y-2 text-left">
               <div class="flex items-center justify-between">
                 <span class="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
                   <i class="fa-solid fa-circle-check text-emerald-400"></i> OTP Sent Automatically
@@ -427,9 +438,23 @@
                 <span id="web-otp-timer-badge" class="text-[10px] font-bold px-2 py-0.5 bg-emerald-950 text-emerald-300 rounded-full border border-emerald-800/50">Resend in 30s</span>
               </div>
               <p class="text-[11px] text-slate-300">6-digit verification code sent automatically to <strong id="web-otp-target-display" class="text-white">+91 9957905450</strong></p>
+              
               <div class="flex items-center justify-between pt-1 border-t border-slate-800">
                 <span class="text-[11px] font-bold text-slate-400">Auto-Detected Code: <span id="web-live-otp-display" class="text-emerald-400 font-extrabold ml-1">847291</span></span>
-                <button type="button" onclick="autoFillWebOtp()" class="text-[10px] font-bold text-pink-400 hover:text-pink-300 underline">⚡ Auto-Fill</button>
+                <button type="button" onclick="autoFillWebOtp()" class="text-[10px] font-bold text-pink-400 hover:text-pink-300 underline cursor-pointer">⚡ Auto-Fill</button>
+              </div>
+
+              <!-- 1-Tap Direct Channel Open Actions -->
+              <div class="grid grid-cols-3 gap-1.5 pt-1 border-t border-slate-800">
+                <button type="button" onclick="openWebWhatsAppOtp()" class="py-1.5 px-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition cursor-pointer">
+                  <i class="fa-brands fa-whatsapp"></i> WhatsApp
+                </button>
+                <button type="button" onclick="openWebSmsOtp()" class="py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition cursor-pointer">
+                  <i class="fa-solid fa-message"></i> SMS App
+                </button>
+                <button type="button" onclick="openWebEmailOtp()" class="py-1.5 px-2 bg-rose-700 hover:bg-rose-600 text-white rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition cursor-pointer">
+                  <i class="fa-solid fa-envelope"></i> Email App
+                </button>
               </div>
             </div>
 
@@ -1585,6 +1610,41 @@
                 <input type="checkbox" value="acidity" class="text-pink-600 focus:ring-pink-500 rounded" onchange="runSymptomChecker()">
                 <span class="text-sm text-slate-700">Stomach Acid / Bloated Burn</span>
               </label>
+              <label class="flex items-center space-x-3 p-2.5 rounded-lg hover:bg-sky-50 cursor-pointer border border-sky-100">
+                <input type="checkbox" value="nightfall" class="text-sky-600 focus:ring-sky-500 rounded" onchange="runSymptomChecker()">
+                <span class="text-sm text-slate-800 font-semibold">⚡ Night Fall / Nocturnal Emission (Andrology)</span>
+              </label>
+              <label class="flex items-center space-x-3 p-2.5 rounded-lg hover:bg-purple-50 cursor-pointer border border-purple-100">
+                <input type="checkbox" value="hairfall" class="text-purple-600 focus:ring-purple-500 rounded" onchange="runSymptomChecker()">
+                <span class="text-sm text-slate-800 font-semibold">⚡ Hair Fall / Alopecia & Thinning</span>
+              </label>
+              <label class="flex items-center space-x-3 p-2.5 rounded-lg hover:bg-pink-50 cursor-pointer border border-pink-100">
+                <input type="checkbox" value="pcos" class="text-pink-600 focus:ring-pink-500 rounded" onchange="runSymptomChecker()">
+                <span class="text-sm text-slate-800 font-semibold">⚡ PCOS / Period Cramps (Dysmenorrhea)</span>
+              </label>
+              <label class="flex items-center space-x-3 p-2.5 rounded-lg hover:bg-rose-50 cursor-pointer border border-rose-100">
+                <input type="checkbox" value="dengue" class="text-rose-600 focus:ring-rose-500 rounded" onchange="runSymptomChecker()">
+                <span class="text-sm text-slate-800 font-semibold">⚡ Dengue Fever / Platelet Drop</span>
+              </label>
+              <label class="flex items-center space-x-3 p-2.5 rounded-lg hover:bg-amber-50 cursor-pointer border border-amber-100">
+                <input type="checkbox" value="diabetes" class="text-amber-600 focus:ring-amber-500 rounded" onchange="runSymptomChecker()">
+                <span class="text-sm text-slate-800 font-semibold">⚡ Diabetes / High Blood Sugar & Thirst</span>
+              </label>
+              <label class="flex items-center space-x-3 p-2.5 rounded-lg hover:bg-red-50 cursor-pointer border border-red-100">
+                <input type="checkbox" value="hypertension" class="text-red-600 focus:ring-red-500 rounded" onchange="runSymptomChecker()">
+                <span class="text-sm text-slate-800 font-semibold">⚡ High Blood Pressure / BP Spike & Dizziness</span>
+              </label>
+            </div>
+
+            <!-- Custom Symptom Input with Dedicated Gemini -->
+            <div class="pt-3 border-t border-slate-100 space-y-2">
+              <label class="block text-xs font-bold text-slate-600">Other Specific Symptoms / Condition:</label>
+              <div class="flex gap-2">
+                <input type="text" id="custom-symptom-text" placeholder="e.g. nocturnal emission, skin rash, migraine..." class="flex-1 px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-1 focus:ring-pink-500">
+                <button type="button" onclick="analyzeCustomSymptomWithGemini()" class="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold flex items-center gap-1 shrink-0 transition cursor-pointer">
+                  <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> AI Check
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1620,7 +1680,11 @@
                 <p class="text-sm text-slate-600 border-l-4 border-amber-500 pl-3 italic" id="symptom-precaution-text">Safety alerts</p>
               </div>
 
-              <div class="pt-4 border-t border-slate-100 flex justify-end">
+              <div class="pt-4 border-t border-slate-100 flex flex-wrap gap-2 justify-end">
+                <button onclick="askDedicatedGeminiFromTriage()" class="bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs py-2.5 px-4 rounded-xl flex items-center space-x-2 transition shadow-sm cursor-pointer">
+                  <i data-lucide="sparkles" class="w-4 h-4"></i>
+                  <span>💬 Consult Dedicated Gemini 3.5 Flash</span>
+                </button>
                 <button onclick="generateWebSymptomPdf()" class="bg-royal-navy hover:bg-slate-800 text-white font-bold text-xs py-2.5 px-4 rounded-xl flex items-center space-x-2 transition shadow-sm cursor-pointer">
                   <i data-lucide="file-text" class="w-4 h-4"></i>
                   <span>Generate AI Triage Report (PDF)</span>
@@ -7779,6 +7843,72 @@
           <span class="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-1 rounded-full font-bold">Antacids Suspensions</span>
         `;
         cautionText.innerText = "Advise patient to avoid lying down immediately after meals and restrict high acidic oil diet patterns.";
+      } else if (selected.includes('nightfall')) {
+        banner.className = "flex items-center space-x-3 p-4 rounded-xl border border-sky-200 bg-sky-50 text-sky-900";
+        bannerIconBg.className = "p-2 rounded-full bg-sky-600 text-white";
+        riskTitle.innerText = "Andrological Triage: Physiological Nocturnal Emission (Night Fall)";
+        riskDesc.innerText = "Natural, involuntary release of seminal fluid during sleep. 100% normal physiological event in healthy adult males. No pathology.";
+        otcList.innerHTML = `
+          <span class="bg-sky-100 text-sky-800 text-xs px-2.5 py-1 rounded-full font-bold">Ashwagandha (Neuro-Nutritional Vitality)</span>
+          <span class="bg-sky-100 text-sky-800 text-xs px-2.5 py-1 rounded-full font-bold">Zinc & Multivitamin Complex</span>
+          <span class="bg-sky-100 text-sky-800 text-xs px-2.5 py-1 rounded-full font-bold">Magnesium Glycinate (Nervous Relaxation)</span>
+        `;
+        cautionText.innerText = "Clinical Reassurance: This is natural biological regulation, NOT a disease. Reassure patient. Advise side-sleeping, avoidance of erotic screen media before bed, and pelvic floor (Kegel) exercises. Never prescribe synthetic sedatives.";
+      } else if (selected.includes('hairfall')) {
+        banner.className = "flex items-center space-x-3 p-4 rounded-xl border border-purple-200 bg-purple-50 text-purple-900";
+        bannerIconBg.className = "p-2 rounded-full bg-purple-600 text-white";
+        riskTitle.innerText = "Dermatological Triage: Hair Thinning & Alopecia";
+        riskDesc.innerText = "Follicle shedding associated with Androgenetic Alopecia, Telogen Effluvium, or nutritional deficits.";
+        otcList.innerHTML = `
+          <span class="bg-purple-100 text-purple-800 text-xs px-2.5 py-1 rounded-full font-bold">Biotin 10mg + Zinc Tablet</span>
+          <span class="bg-purple-100 text-purple-800 text-xs px-2.5 py-1 rounded-full font-bold">Saw Palmetto Extract (Natural DHT Inhibitor)</span>
+          <span class="bg-purple-100 text-purple-800 text-xs px-2.5 py-1 rounded-full font-bold">Minoxidil 5% Topical Solution (1ml BD)</span>
+        `;
+        cautionText.innerText = "Advise patient to check serum Ferritin and Vitamin D3. Apply Minoxidil only on dry scalp. Avoid harsh chemical shampoos.";
+      } else if (selected.includes('pcos')) {
+        banner.className = "flex items-center space-x-3 p-4 rounded-xl border border-pink-200 bg-pink-50 text-pink-900";
+        bannerIconBg.className = "p-2 rounded-full bg-pink-600 text-white";
+        riskTitle.innerText = "Gynecological Triage: PCOS & Acute Dysmenorrhea";
+        riskDesc.innerText = "Hormonal ovarian syndrome with painful menstrual cramps and irregular cycle intervals.";
+        otcList.innerHTML = `
+          <span class="bg-pink-100 text-pink-800 text-xs px-2.5 py-1 rounded-full font-bold">Meftal-Spas (Mefenamic Acid + Dicyclomine)</span>
+          <span class="bg-pink-100 text-pink-800 text-xs px-2.5 py-1 rounded-full font-bold">Myo-Inositol + D-Chiro-Inositol</span>
+          <span class="bg-pink-100 text-pink-800 text-xs px-2.5 py-1 rounded-full font-bold">Iron & Folic Acid Supplement</span>
+        `;
+        cautionText.innerText = "Take antispasmodic tablets strictly after meals. If extreme lower quadrant pain persists, order pelvic ultrasound to rule out ovarian cyst torsion.";
+      } else if (selected.includes('dengue')) {
+        banner.className = "flex items-center space-x-3 p-4 rounded-xl border border-red-200 bg-red-50 text-red-900";
+        bannerIconBg.className = "p-2 rounded-full bg-red-600 text-white";
+        riskTitle.innerText = "EMERGENCY VIRAL TRIAGE: Suspected Dengue / Platelet Drop";
+        riskDesc.innerText = "Sudden fever, retro-orbital eye pain, bone breaking aches, and risk of critical thrombocytopenia.";
+        otcList.innerHTML = `
+          <span class="bg-red-100 text-red-800 text-xs px-2.5 py-1 rounded-full font-bold">Paracetamol 650mg (Only Antipyretic)</span>
+          <span class="bg-red-100 text-red-800 text-xs px-2.5 py-1 rounded-full font-bold">ORS & Coconut Water (Intensive Hydration)</span>
+          <span class="bg-red-100 text-red-800 text-xs px-2.5 py-1 rounded-full font-bold">Carica Papaya Leaf Extract Tablet</span>
+        `;
+        cautionText.innerText = "CRITICAL WARNING: NEVER administer Ibuprofen, Aspirin, or Diclofenac (triggers fatal gastrointestinal bleeding in dengue). Mandatory daily CBC Platelet monitoring.";
+      } else if (selected.includes('diabetes')) {
+        banner.className = "flex items-center space-x-3 p-4 rounded-xl border border-amber-200 bg-amber-50 text-amber-900";
+        bannerIconBg.className = "p-2 rounded-full bg-amber-600 text-white";
+        riskTitle.innerText = "Metabolic Triage: Uncontrolled Hyperglycemia";
+        riskDesc.innerText = "Elevated blood glucose presenting with polydipsia, polyuria, lethargy, or blurred vision.";
+        otcList.innerHTML = `
+          <span class="bg-amber-100 text-amber-800 text-xs px-2.5 py-1 rounded-full font-bold">Sugar-Free Oral Hydration</span>
+          <span class="bg-amber-100 text-amber-800 text-xs px-2.5 py-1 rounded-full font-bold">Metformin 500mg (Rx only)</span>
+          <span class="bg-amber-100 text-amber-800 text-xs px-2.5 py-1 rounded-full font-bold">Alpha Lipoic Acid</span>
+        `;
+        cautionText.innerText = "Immediate Fasting / Random Blood Sugar & HbA1c test required. Educate patient on recognizing hypoglycemic warning signs (sweating, tremors).";
+      } else if (selected.includes('hypertension')) {
+        banner.className = "flex items-center space-x-3 p-4 rounded-xl border border-red-200 bg-red-50 text-red-900";
+        bannerIconBg.className = "p-2 rounded-full bg-red-600 text-white";
+        riskTitle.innerText = "EMERGENCY CARDIOVASCULAR TRIAGE: Blood Pressure Spike";
+        riskDesc.innerText = "Severe hypertension (BP > 140/90 mmHg) with occipital headache, palpitations, or lightheadedness.";
+        otcList.innerHTML = `
+          <span class="bg-red-100 text-red-800 text-xs px-2.5 py-1 rounded-full font-bold">Immediate Quiet Rest</span>
+          <span class="bg-red-100 text-red-800 text-xs px-2.5 py-1 rounded-full font-bold">Amlodipine / Telmisartan (Rx only)</span>
+          <span class="bg-red-100 text-red-800 text-xs px-2.5 py-1 rounded-full font-bold">Low-Sodium Lifestyle</span>
+        `;
+        cautionText.innerText = "RED FLAG ALERT: If accompanied by chest tightness, left arm radiating numbness, or shortness of breath, transfer to cardiac ICU immediately. Mandatory 12-lead ECG.";
       } else {
         banner.className = "flex items-center space-x-3 p-4 rounded-xl border border-amber-200 bg-amber-50 text-amber-800";
         bannerIconBg.className = "p-2 rounded-full bg-amber-600 text-white";
@@ -7790,6 +7920,69 @@
         `;
         cautionText.innerText = "Advise plenty of warm fluid hydration. Review again if indicators continue over 72 hours.";
       }
+    }
+
+    function askDedicatedGeminiFromTriage() {
+      const checkboxes = document.querySelectorAll('#symptom-checkboxes input:checked');
+      const selectedNames = Array.from(checkboxes).map(c => {
+        const span = c.closest('label')?.querySelector('span');
+        return span ? span.innerText.replace('⚡ ', '') : c.value;
+      });
+      const customVal = document.getElementById('custom-symptom-text')?.value.trim();
+      if (customVal) selectedNames.push(customVal);
+
+      if (selectedNames.length === 0) {
+        Swal.fire('No Symptoms', 'Please select at least one symptom to consult Dedicated Gemini.', 'info');
+        return;
+      }
+
+      const prompt = `Please provide a comprehensive clinical pharmacological consultation for presenting symptoms: ${selectedNames.join(', ')}. Include evidence-based oral medicines, recommended diagnostic lab tests, red flag warnings, and patient lifestyle counseling.`;
+      
+      switchTab('gemini');
+      const chatInput = document.getElementById('gemini-chat-input');
+      if (chatInput) {
+        chatInput.value = prompt;
+        sendGeminiWebChat();
+      }
+    }
+
+    function analyzeCustomSymptomWithGemini() {
+      const input = document.getElementById('custom-symptom-text');
+      const query = input ? input.value.trim() : '';
+      if (!query) {
+        Swal.fire('Empty Input', 'Please type a symptom or medical condition to analyze with Gemini.', 'info');
+        return;
+      }
+
+      // If matches known condition, trigger corresponding check
+      const lower = query.toLowerCase();
+      if (lower.includes('night') || lower.includes('fall') || lower.includes('nocturnal') || lower.includes('semen') || lower.includes('erect')) {
+        const chk = document.querySelector('input[value="nightfall"]');
+        if (chk) { chk.checked = true; runSymptomChecker(); return; }
+      }
+      if (lower.includes('hair') || lower.includes('bald') || lower.includes('alopecia')) {
+        const chk = document.querySelector('input[value="hairfall"]');
+        if (chk) { chk.checked = true; runSymptomChecker(); return; }
+      }
+      if (lower.includes('pcos') || lower.includes('period') || lower.includes('cramp') || lower.includes('menses')) {
+        const chk = document.querySelector('input[value="pcos"]');
+        if (chk) { chk.checked = true; runSymptomChecker(); return; }
+      }
+      if (lower.includes('dengue') || lower.includes('platelet')) {
+        const chk = document.querySelector('input[value="dengue"]');
+        if (chk) { chk.checked = true; runSymptomChecker(); return; }
+      }
+      if (lower.includes('sugar') || lower.includes('diabet') || lower.includes('glucose')) {
+        const chk = document.querySelector('input[value="diabetes"]');
+        if (chk) { chk.checked = true; runSymptomChecker(); return; }
+      }
+      if (lower.includes('bp') || lower.includes('hypertens') || lower.includes('pressure')) {
+        const chk = document.querySelector('input[value="hypertension"]');
+        if (chk) { chk.checked = true; runSymptomChecker(); return; }
+      }
+
+      // Else consult Dedicated Gemini directly
+      askDedicatedGeminiFromTriage();
     }
 
     function filterSymptomList(query) {
@@ -11913,6 +12106,50 @@
           }
         }
       }, 1000);
+    }
+
+    let currentWebOtpChannel = 'ALL';
+
+    function setWebOtpChannel(ch) {
+      currentWebOtpChannel = ch;
+      const channels = ['ALL', 'WA', 'SMS', 'EMAIL'];
+      channels.forEach(c => {
+        const btn = document.getElementById('otp-ch-' + c);
+        if (!btn) return;
+        if (c === ch) {
+          btn.className = "py-1.5 rounded-lg text-[10.5px] font-bold bg-pink-600 text-white border border-pink-500 transition cursor-pointer";
+        } else {
+          btn.className = "py-1.5 rounded-lg text-[10.5px] font-bold bg-slate-800 text-slate-300 hover:text-white transition cursor-pointer";
+        }
+      });
+      if (typeof showToast === 'function') {
+        const names = { ALL: 'All Auto Channels', WA: 'WhatsApp Direct', SMS: 'SMS Gateway', EMAIL: 'Email Dispatch' };
+        showToast("Preferred Channel: " + (names[ch] || ch));
+      }
+    }
+
+    function openWebWhatsAppOtp() {
+      const phoneInput = document.getElementById('web-login-phone-input');
+      const raw = phoneInput ? phoneInput.value.replace(/\D/g, '') : '';
+      const phone = raw.length === 10 ? '91' + raw : (raw || '919957905450');
+      const msg = encodeURIComponent(`Your ROYAL PHARMACY security OTP is: ${currentWebOtp}. Valid for 10 minutes.`);
+      window.open(`https://api.whatsapp.com/send?phone=${phone}&text=${msg}`, '_blank');
+    }
+
+    function openWebSmsOtp() {
+      const phoneInput = document.getElementById('web-login-phone-input');
+      const raw = phoneInput ? phoneInput.value.replace(/\D/g, '') : '';
+      const phone = raw.length === 10 ? '91' + raw : raw;
+      const msg = encodeURIComponent(`Your ROYAL PHARMACY security OTP is: ${currentWebOtp}. Valid for 10 minutes.`);
+      window.location.href = `sms:+${phone}?body=${msg}`;
+    }
+
+    function openWebEmailOtp() {
+      const emailInput = document.getElementById('web-login-email-input');
+      const email = emailInput && emailInput.value.trim() ? emailInput.value.trim() : 'sulman995790@gmail.com';
+      const subject = encodeURIComponent("Your Royal Pharmacy Verification OTP");
+      const body = encodeURIComponent(`Your ROYAL PHARMACY security OTP code is: ${currentWebOtp}\n\nValid for 10 minutes.`);
+      window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
     }
 
     function handleWebPrimaryAuth() {
