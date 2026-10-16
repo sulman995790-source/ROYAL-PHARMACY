@@ -20,8 +20,15 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      - name: Grant Execute Permission for Gradlew
-        run: chmod +x gradlew
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Ensure Gradle Wrapper Jar Exists
+        run: |
+          if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
+            gradle wrapper
+          fi
+          chmod +x gradlew
 
       - name: Inject Gemini 4 API Key from GitHub Secrets
         run: |
