@@ -1,72 +1,37 @@
-name: Build Android APK
+name: Android CI - Build Royal Pharmacy APK
 
 on:
   push:
-    branches: [ "main" ]
-  workflow_dispatch:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
 
 jobs:
-  build:
+  build-apk:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-    - uses: actions/setup-java@v5
-      with:
-        java-version: '21'
-        distribution: 'temurin'
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
 
-    - uses: gradle/actions/setup-gradle@v4
-      with:
-        gradle-version: '9.3.1'
+      - name: Grant Execute Permission for Gradlew
+        run: chmod +x gradlew
 
-    - run: gradle wrapper --gradle-version 9.3.1
-    - run: chmod +x ./gradlew
+      - name: Inject Gemini 4 API Key from GitHub Secrets
+        run: |
+          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> local.properties
 
-    - name: Restore or Generate Debug Keystore
-      run: |
-        if [ -s debug.keystore.base64 ]; then
-          echo "Restoring debug.keystore from debug.keystore.base64"
-          base64 -d debug.keystore.base64 > debug.keystore || base64 --decode debug.keystore.base64 > debug.keystore
-        fi
-        if [ ! -s debug.keystore ]; then
-          echo "debug.keystore not found or empty. Generating fresh standard debug keystore via keytool..."
-          keytool -genkeypair -v \
-            -keystore debug.keystore \
-            -storepass android \
-            -alias androiddebugkey \
-            -keypass android \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -dname "CN=Android Debug,O=Android,C=US"
-        fi
-        echo "Verifying debug.keystore existence and size:"
-        ls -la debug.keystore
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug --stacktrace
 
-    - name: Check Keystore Secrets & Build
-      env:
-        KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
-        STORE_PASS: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
-      run: |
-        if [ -z "$KEYSTORE_BASE64" ] || [ -z "$STORE_PASS" ]; then
-          echo "::warning::RELEASE_KEYSTORE_BASE64 or RELEASE_KEYSTORE_PASSWORD secret is missing in GitHub repository settings. Building Debug APK as fallback so workflow succeeds."
-          ./gradlew assembleDebug
-        else
-          echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.keystore"
-          ./gradlew assembleRelease \
-            -Pandroid.injected.signing.store.file="$RUNNER_TEMP/release.keystore" \
-            -Pandroid.injected.signing.store.password="$STORE_PASS" \
-            -Pandroid.injected.signing.key.alias=royalpharmacykey \
-            -Pandroid.injected.signing.key.password="$STORE_PASS" || {
-              echo "::warning::Release signing failed with provided secrets. Falling back to Debug APK build."
-              ./gradlew assembleDebug
-            }
-        fi
-
-    - name: Upload APK Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: RoyalPharmacy-APK
-        path: app/build/outputs/apk/**/*.apk
-        if-no-files-found: error
+      - name: Upload Compiled Royal Pharmacy APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Royal-Pharmacy-v4-Debug-APK
+          path: app/build/outputs/apk/debug/*.apk

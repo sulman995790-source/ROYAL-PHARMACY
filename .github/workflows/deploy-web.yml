@@ -1,49 +1,47 @@
-# Simple workflow for deploying static content to GitHub Pages
-name: Deploy Web Portal to Pages
+name: Deploy Royal Pharmacy Web ERP to GitHub Pages
 
 on:
-  # Runs on pushes targeting the default branch
   push:
-    branches: ["main", "master"]
-
-  # Allows you to run this workflow manually from the Actions tab
+    branches: [ "main", "master" ]
   workflow_dispatch:
 
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# Auto-cancels older concurrent queue builds to prevent API lockouts
 concurrency:
   group: "pages"
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
-  # Single deploy job since we're just deploying; no build step needed
   deploy:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout Repository
         uses: actions/checkout@v4
-      
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
-      
-      - name: Prepare static files
-        run: |
-          cp web/index.html index.html || true
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3.0.1
+      - name: Prepare Web Artifact
+        run: |
+          mkdir -p _site
+          if [ -f "web/index.html" ]; then
+            cp -r web/* _site/
+          else
+            cp index.html _site/
+            cp sw.js _site/ 2>/dev/null || true
+          fi
+
+      - name: Upload Artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'
-      
+          path: '_site'
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-        

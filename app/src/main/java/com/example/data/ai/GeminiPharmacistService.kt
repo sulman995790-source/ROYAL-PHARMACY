@@ -21,7 +21,13 @@ data class ChatMessage(
   val actionSuggestion: String? = null
 )
 
-class GeminiPharmacistService {
+class GeminiPharmacistService(private val customApiKey: String? = null) {
+
+  companion object {
+    const val PRIMARY_MODEL = "gemini-4-argon"
+    const val FALLBACK_MODEL = "gemini-3.8-flash"
+  }
+
   private val client = OkHttpClient.Builder()
     .connectTimeout(60, TimeUnit.SECONDS)
     .readTimeout(60, TimeUnit.SECONDS)
@@ -47,6 +53,67 @@ class GeminiPharmacistService {
       !k.equals("YOUR_API_KEY", ignoreCase = true) &&
       !k.contains("DEFAULT", ignoreCase = true) &&
       k.length >= 20
+  }
+
+  suspend fun askClinicalPharmacist(
+    userQuery: String,
+    inventory: List<com.example.data.db.MedicineBatchEntity>
+  ): Result<String> = withContext(Dispatchers.IO) {
+    val stockDigest = inventory.take(60).joinToString("; ") {
+      "${it.brandName} (Salt: ${it.genericSalt}, Batch: ${it.batchNumber}, Exp: ${it.expiryYearMonth}, Qty: ${it.stockQuantity}, MRP: ₹${it.sellingMrp})"
+    }
+
+    val systemPromptStr = """
+      You are Gemini 4 Argon Clinical Pharmacist Assistant for Royal Pharmacy.
+      Live FEFO Inventory: $stockDigest
+
+      User Query: $userQuery
+
+      Provide:
+      1. Direct clinical answer (dosage, contraindications, renal/hepatic warnings, pregnancy category).
+      2. Drug-Drug Interaction severity if multiple drugs are mentioned.
+      3. Exact matching brand or identical generic salt substitute available in our Live FEFO Inventory.
+    """.trimIndent()
+
+    val keyToUse = customApiKey?.ifBlank { null } ?: try {
+      BuildConfig.GEMINI_API_KEY.ifBlank { System.getenv("GEMINI_API_KEY") ?: "" }
+    } catch (_: Exception) {
+      System.getenv("GEMINI_API_KEY") ?: ""
+    }
+
+    if (!isApiKeyValid(keyToUse)) {
+      return@withContext Result.success(generateLocalClinicalResponse(userQuery))
+    }
+
+    runCatching {
+      executeModelRequest(PRIMARY_MODEL, systemPromptStr, keyToUse)
+    }.recoverCatching {
+      executeModelRequest(FALLBACK_MODEL, systemPromptStr, keyToUse)
+    }.recoverCatching {
+      executeModelRequest("gemini-3.5-flash", systemPromptStr, keyToUse)
+    }.recoverCatching {
+      generateLocalClinicalResponse(userQuery)
+    }
+  }
+
+  private fun executeModelRequest(model: String, prompt: String, key: String): String {
+    val url = "https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$key"
+    val payload = JSONObject().apply {
+      put("contents", JSONArray().put(
+        JSONObject().put("parts", JSONArray().put(JSONObject().put("text", prompt)))
+      ))
+    }
+    val requestBody = payload.toString().toRequestBody("application/json".toMediaType())
+    val request = Request.Builder().url(url).post(requestBody).build()
+    val response = client.newCall(request).execute()
+    val responseBody = response.body?.string() ?: ""
+    if (response.isSuccessful) {
+      val json = JSONObject(responseBody)
+      val candidates = json.optJSONArray("candidates")
+      val text = candidates?.optJSONObject(0)?.optJSONObject("content")?.optJSONArray("parts")?.optJSONObject(0)?.optString("text")
+      if (!text.isNullOrBlank()) return text
+    }
+    throw RuntimeException("Gemini API call returned invalid response")
   }
 
   suspend fun sendMessage(
