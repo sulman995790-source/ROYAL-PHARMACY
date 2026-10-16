@@ -164,6 +164,7 @@ fun DiseaseTrackerScreen(
   // Selected Symptoms Chips
   val popularSymptoms = listOf(
     "High Fever", "Chills & Rigors", "Persistent Dry Cough", "Productive Cough with Sputum",
+    "Night Fall / Nocturnal Emission", "Hair Fall / Alopecia", "PCOS / Irregular Periods", "Dengue Warning Signs",
     "Chest Pain / Tightness", "Shortness of Breath", "Severe Headache", "Body Ache & Muscle Pain",
     "Joint Stiffness", "Nausea & Vomiting", "Watery Diarrhea", "Severe Acidity / Heartburn",
     "Abdominal Cramps", "Skin Rash", "Sore Throat / Difficulty Swallowing", "Dizziness / Vertigo"
