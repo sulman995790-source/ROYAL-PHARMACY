@@ -18,7 +18,6 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: gradle
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
@@ -42,7 +41,7 @@ jobs:
           echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> local.properties
 
       - name: Build Debug APK
-        run: ./gradlew assembleDebug --stacktrace -Djava.awt.headless=true
+        run: ./gradlew assembleDebug --stacktrace -Djava.awt.headless=true --no-daemon
 
       - name: Upload Compiled Royal Pharmacy APK
         uses: actions/upload-artifact@v4
