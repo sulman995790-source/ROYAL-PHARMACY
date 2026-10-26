@@ -23,6 +23,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.AdminPanelSettings
@@ -455,7 +457,7 @@ fun MoreScreen(
     item {
       SectionHeader("Inventory & Master")
       MoreMenuRow(
-        icon = Icons.Default.TrendingUp,
+        icon = Icons.AutoMirrored.Filled.TrendingUp,
         title = "Smart Inventory Suggestions",
         subtitle = "Velocity run-rate, stockout predictor & 1-tap PO draft",
         hasNewTag = true,
@@ -481,7 +483,7 @@ fun MoreScreen(
         onClick = { viewModel.navigateTo(Screen.BATCH_TRACKING) }
       )
       MoreMenuRow(
-        icon = Icons.Default.ReceiptLong,
+        icon = Icons.AutoMirrored.Filled.ReceiptLong,
         title = "Purchase Orders",
         subtitle = "PO creation, distributor order tracking",
         onClick = { viewModel.navigateTo(Screen.PURCHASE_ORDERS) }

@@ -227,7 +227,7 @@ fun MedicineDetailEditDialog(
           containerColor = Color(0xFFF1F5F9),
           indicator = { tabPositions ->
             if (selectedTab < tabPositions.size) {
-              TabRowDefaults.Indicator(
+              TabRowDefaults.SecondaryIndicator(
                 Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
                 color = RoyalMagenta
               )

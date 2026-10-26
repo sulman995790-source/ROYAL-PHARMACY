@@ -29,6 +29,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Emergency
@@ -846,7 +847,7 @@ fun CriticalStockAlertsScreen(
                         shape = RoundedCornerShape(8.dp),
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
                       ) {
-                        Icon(Icons.Default.Send, contentDescription = null, tint = RoyalMagenta, modifier = Modifier.size(12.dp))
+                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null, tint = RoyalMagenta, modifier = Modifier.size(12.dp))
                         Spacer(modifier = Modifier.width(4.dp))
                         Text("Push Alert", fontSize = 10.5.sp, color = RoyalMagenta)
                       }
@@ -1036,7 +1037,7 @@ fun CriticalMedicineCard(
             shape = RoundedCornerShape(8.dp),
             modifier = Modifier.testTag("btn_push_alert_${medicine.id}")
           ) {
-            Icon(Icons.Default.Send, contentDescription = null, tint = RoyalMagenta, modifier = Modifier.size(12.dp))
+            Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null, tint = RoyalMagenta, modifier = Modifier.size(12.dp))
             Spacer(modifier = Modifier.width(4.dp))
             Text("Push Alert", fontSize = 11.sp, color = RoyalMagenta, fontWeight = FontWeight.Bold)
           }

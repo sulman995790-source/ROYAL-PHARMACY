@@ -23,11 +23,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.FormatAlignLeft
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.FormatAlignLeft
 import androidx.compose.material.icons.filled.LocalPharmacy
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Print
@@ -361,7 +361,7 @@ fun InvoicePrinterScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                   ) {
                     Icon(
-                      imageVector = if (size == PrinterPaperSize.THERMAL_80MM || size == PrinterPaperSize.THERMAL_58MM) Icons.Default.Receipt else Icons.Default.FormatAlignLeft,
+                      imageVector = if (size == PrinterPaperSize.THERMAL_80MM || size == PrinterPaperSize.THERMAL_58MM) Icons.Default.Receipt else Icons.AutoMirrored.Filled.FormatAlignLeft,
                       contentDescription = null,
                       tint = if (isSelected) RoyalMagenta else TextMuted,
                       modifier = Modifier.size(20.dp)

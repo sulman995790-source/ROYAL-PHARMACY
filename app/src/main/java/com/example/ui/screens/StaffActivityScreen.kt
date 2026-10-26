@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -302,7 +303,7 @@ fun StaffActivityLogCard(
   modifier: Modifier = Modifier
 ) {
   val (actionIcon, actionLabel, iconBgColor) = when (log.actionType) {
-    "BILL_GENERATED" -> Triple(Icons.Default.ReceiptLong, "BILL CREATED", Color(0xFF10B981))
+    "BILL_GENERATED" -> Triple(Icons.AutoMirrored.Filled.ReceiptLong, "BILL CREATED", Color(0xFF10B981))
     "STOCK_UPDATED" -> Triple(Icons.Default.Inventory2, "STOCK UPDATE", Color(0xFF2563EB))
     "STAFF_ADDED" -> Triple(Icons.Default.PersonAdd, "STAFF ADDED", Color(0xFF9C1258))
     "STAFF_REMOVED" -> Triple(Icons.Default.PersonRemove, "STAFF REMOVED", Color(0xFFEF4444))

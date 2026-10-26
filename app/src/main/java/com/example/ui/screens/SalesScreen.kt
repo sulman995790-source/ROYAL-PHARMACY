@@ -26,6 +26,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.BarChart
@@ -298,7 +299,7 @@ fun SalesScreen(
                   verticalAlignment = Alignment.CenterVertically
                 ) {
                   Row(verticalAlignment = Alignment.CenterVertically) {
-                    androidx.compose.material3.Icon(Icons.Default.TrendingUp, contentDescription = null, tint = RoyalNavy, modifier = Modifier.size(18.dp))
+                    androidx.compose.material3.Icon(Icons.AutoMirrored.Filled.TrendingUp, contentDescription = null, tint = RoyalNavy, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
                     Text("Total Sales Trend (7 Days)", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = TextDark)
                   }
@@ -501,7 +502,7 @@ fun SalesScreen(
                 ) {
                   Row(verticalAlignment = Alignment.CenterVertically) {
                     androidx.compose.material3.Icon(
-                      Icons.Default.TrendingUp,
+                      Icons.AutoMirrored.Filled.TrendingUp,
                       contentDescription = null,
                       tint = Color(0xFFE11D48),
                       modifier = Modifier.size(18.dp)
@@ -772,7 +773,7 @@ fun SalesScreen(
                   verticalAlignment = Alignment.CenterVertically
                 ) {
                   Row(verticalAlignment = Alignment.CenterVertically) {
-                    androidx.compose.material3.Icon(Icons.Default.TrendingUp, contentDescription = null, tint = RoyalMagenta, modifier = Modifier.size(18.dp))
+                    androidx.compose.material3.Icon(Icons.AutoMirrored.Filled.TrendingUp, contentDescription = null, tint = RoyalMagenta, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(6.dp))
                     Column {
                       Text("Monthly Revenue Trends", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = TextDark)

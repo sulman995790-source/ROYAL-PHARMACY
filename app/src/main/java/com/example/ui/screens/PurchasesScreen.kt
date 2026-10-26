@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
@@ -32,7 +33,6 @@ import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Inventory
 import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.Phone
-import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.AlertDialog
@@ -152,7 +152,7 @@ fun PurchasesScreen(
             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
             modifier = Modifier.padding(end = 4.dp).testTag("btn_goto_purchase_orders")
           ) {
-            Icon(Icons.Default.ReceiptLong, contentDescription = null, tint = Color.White, modifier = Modifier.size(13.dp))
+            Icon(Icons.AutoMirrored.Filled.ReceiptLong, contentDescription = null, tint = Color.White, modifier = Modifier.size(13.dp))
             Spacer(modifier = Modifier.width(4.dp))
             Text("Orders PO", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
           }

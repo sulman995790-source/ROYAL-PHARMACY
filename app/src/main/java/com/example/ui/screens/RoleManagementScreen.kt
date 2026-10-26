@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.HelpCenter
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -184,7 +185,7 @@ fun RoleManagementScreen(
             ListItem(
               headlineContent = { Text("Security Questions") },
               supportingContent = { Text("Reset options for forgotten passwords") },
-              leadingContent = { Icon(Icons.Default.HelpCenter, contentDescription = null, tint = RoyalNavy) },
+              leadingContent = { Icon(Icons.AutoMirrored.Filled.HelpCenter, contentDescription = null, tint = RoyalNavy) },
               trailingContent = {
                 Button(
                   onClick = { showSecurityQuestionsDialog = true },

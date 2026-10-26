@@ -683,7 +683,7 @@
     async function callGemini4Argon(promptText, base64Image = null) {
       const apiKey = state.config.geminiKey;
       const selectedModel = document.getElementById("gemini-model-select")?.value || "gemini-4-argon";
-      const modelsToTry = [selectedModel, "gemini-4-argon", "gemini-3.8-flash", "gemini-3.5-flash", "gemini-2.5-flash"];
+      const modelsToTry = [...new Set([selectedModel, "gemini-4-argon", "gemini-3.8-flash", "gemini-3.5-flash", "gemini-2.5-flash"])];
 
       if (!apiKey) {
         return null; // Caller will use local deterministic clinical engine if no API key configured
@@ -914,6 +914,11 @@ Identify prescribed medicines, dosage schedule, and match to our Live Inventory 
       renderPosCart();
     }
 
+    function printThermalInvoiceById(invId) {
+      const inv = state.invoices.find(i => i.id === invId);
+      if (inv) printThermalInvoice(inv);
+    }
+
     function printThermalInvoice(inv) {
       document.getElementById("pr-store-name").innerText = state.config.name;
       document.getElementById("pr-store-dl").innerText = "DL: " + state.config.dl;
@@ -1110,6 +1115,7 @@ Provide an accurate, clinically verified answer with dosage, interactions, and m
       const condition = document.getElementById("pat-cond").value.trim();
       if (!name) return;
       state.patients.push({ id: Date.now(), name, phone, condition });
+      ["pat-name", "pat-phone", "pat-cond"].forEach(id => document.getElementById(id).value = "");
       persist();
     }
 
@@ -1119,6 +1125,7 @@ Provide an accurate, clinically verified answer with dosage, interactions, and m
       const spec = document.getElementById("doc-spec").value.trim();
       if (!name) return;
       state.doctors.push({ id: Date.now(), name, reg, spec });
+      ["doc-name", "doc-reg", "doc-spec"].forEach(id => document.getElementById(id).value = "");
       persist();
     }
 
@@ -1128,6 +1135,7 @@ Provide an accurate, clinically verified answer with dosage, interactions, and m
       const amt = parseFloat(document.getElementById("khata-amt").value) || 0;
       if (!name || amt <= 0) return;
       state.khata.push({ id: Date.now(), name, phone, balance: amt });
+      ["khata-name", "khata-phone", "khata-amt"].forEach(id => document.getElementById(id).value = "");
       persist();
     }
 
@@ -1137,6 +1145,7 @@ Provide an accurate, clinically verified answer with dosage, interactions, and m
       const amt = parseFloat(document.getElementById("exp-amt").value) || 0;
       if (!desc || amt <= 0) return;
       state.cashLedger.unshift({ id: Date.now(), date: new Date().toLocaleString(), desc, type, amt });
+      ["exp-desc", "exp-amt"].forEach(id => document.getElementById(id).value = "");
       persist();
     }
 
@@ -1146,6 +1155,7 @@ Provide an accurate, clinically verified answer with dosage, interactions, and m
       const phone = document.getElementById("sup-phone").value.trim();
       if (!name) return;
       state.suppliers.push({ id: Date.now(), name, gst, phone });
+      ["sup-name", "sup-gst", "sup-phone"].forEach(id => document.getElementById(id).value = "");
       persist();
     }
 
@@ -1240,7 +1250,7 @@ Provide an accurate, clinically verified answer with dosage, interactions, and m
             <td class="p-3"><span class="px-2 py-0.5 bg-slate-100 rounded font-semibold">${inv.mode}</span></td>
             <td class="p-3 text-right font-bold text-emerald-700">₹${inv.net.toFixed(2)}</td>
             <td class="p-3 text-center space-x-2">
-              <button onclick='printThermalInvoice(${JSON.stringify(inv)})' class="text-slate-600 hover:text-black"><i class="fa-solid fa-print"></i></button>
+              <button onclick="printThermalInvoiceById('${inv.id}')" class="text-slate-600 hover:text-black"><i class="fa-solid fa-print"></i></button>
               <button onclick="refundInvoice('${inv.id}')" class="text-rose-600 hover:underline">Return</button>
             </td>
           </tr>

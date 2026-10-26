@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Check
@@ -945,7 +946,7 @@ fun BatchTrackingScreen(
           colors = ButtonDefaults.buttonColors(containerColor = RoyalMagenta),
           modifier = Modifier.testTag("btn_confirm_batch_return")
         ) {
-          Icon(Icons.Default.ReceiptLong, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+          Icon(Icons.AutoMirrored.Filled.ReceiptLong, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
           Spacer(modifier = Modifier.width(4.dp))
           Text("Generate Credit Note")
         }
@@ -965,7 +966,7 @@ fun BatchTrackingScreen(
       onDismissRequest = { generatedCreditNote = null },
       title = {
         Row(verticalAlignment = Alignment.CenterVertically) {
-          Icon(Icons.Default.ReceiptLong, contentDescription = null, tint = StatusGreen)
+          Icon(Icons.AutoMirrored.Filled.ReceiptLong, contentDescription = null, tint = StatusGreen)
           Spacer(modifier = Modifier.width(8.dp))
           Text("Credit Note Voucher", fontSize = 16.sp, fontWeight = FontWeight.Bold)
         }

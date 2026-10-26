@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.TrendingDown
 import androidx.compose.material.icons.filled.AddShoppingCart
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.BarChart
@@ -454,7 +455,7 @@ fun StockAnalyticsScreen(
             ) {
               Column(modifier = Modifier.padding(14.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                  Icon(Icons.Default.TrendingDown, contentDescription = null, tint = Color(0xFFE11D48), modifier = Modifier.size(22.dp))
+                  Icon(Icons.AutoMirrored.Filled.TrendingDown, contentDescription = null, tint = Color(0xFFE11D48), modifier = Modifier.size(22.dp))
                   Spacer(modifier = Modifier.width(8.dp))
                   Text("Dead Stock & Locked Capital", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFF9F1239))
                 }

@@ -27,9 +27,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
@@ -462,7 +462,7 @@ fun PatientManagementScreen(
                   contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
                   modifier = Modifier.weight(1f).height(36.dp).testTag("btn_whatsapp_${patient.id}")
                 ) {
-                  Icon(Icons.Default.Chat, contentDescription = null, tint = Color(0xFF059669), modifier = Modifier.size(14.dp))
+                  Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = null, tint = Color(0xFF059669), modifier = Modifier.size(14.dp))
                   Spacer(modifier = Modifier.width(4.dp))
                   Text("WhatsApp", fontSize = 11.sp, color = Color(0xFF059669), fontWeight = FontWeight.Bold)
                 }

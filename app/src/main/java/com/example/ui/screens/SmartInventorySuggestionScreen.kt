@@ -27,6 +27,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CheckCircle
@@ -500,7 +501,7 @@ fun SmartInventorySuggestionScreen(
               if (item.seasonalNote.isNotBlank()) {
                 Spacer(modifier = Modifier.height(6.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                  Icon(Icons.Default.TrendingUp, contentDescription = null, tint = Color(0xFF2563EB), modifier = Modifier.size(13.dp))
+                  Icon(Icons.AutoMirrored.Filled.TrendingUp, contentDescription = null, tint = Color(0xFF2563EB), modifier = Modifier.size(13.dp))
                   Spacer(modifier = Modifier.width(4.dp))
                   Text(item.seasonalNote, fontSize = 10.5.sp, color = Color(0xFF1E40AF), fontWeight = FontWeight.Medium)
                 }

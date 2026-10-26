@@ -26,10 +26,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.LocalHospital
@@ -478,7 +478,7 @@ fun DoctorItemCard(
               .padding(horizontal = 8.dp, vertical = 4.dp)
           ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-              Icon(Icons.Default.Chat, contentDescription = "WhatsApp", tint = Color(0xFF15803D), modifier = Modifier.size(13.dp))
+              Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = "WhatsApp", tint = Color(0xFF15803D), modifier = Modifier.size(13.dp))
               Spacer(modifier = Modifier.width(3.dp))
               Text("Chat", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF15803D))
             }

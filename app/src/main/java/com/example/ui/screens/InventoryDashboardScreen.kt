@@ -25,6 +25,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
+import androidx.compose.material.icons.automirrored.filled.TrendingDown
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.AddShoppingCart
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -363,7 +365,7 @@ fun InventoryDashboardScreen(
               ) {
                 Column {
                   Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.TrendingUp, contentDescription = null, tint = StatusGreen, modifier = Modifier.size(14.dp))
+                    Icon(Icons.AutoMirrored.Filled.TrendingUp, contentDescription = null, tint = StatusGreen, modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("Fast Moving", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = StatusGreen)
                   }
@@ -383,7 +385,7 @@ fun InventoryDashboardScreen(
               ) {
                 Column {
                   Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.TrendingDown, contentDescription = null, tint = Color(0xFFD97706), modifier = Modifier.size(14.dp))
+                    Icon(Icons.AutoMirrored.Filled.TrendingDown, contentDescription = null, tint = Color(0xFFD97706), modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("Slow Moving", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD97706))
                   }
