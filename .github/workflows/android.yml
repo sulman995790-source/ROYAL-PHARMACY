@@ -18,7 +18,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: '21'
           distribution: 'temurin'
@@ -38,12 +38,23 @@ jobs:
 
       - name: Ensure debug.keystore Exists in CI
         run: |
-          if [ ! -f "debug.keystore" ]; then
-            if [ -f "debug.keystore.base64" ]; then
-              base64 -d debug.keystore.base64 > debug.keystore
-            else
-              echo "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" | base64 -d > debug.keystore || keytool -genkeypair -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          if [ ! -s "debug.keystore" ]; then
+            rm -f debug.keystore
+            if [ -s "debug.keystore.base64" ]; then
+              base64 -di debug.keystore.base64 > debug.keystore || rm -f debug.keystore
             fi
+          fi
+          if [ ! -s "debug.keystore" ]; then
+            rm -f debug.keystore
+            keytool -genkeypair -v \
+              -keystore debug.keystore \
+              -storepass android \
+              -alias androiddebugkey \
+              -keypass android \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US"
           fi
 
       - name: Ensure google-services.json Exists in CI
@@ -61,7 +72,6 @@ jobs:
           fi
           echo "GEMINI_API_KEY=$API_KEY" > .env
           echo "RELEASE_KEYSTORE_PASSWORD=@sk1234SS" >> .env
-          echo "GEMINI_API_KEY=$API_KEY" >> local.properties
 
       - name: Build Debug APK
         run: |
