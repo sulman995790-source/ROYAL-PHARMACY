@@ -18,9 +18,9 @@ android {
     targetSdk = 36
 
     // Dynamically checks the GitHub environment counter to auto-increment version code with elevated base
-    val githubBuildNumber = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1
-    versionCode = 2000 + githubBuildNumber
-    versionName = "2.0.$githubBuildNumber"
+    val githubBuildNumber = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 500
+    versionCode = 50000 + githubBuildNumber
+    versionName = "5.0.$githubBuildNumber"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }

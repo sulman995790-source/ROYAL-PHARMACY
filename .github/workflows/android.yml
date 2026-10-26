@@ -38,11 +38,9 @@ jobs:
 
       - name: Ensure debug.keystore Exists in CI
         run: |
-          if [ ! -s "debug.keystore" ]; then
+          if [ -s "debug.keystore.base64" ]; then
             rm -f debug.keystore
-            if [ -s "debug.keystore.base64" ]; then
-              base64 -di debug.keystore.base64 > debug.keystore || rm -f debug.keystore
-            fi
+            base64 --decode debug.keystore.base64 > debug.keystore || base64 -di debug.keystore.base64 > debug.keystore || rm -f debug.keystore
           fi
           if [ ! -s "debug.keystore" ]; then
             rm -f debug.keystore
@@ -56,6 +54,7 @@ jobs:
               -validity 10000 \
               -dname "CN=Android Debug,O=Android,C=US"
           fi
+          keytool -list -v -keystore debug.keystore -storepass android | grep -E "Alias|SHA1|SHA256" || true
 
       - name: Ensure google-services.json Exists in CI
         run: |
