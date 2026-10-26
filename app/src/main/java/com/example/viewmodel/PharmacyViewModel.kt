@@ -2072,7 +2072,7 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
     isAiThinking.value = true
 
     viewModelScope.launch {
-      val responseText = geminiService.sendMessage(text, priorHistory)
+      val responseText = geminiService.sendMessage(text, priorHistory, allMedicines.value)
       val botMsg = ChatMessage(sender = "gemini", text = responseText)
       chatMessages.value = chatMessages.value + botMsg
       isAiThinking.value = false
@@ -2735,14 +2735,20 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
     sourceLocation: String,
     destLocation: String
   ) {
-    val currentRole = currentUserRole.value.name
-    logStaffActivity(
-      staffName = "Pharmacist",
-      staffRole = currentRole,
-      actionType = "STOCK_TRANSFER",
-      description = "Transferred $quantity packs of '$medicineName' from '$sourceLocation' to '$destLocation'",
-      badgeColorHex = 0xFF0D9488
-    )
+    viewModelScope.launch {
+      if (medicineId > 0L && destLocation.isNotBlank()) {
+        repository.updateMedicineRack(medicineId, destLocation)
+      }
+      val currentRole = currentUserRole.value.name
+      logStaffActivity(
+        staffName = "Pharmacist",
+        staffRole = currentRole,
+        actionType = "STOCK_TRANSFER",
+        description = "Transferred $quantity packs of '$medicineName' from '$sourceLocation' to '$destLocation'",
+        badgeColorHex = 0xFF0D9488
+      )
+      scanFeedbackMessage.value = "Transferred $quantity packs of $medicineName to $destLocation"
+    }
   }
 }
 

@@ -127,7 +127,8 @@ fun SmartSalesAnalyticsScreen(
 
           IconButton(
             onClick = {
-              Toast.makeText(context, "Exported Analytics Summary Report (CSV)", Toast.LENGTH_SHORT).show()
+              com.example.service.CsvExportService.exportSalesToCsv(context, viewModel.allSales.value)
+              Toast.makeText(context, "Exporting Sales & Analytics Report (CSV)...", Toast.LENGTH_SHORT).show()
             },
             modifier = Modifier.testTag("btn_export_analytics")
           ) {

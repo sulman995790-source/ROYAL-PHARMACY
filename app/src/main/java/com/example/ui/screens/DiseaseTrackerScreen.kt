@@ -53,6 +53,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -120,6 +121,7 @@ fun DiseaseTrackerScreen(
 ) {
   val context = LocalContext.current
   val scope = rememberCoroutineScope()
+  val allMedicines by viewModel.allMedicines.collectAsState()
 
   // Tab State: "AI_FORM" vs "DEDICATED_GEMINI"
   var activeTrackerTab by remember { mutableStateOf("AI_FORM") }
@@ -131,7 +133,7 @@ fun DiseaseTrackerScreen(
       listOf(
         com.example.data.ai.ChatMessage(
           sender = "gemini",
-          text = "👋 Hello! I am your **Dedicated Gemini 3.5 Flash Clinical Medical Assistant**.\n\nI specialize in disease tracking, differential diagnosis, prescription verification, drug interactions, and lifestyle guidance. Ask me anything or select a topic below!"
+          text = "👋 Hello! I am your **Dedicated Gemini 3.5 Flash Clinical Medical Assistant**.\n\nI specialize in disease tracking, differential diagnosis, prescription verification, drug interactions, and live stock substitute lookups. Ask me anything or select a topic below!"
         )
       )
     )
@@ -141,13 +143,14 @@ fun DiseaseTrackerScreen(
 
   fun sendDedicatedGeminiQuery(queryText: String) {
     if (queryText.isBlank() || isGeminiThinking) return
+    val priorHistory = dedicatedGeminiMessages
     val userMsg = com.example.data.ai.ChatMessage(sender = "user", text = queryText)
-    dedicatedGeminiMessages = dedicatedGeminiMessages + userMsg
+    dedicatedGeminiMessages = priorHistory + userMsg
     dedicatedGeminiInput = ""
     isGeminiThinking = true
 
     scope.launch {
-      val reply = geminiService.sendMessage(queryText, dedicatedGeminiMessages)
+      val reply = geminiService.sendMessage(queryText, priorHistory, allMedicines)
       val geminiMsg = com.example.data.ai.ChatMessage(sender = "gemini", text = reply)
       dedicatedGeminiMessages = dedicatedGeminiMessages + geminiMsg
       isGeminiThinking = false
@@ -682,7 +685,24 @@ fun DiseaseTrackerScreen(
 
                   Button(
                     onClick = {
-                      Toast.makeText(context, "Medicines saved to Clinical Protocol!", Toast.LENGTH_SHORT).show()
+                      val medsSummary = (res.oralMedicines + res.injectables)
+                        .joinToString(", ") { "${it.brandName} (${it.frequency})" }
+                      val todayStr = java.text.SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()).format(java.util.Date())
+                      viewModel.addPrescriptionRecord(
+                        com.example.data.model.PrescriptionRecord(
+                          patientName = patientName.ifBlank { "Walk-in Patient" },
+                          patientAgeGender = "$ageText / $gender",
+                          patientPhone = "",
+                          doctorName = "AI Clinical Protocol",
+                          clinicName = "Royal Pharmacy Clinical Triage",
+                          prescriptionDate = todayStr,
+                          medicinesSummary = medsSummary,
+                          diagnosisNotes = "${res.primaryDiagnosis} (${res.probabilityPercent}% match)",
+                          status = "Active",
+                          refillDueDate = "Follow-up in 5 days"
+                        )
+                      )
+                      Toast.makeText(context, "Protocol saved to Prescription History for $patientName!", Toast.LENGTH_SHORT).show()
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = StatusGreen),
                     modifier = Modifier.weight(1.2f)
@@ -691,6 +711,39 @@ fun DiseaseTrackerScreen(
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("Save Protocol")
                   }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedButton(
+                  onClick = {
+                    (res.oralMedicines + res.injectables).forEach { suggested ->
+                      val matched = allMedicines.firstOrNull {
+                        it.name.contains(suggested.brandName.substringBefore(" "), ignoreCase = true) ||
+                          it.composition.contains(suggested.genericSalt.substringBefore(" "), ignoreCase = true)
+                      }
+                      if (matched != null) {
+                        viewModel.addMedicineToCart(matched, 1)
+                      } else {
+                        viewModel.handleParsedLabelOcr(
+                          name = suggested.brandName,
+                          batch = "PROTO-${(100..999).random()}",
+                          expiry = "12/28",
+                          mrp = if (suggested.isInjectable) 145.0 else 85.0,
+                          manufacturer = "Clinical Protocol"
+                        )
+                      }
+                    }
+                    viewModel.billingCustomerName.value = patientName.ifBlank { "Walk-in Patient" }
+                    Toast.makeText(context, "Added protocol medicines to POS Billing Cart!", Toast.LENGTH_SHORT).show()
+                    viewModel.navigateTo(Screen.ADD_SALE)
+                  },
+                  modifier = Modifier
+                    .fillMaxWidth()
+                    .height(44.dp)
+                ) {
+                  Icon(Icons.Default.Medication, contentDescription = null, tint = StatusGreen, modifier = Modifier.size(16.dp))
+                  Spacer(modifier = Modifier.width(6.dp))
+                  Text("Dispense Protocol Medicines to POS Bill", fontSize = 12.5.sp, fontWeight = FontWeight.Bold, color = StatusGreen)
                 }
 
                 Spacer(modifier = Modifier.height(10.dp))
@@ -955,7 +1008,7 @@ suspend fun analyzeSymptomsAndTrackDisease(
   if (isApiKeyValid(apiKey)) {
     try {
       val client = OkHttpClient()
-      val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=$apiKey"
+      val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=$apiKey"
       val prompt = """
         You are a senior clinical pharmacologist and physician.
         Patient Symptoms: $symptoms

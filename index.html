@@ -1055,6 +1055,39 @@ Identify prescribed medicines, dosage schedule, and match to our Live Inventory 
     }
 
     // --- CLINICAL AI & TOOLS ---
+    function generateWebClinicalFallback(q) {
+      const lower = q.toLowerCase().trim();
+      const matchedMeds = state.inventory.filter(i =>
+        lower.includes(i.name.toLowerCase().split(" ")[0]) ||
+        lower.includes(i.salt.toLowerCase().split(" ")[0]) ||
+        i.name.toLowerCase().includes(lower) ||
+        i.salt.toLowerCase().includes(lower)
+      );
+      if (lower.includes("what are you doing") || lower.includes("status") || lower.includes("who are you")) {
+        const lowCount = state.inventory.filter(i => i.qty <= i.reorder).length;
+        return `<strong>Royal Pharmacy Clinical AI:</strong> I am actively monitoring your pharmacy operations:<br>• <strong>${state.inventory.length}</strong> medicines in live catalog (${lowCount} low-stock alerts)<br>• <strong>${state.invoices.length}</strong> sales invoices &amp; <strong>${state.khata.length}</strong> Udhar Khata accounts<br>Ask me about any drug dosage, interaction, disease protocol, or stock item!`;
+      }
+      if (lower.includes("low stock") || lower.includes("shortage") || lower.includes("reorder")) {
+        const low = state.inventory.filter(i => i.qty <= i.reorder);
+        return `<strong>Live Low-Stock Report:</strong><br>` + (low.length ? low.map(i => `• <strong>${i.name}</strong> (${i.salt}) — Qty: ${i.qty} packs | Reorder Level: ${i.reorder}`).join("<br>") : "✅ All inventory items are above reorder thresholds.");
+      }
+      if (lower.includes("expir")) {
+        const exp = state.inventory.filter(i => i.exp.includes("2025") || i.exp.includes("2026-0") || i.exp.includes("26"));
+        return `<strong>Batch Expiry Radar:</strong><br>` + (exp.length ? exp.map(i => `• <strong>${i.name}</strong> [Batch: ${i.batch}] — Exp: ${i.exp} (Rack ${i.rack})`).join("<br>") : "✅ No near-expiry batches flagged.");
+      }
+      if (lower.includes("interaction")) {
+        return `<strong>Drug-Drug Interaction Guidance:</strong><br>• <strong>Azithromycin + Cetirizine / Levocetirizine:</strong> Safe co-administration; monitor mild sedation.<br>• <strong>Metformin + Glimepiride:</strong> Synergistic glycemic control; counsel patient on hypoglycemia signs.<br>• <strong>Telmisartan + NSAIDs (Aceclofenac/Diclofenac):</strong> Monitor BP and renal function; NSAIDs may attenuate antihypertensive effect.`;
+      }
+      if (matchedMeds.length > 0) {
+        const targetSalt = matchedMeds[0].salt;
+        const subs = state.inventory.filter(i => i.salt.toLowerCase() === targetSalt.toLowerCase());
+        return `<strong>Live Inventory &amp; Clinical Match:</strong><br>` +
+          matchedMeds.map(m => `• <strong>${m.name}</strong> (${m.salt}) — Stock: <strong>${m.qty} packs</strong> | MRP: ₹${m.mrp} | PTR: ₹${m.ptr} | Rack: ${m.rack} | Sch: ${m.sch}`).join("<br>") +
+          (subs.length > 1 ? `<br><strong>Available Same-Salt Substitutes:</strong> ${subs.map(s => `${s.name} (₹${s.mrp})`).join(", ")}` : "");
+      }
+      return `<strong>Clinical &amp; Inventory Summary:</strong><br>For <em>"${q}"</em>:<br>• Verify Schedule H/H1 compliance and hepatic/renal dosing.<br>• Top in-stock formulations ready to dispense: ${state.inventory.slice(0, 4).map(i => `<strong>${i.name}</strong> (${i.salt}, ₹${i.mrp}, Qty: ${i.qty})`).join(", ")}.`;
+    }
+
     async function sendClinicalChat() {
       const input = document.getElementById("clinical-chat-input");
       const q = input.value.trim();
@@ -1072,7 +1105,7 @@ Provide an accurate, clinically verified answer with dosage, interactions, and m
       const aiRes = await callGemini4Argon(prompt);
       const replyText = aiRes
         ? `<strong>${aiRes.model}:</strong> <span class="whitespace-pre-line">${aiRes.text}</span>`
-        : `<strong>Local Pharmacist Engine (Configure API Key in Settings for Live Gemini 4 Argon):</strong> Based on your inventory, matching compositions include ${state.inventory.slice(0,3).map(i=>i.name + " [" + i.salt + "]").join(", ")}. Always verify renal/hepatic dosing and Schedule H compliance.`;
+        : generateWebClinicalFallback(q);
 
       chatBox.innerHTML += `<div class="bg-white p-3 rounded-lg border shadow-sm mr-12">${replyText}</div>`;
       chatBox.scrollTop = chatBox.scrollHeight;

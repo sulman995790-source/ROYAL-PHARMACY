@@ -452,7 +452,17 @@ fun DailySalesReportScreen(
 
                 Button(
                   onClick = {
-                    Toast.makeText(context, "Cash Register reconciled and closed for $currentDate", Toast.LENGTH_LONG).show()
+                    if (Math.abs(cashDifference) >= 1.0) {
+                      viewModel.adjustCashInHand(cashDifference, "EOD Reconciliation ($currentDate)")
+                    }
+                    viewModel.logStaffActivity(
+                      staffName = "Store Manager",
+                      staffRole = "OWNER",
+                      actionType = "CASH_RECONCILED",
+                      description = "Closed & reconciled Cash Register for $currentDate (Expected: ₹${String.format(Locale.getDefault(), "%,.0f", expectedCashInDrawer)}, Diff: ₹${String.format(Locale.getDefault(), "%+,.0f", cashDifference)})",
+                      badgeColorHex = 0xFF10B981
+                    )
+                    Toast.makeText(context, "Cash Register reconciled and locked for $currentDate", Toast.LENGTH_LONG).show()
                   },
                   colors = ButtonDefaults.buttonColors(containerColor = RoyalNavy),
                   shape = RoundedCornerShape(6.dp),
