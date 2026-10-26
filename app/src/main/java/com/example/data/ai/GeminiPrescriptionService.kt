@@ -154,7 +154,7 @@ object GeminiPrescriptionService {
           prescribedName = obj.optString("prescribedName", "Prescribed Drug"),
           dosageSchedule = obj.optString("dosageSchedule", "As Directed"),
           matchedBatchId = if (obj.isNull("matchedBatchId")) null else obj.optLong("matchedBatchId"),
-          matchedBrandName = obj.optString("matchedBrandName", null),
+          matchedBrandName = if (obj.isNull("matchedBrandName")) null else obj.optString("matchedBrandName"),
           clinicalNote = obj.optString("clinicalNote", "Clinical check verified")
         )
       }

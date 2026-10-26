@@ -9,6 +9,8 @@ on:
 jobs:
   build-apk:
     runs-on: ubuntu-latest
+    env:
+      JAVA_TOOL_OPTIONS: "-Djava.awt.headless=true"
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -38,10 +40,16 @@ jobs:
 
       - name: Inject Gemini 4 API Key from GitHub Secrets
         run: |
+          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> .env
           echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> local.properties
 
       - name: Build Debug APK
-        run: ./gradlew assembleDebug --stacktrace -Djava.awt.headless=true --no-daemon
+        run: |
+          if command -v xvfb-run > /dev/null 2>&1; then
+            xvfb-run -a ./gradlew assembleDebug --stacktrace --no-daemon
+          else
+            ./gradlew assembleDebug --stacktrace --no-daemon
+          fi
 
       - name: Upload Compiled Royal Pharmacy APK
         uses: actions/upload-artifact@v4
