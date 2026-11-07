@@ -1,5 +1,11 @@
 package com.example.data.ai
 
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import com.example.BuildConfig
 import com.example.data.model.MedicineItem
 import com.google.firebase.Firebase
@@ -26,6 +32,71 @@ data class ChatMessage(
   val actionSuggestion: String? = null
 )
 
+/**
+ * Converts Markdown-formatted clinical text (**bold**, *italic*, ### headers) into a clean
+ * Compose AnnotatedString so raw asterisks (** or *) never clutter the UI.
+ */
+fun formatClinicalMarkdown(rawText: String): AnnotatedString {
+  val cleanedLines = rawText
+    .replace("```json", "")
+    .replace("```", "")
+    .lines()
+    .map { line ->
+      val trimmed = line.trimStart()
+      when {
+        trimmed.startsWith("### ") -> "**" + trimmed.removePrefix("### ").trim() + "**"
+        trimmed.startsWith("## ") -> "**" + trimmed.removePrefix("## ").trim() + "**"
+        trimmed.startsWith("# ") -> "**" + trimmed.removePrefix("# ").trim() + "**"
+        trimmed.startsWith("* ") -> "• " + trimmed.removePrefix("* ")
+        trimmed.startsWith("- ") -> "• " + trimmed.removePrefix("- ")
+        else -> line
+      }
+    }
+  val normalized = cleanedLines.joinToString("\n")
+
+  return buildAnnotatedString {
+    var i = 0
+    val n = normalized.length
+    while (i < n) {
+      if (i + 1 < n && normalized[i] == '*' && normalized[i + 1] == '*') {
+        val endBold = normalized.indexOf("**", i + 2)
+        if (endBold != -1) {
+          val boldContent = normalized.substring(i + 2, endBold).replace("*", "")
+          withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
+            append(boldContent)
+          }
+          i = endBold + 2
+          continue
+        }
+      }
+      if (normalized[i] == '*') {
+        val endItalic = normalized.indexOf('*', i + 1)
+        if (endItalic != -1 && endItalic > i + 1 && !normalized.substring(i + 1, endItalic).contains('\n')) {
+          val italicContent = normalized.substring(i + 1, endItalic)
+          withStyle(SpanStyle(fontStyle = FontStyle.Italic)) {
+            append(italicContent)
+          }
+          i = endItalic + 1
+          continue
+        }
+      }
+      if (normalized[i] == '`') {
+        val endCode = normalized.indexOf('`', i + 1)
+        if (endCode != -1 && endCode > i + 1 && !normalized.substring(i + 1, endCode).contains('\n')) {
+          val codeContent = normalized.substring(i + 1, endCode)
+          withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) {
+            append(codeContent)
+          }
+          i = endCode + 1
+          continue
+        }
+      }
+      append(normalized[i])
+      i++
+    }
+  }
+}
+
 class GeminiPharmacistService(private val customApiKey: String? = null) {
 
   companion object {
@@ -49,11 +120,11 @@ class GeminiPharmacistService(private val customApiKey: String? = null) {
   private val systemPrompt = """
     You are the Senior Pharmacist AI and Clinical Support Agent for ROYAL PHARMACY.
     Your capabilities:
-    1. Check drug-drug interactions, contraindications, and adult/pediatric dosages.
-    2. Provide generic medicine substitutes and cost-saving alternatives based on chemical salts.
-    3. Help pharmacists manage suppliers, purchase orders, Udhar Khata credit ledgers, and inventory.
-    4. Provide real-time info on pharmaceutical news, CDSCO regulatory guidelines, and clinical drug safety.
-    5. Pull real-time directions, logistics routes, and nearby hospital/distributor locations.
+    1. Check drug-drug interactions, contraindications, and adult/pediatric weight-based dosages (mg/kg).
+    2. For pediatric patients (Age <= 12 years), ALWAYS prescribe oral drops, syrups, suspensions, or sachets with weight-based (mg/kg and ml) dosing—NEVER recommend adult tablets or adult IV bolus doses.
+    3. Provide generic medicine substitutes and cost-saving alternatives based on chemical salts.
+    4. Help pharmacists manage suppliers, purchase orders, Udhar Khata credit ledgers, and inventory.
+    5. Provide real-time info on pharmaceutical news, CDSCO regulatory guidelines, and clinical drug safety.
     Tone: Professional, clinical, reassuring, precise, and supportive of community pharmacy operations in India.
   """.trimIndent()
 
@@ -82,7 +153,7 @@ class GeminiPharmacistService(private val customApiKey: String? = null) {
       User Query: $userQuery
 
       Provide:
-      1. Direct clinical answer (dosage, contraindications, renal/hepatic warnings, pregnancy category).
+      1. Direct clinical answer (dosage, pediatric weight-based adjustment if applicable, contraindications, renal/hepatic warnings, pregnancy category).
       2. Drug-Drug Interaction severity if multiple drugs are mentioned.
       3. Exact matching brand or identical generic salt substitute available in our Live FEFO Inventory.
     """.trimIndent()
@@ -145,7 +216,8 @@ class GeminiPharmacistService(private val customApiKey: String? = null) {
   suspend fun sendMessage(
     userMessage: String,
     conversationHistory: List<ChatMessage>,
-    liveInventory: List<MedicineItem> = emptyList()
+    liveInventory: List<MedicineItem> = emptyList(),
+    patientContext: String = ""
   ): String = withContext(Dispatchers.IO) {
     val recentContext = conversationHistory
       .filter { it.text.isNotBlank() }
@@ -160,6 +232,10 @@ class GeminiPharmacistService(private val customApiKey: String? = null) {
 
     val fullPrompt = buildString {
       append(systemPrompt)
+      if (patientContext.isNotBlank()) {
+        append("\n\nActive Patient Profile in Clinical Tracker:\n")
+        append(patientContext)
+      }
       if (inventoryDigest.isNotBlank()) {
         append("\n\n")
         append(inventoryDigest)
@@ -170,7 +246,7 @@ class GeminiPharmacistService(private val customApiKey: String? = null) {
       }
       append("\n\nCurrent User Query: ")
       append(userMessage)
-      append("\n\nRespond directly, accurately, and concisely with clinical pharmacology and pharmacy guidance.")
+      append("\n\nRespond directly, accurately, and concisely with clinical pharmacology and pharmacy guidance. If the active patient is a child/infant (Pediatric), ensure all dosages are weight-based syrups/drops/sachets.")
     }
 
     // 1. Try Firebase AI Logic (`gemini-3.8-flash`)
@@ -243,28 +319,54 @@ class GeminiPharmacistService(private val customApiKey: String? = null) {
     }
 
     // 3. Intelligent Clinical & Pharmacy Knowledge Engine (Guaranteed Accurate Response)
-    return@withContext generateLocalClinicalResponse(userMessage, liveInventory)
+    return@withContext generateLocalClinicalResponse(userMessage, liveInventory, patientContext)
   }
 
   fun generateLocalClinicalResponse(
     query: String,
-    liveInventory: List<MedicineItem> = emptyList()
+    liveInventory: List<MedicineItem> = emptyList(),
+    patientContext: String = ""
   ): String {
     val q = query.lowercase().trim()
+    val ctxLower = patientContext.lowercase()
+    val hasPediatricContext = ctxLower.contains("pediatric") || ctxLower.contains("infant") ||
+      Regex("age:\\s*([0-9]|1[0-2])\\b").containsMatchIn(ctxLower)
 
-    // 1. Conversational / Status Queries (e.g. "what are you doing", "how are you", "who are you", "hello")
-    if (q.contains("what are you doing") || q.contains("how are you") || q.contains("who are you") ||
-      q == "hi" || q == "hello" || q == "hey" || q == "namaste" || q == "status"
+    // 1. Natural Conversational Greetings (Context-Aware & Never Robotic)
+    if (q == "hi" || q == "hello" || q == "hey" || q == "namaste" || q == "good morning" ||
+      q == "good evening" || q == "hi there" || q == "hello gemini"
     ) {
+      if (patientContext.isNotBlank()) {
+        return "👋 **Hello Doctor / Pharmacist!** I have your active patient case loaded:\n" +
+          "• $patientContext\n\n" +
+          (if (hasPediatricContext) {
+            "👶 **Pediatric Safety Mode Active:** All treatment recommendations are strictly calibrated for pediatric oral drops, syrups, suspensions, and sachets (weight-based `mg/kg` dosing). Adult tablets and adult IV boluses are automatically blocked.\n\n" +
+              "How can I help with this child's case? You can ask:\n" +
+              "• *\"Calculate exact ml dose for 1-year-old (10 kg)\"*\n" +
+              "• *\"Pediatric diarrhea ORS & Zinc protocol\"*\n" +
+              "• *\"Safe antibiotic suspension for child\"*"
+          } else {
+            "How can I assist with this patient today? You can ask me to:\n" +
+              "• Verify **dosages or renal/hepatic adjustments**\n" +
+              "• Check **drug-drug interactions** or pregnancy safety\n" +
+              "• Find **in-stock brand/generic substitutes** from your inventory"
+          })
+      }
+      val medCount = if (liveInventory.isNotEmpty()) liveInventory.size else 24
+      return "👋 **Hello! I am your Clinical Pharmacist & Medical Reasoner at Royal Pharmacy.**\n\n" +
+        "I am connected to your live catalog ($medCount active batches) and clinical dosing guidelines. How can I help you right now?\n" +
+        "• **Pediatric & Adult Dosing:** Tell me the patient's age/weight and symptoms (e.g., *\"1 year old child with watery diarrhea\"* or *\"Fever protocol for 12 kg child\"*)\n" +
+        "• **Drug Safety & Interactions:** e.g., *\"Telmisartan + Spironolactone interaction\"*\n" +
+        "• **Substitutes & Stock Check:** e.g., *\"Substitute for Augmentin 625 or Calpol drops\"*"
+    }
+
+    if (q.contains("what are you doing") || q.contains("how are you") || q.contains("who are you") || q == "status") {
       val medCount = if (liveInventory.isNotEmpty()) liveInventory.size else 24
       val lowCount = liveInventory.count { it.stockPacks <= it.minStockAlert }
-      return "🤖 **Active Clinical & Pharmacy Surveillance Status:**\n" +
-        "I am actively monitoring Royal Pharmacy's clinical protocols and live inventory ($medCount active medicine batches${if (lowCount > 0) ", $lowCount low-stock alerts" else ""}).\n\n" +
-        "**Ask me anything directly, for example:**\n" +
-        "• **Disease & Treatment:** *\"Dengue fever protocol\"*, *\"Night fall treatment\"*, *\"PCOS management\"*, *\"Acute gastroenteritis\"*\n" +
-        "• **Dosage & Pediatrics:** *\"Paracetamol pediatric dose for 14kg child\"*, *\"Augmentin 625 adult dosage\"*\n" +
-        "• **Interactions & Safety:** *\"Warfarin + Aspirin interaction\"*, *\"Safe medicines in pregnancy\"*\n" +
-        "• **Generic Substitutes:** *\"Cheaper substitute for Telma 40 or Pan 40\"*"
+      return "🤖 **Clinical & Pharmacy Assistant Status:**\n" +
+        "I am online and ready to assist with clinical triage, pediatric/adult weight-based dosage calculations, drug-drug interaction screening, and live FEFO inventory lookups ($medCount active batches${if (lowCount > 0) ", $lowCount low-stock alerts" else ""}).\n\n" +
+        (if (patientContext.isNotBlank()) "📋 **Current Patient Context:** $patientContext\n\n" else "") +
+        "Tell me any symptom, patient age/weight, or medicine name to begin."
     }
 
     // 2. Night Fall / Nocturnal Emission / Andrology
@@ -385,10 +487,24 @@ class GeminiPharmacistService(private val customApiKey: String? = null) {
         "• **Lifestyle Advice:** Elevate head end of bed by 6 inches, avoid lying down within 2 hours of dinner, and avoid NSAIDs, smoking, and spicy/oily foods."
     }
 
+    val isQueryPediatric = hasPediatricContext || q.contains("pediatric") || q.contains("child") ||
+      q.contains("infant") || q.contains("baby") || q.contains("1 yr") || q.contains("1 year") ||
+      q.contains("2 yr") || q.contains("3 yr") || q.contains("toddler")
+
     // 11. Cough / Cold / Bronchitis / Asthma
     if (q.contains("cough") || q.contains("cold") || q.contains("throat") || q.contains("asthma") ||
-      q.contains("ascoril") || q.contains("montair") || q.contains("allergy") || q.contains("wheez")
+      q.contains("ascoril") || q.contains("montair") || q.contains("allergy") || q.contains("wheez") || q.contains("nebul")
     ) {
+      if (isQueryPediatric) {
+        return "👶 **Pediatric Respiratory & Cough Protocol (Syrup / Drops / Nebulization):**\n\n" +
+          "• **1. Productive Cough / Wheeze (Child 1–5 yrs, ~10–18 kg):**\n" +
+          "  • **Ambrodil-S / Ascoril LS Junior Drops/Syrup** *(Levosalbutamol 0.5mg + Ambroxol 15mg + Guaiphenesin 50mg / 5ml)*: **1 ml Drops (for ~1 yr)** or **2.5 ml Syrup (2–5 yrs)** TDS after feeds x 5 days.\n" +
+          "• **2. Nasal Congestion / Blocked Nose:**\n" +
+          "  • **Saline Nasal Drops (Nasoclear / Otrivin Baby Saline 0.65% w/v):** 2 drops in each nostril 15 mins before feeds.\n" +
+          "• **3. Nebulization (If Wheezing / Bronchospasm):**\n" +
+          "  • **Levolin Respule (Levosalbutamol 0.31mg)** + **Budecort Respule (Budesonide 0.5mg)** nebulized BD/TDS.\n" +
+          "• **⚠️ Pediatric Safety Note:** Codeine and Dextromethorphan cough suppressants are contraindicated in infants under 2 years."
+      }
       return "🫁 **Respiratory Protocol: Differentiating Dry vs. Productive Cough**\n\n" +
         "• **1. Productive (Wet / Phlegm) Cough:**\n" +
         "  • **Ascoril LS / Ambrodil-S Syrup** *(Levosalbutamol 1mg + Ambroxol 30mg + Guaiphenesin 50mg)*: 10 ml TDS in adults (clears mucus & relieves bronchospasm).\n" +
@@ -403,6 +519,20 @@ class GeminiPharmacistService(private val customApiKey: String? = null) {
     if (q.contains("diarrhea") || q.contains("loose motion") || q.contains("vomiting") ||
       q.contains("gastroenteritis") || q.contains("stomach") || q.contains("ors")
     ) {
+      if (isQueryPediatric) {
+        return "👶 **Pediatric Acute Gastroenteritis & Diarrhea Protocol (WHO Plan A/B):**\n\n" +
+          "• **1. WHO Low-Osmolarity ORS (Electral / Pedialyte):**\n" +
+          "  • Give **10 ml/kg (~100 ml for a 10 kg 1-year-old)** after every loose stool in small sips by spoon.\n" +
+          "• **2. Mandatory 14-Day Elemental Zinc (Z&D 20 / Zincovit Pediatric Syrup 20mg/5ml):**\n" +
+          "  • **Infants <6 months:** 2.5 ml (10 mg) OD x 14 days.\n" +
+          "  • **Children 6 months – 12 years:** **5 ml (20 mg) OD x 14 days** (repairs intestinal mucosa & prevents relapse).\n" +
+          "• **3. Pediatric Anti-Secretory + Probiotic Sachet:**\n" +
+          "  • **Redotil / Zedott Pediatric Sachet (Racecadotril 10mg / 15mg):** 1.5 mg/kg/dose (**1 Sachet 10mg–15mg TDS** mixed in 2 tsp water/milk for ~10 kg child).\n" +
+          "  • **Enterogermina (Bacillus clausii 2B/5ml) / Econorm Sachet:** 1 mini-bottle or 1 sachet BD x 5 days.\n" +
+          "• **4. Vomiting Control (Weight-Based):**\n" +
+          "  • **Ondem / Emeset Pediatric Syrup (2mg/5ml):** **0.15 mg/kg** (~1.5 mg = **3.7 ml Oral Syrup** or **0.75 ml IV** for a 10 kg 1-year-old).\n" +
+          "• **🚫 STRICT CONTRAINDICATION:** Never administer adult `Norflox-TZ` tablets, `Loperamide (Imodium)`, or adult `40mg IV Pantoprazole` to infants/children."
+      }
       return "💧 **Clinical Protocol: Acute Gastroenteritis, Diarrhea & Vomiting**\n\n" +
         "• **1. Rehydration & Zinc (Cornerstone Therapy):**\n" +
         "  • **WHO Low-Osmolarity ORS (Electral):** Dissolve 1 packet in 1 Liter clean water; sip 200 ml after every loose stool.\n" +
@@ -415,6 +545,14 @@ class GeminiPharmacistService(private val customApiKey: String? = null) {
 
     // 13. Fever / Typhoid / Malaria
     if (q.contains("fever") || q.contains("pyrexia") || q.contains("typhoid") || q.contains("malaria") || q.contains("viral")) {
+      if (isQueryPediatric) {
+        return "👶 **Pediatric Acute Fever Protocol (15 mg/kg/dose):**\n\n" +
+          "• **1. Infant (<2 yrs, ~8–12 kg) — Paracetamol Oral Drops (Calpol / Pacimol Drops 100mg/ml):**\n" +
+          "  • **10 kg (1-year-old):** 150 mg = **1.5 ml Drops** every 6 hours as needed for temp `>100°F`.\n" +
+          "• **2. Child (2–12 yrs) — Paracetamol Suspension (Calpol 250 / Dolo 250, 250mg/5ml):**\n" +
+          "  • **15 kg child:** 225 mg = **4.5 ml Syrup** every 6 hours.\n" +
+          "• **3. Supportive Care:** Tepid lukewarm sponging, oral rehydration (ORS), and avoid Aspirin (Reye's syndrome risk) or Nimesulide (CDSCO banned in pediatrics)."
+      }
       return "🌡️ **Clinical Evaluation: Acute Febrile Illness (Fever Protocol)**\n\n" +
         "• **Immediate Symptomatic Control:**\n" +
         "  1. **Paracetamol 650mg (Dolo 650 / Calpol 650):** 1 tab TDS/QID after food when temp `>100°F` (maintain 6-hour gap).\n" +

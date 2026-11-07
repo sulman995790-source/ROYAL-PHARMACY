@@ -25,6 +25,20 @@
     }
     .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
     .custom-scroll::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
+    @keyframes subtleRedPulse {
+      0%, 100% {
+        background-color: rgba(254, 226, 226, 0.40); /* soft rose-100 */
+      }
+      50% {
+        background-color: rgba(254, 202, 202, 0.85); /* gentle pulse rose-200 */
+      }
+    }
+    .critical-stock-row {
+      animation: subtleRedPulse 2.4s ease-in-out infinite;
+    }
+    .critical-stock-row:hover {
+      animation-play-state: paused;
+    }
   </style>
 </head>
 <body class="bg-slate-100 text-slate-800 font-sans antialiased flex h-screen overflow-hidden">
@@ -358,6 +372,17 @@
         </div>
 
         <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div class="p-3 bg-slate-50 border-b border-slate-200 flex flex-wrap justify-between items-center gap-2 text-xs">
+            <div class="flex items-center gap-2">
+              <span class="font-bold text-slate-800"><i class="fa-solid fa-boxes-stacked text-slate-500 mr-1.5"></i>Master Stock Inventory</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="inline-flex items-center gap-1.5 text-[11px] text-rose-700 bg-rose-50 px-2.5 py-1 rounded-md border border-rose-200 font-semibold shadow-xs">
+                <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+                <span>Subtle Red Highlight: Current Stock ≤ Reorder Level</span>
+              </span>
+            </div>
+          </div>
           <table class="w-full text-left border-collapse text-xs">
             <thead class="bg-slate-50 text-slate-500 uppercase">
               <tr>
@@ -1253,21 +1278,37 @@ Provide an accurate, clinically verified answer with dosage, interactions, and m
       const f = filter.toLowerCase();
       document.getElementById("inventory-tbody").innerHTML = state.inventory
         .filter(i => !f || i.name.toLowerCase().includes(f) || i.salt.toLowerCase().includes(f) || i.batch.toLowerCase().includes(f))
-        .map(i => `
-          <tr>
-            <td class="p-3 font-bold">${i.name} <span class="px-1.5 py-0.5 bg-slate-100 rounded text-[10px]">${i.schedule||"OTC"}</span></td>
+        .map(i => {
+          const isCritical = Number(i.qty) <= Number(i.reorder);
+          const isOutOfStock = Number(i.qty) === 0;
+          return `
+          <tr class="${isCritical ? 'critical-stock-row border-l-4 border-rose-500' : 'hover:bg-slate-50 transition-colors'}">
+            <td class="p-3 font-bold">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span>${i.name}</span>
+                <span class="px-1.5 py-0.5 bg-slate-100 rounded text-[10px] text-slate-600 font-medium">${i.schedule||"OTC"}</span>
+                ${isCritical ? `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700 border border-rose-300 shadow-xs"><i class="fa-solid fa-triangle-exclamation text-rose-600"></i> ${isOutOfStock ? 'Out of Stock' : 'Critical (≤ Reorder)'}</span>` : ''}
+              </div>
+            </td>
             <td class="p-3 text-slate-500">${i.salt}</td>
             <td class="p-3 font-mono">${i.batch} | <strong>${i.rack}</strong></td>
             <td class="p-3">${i.expiry}</td>
             <td class="p-3 text-right">₹${Number(i.ptr).toFixed(2)}</td>
             <td class="p-3 text-right font-bold">₹${Number(i.mrp).toFixed(2)}</td>
-            <td class="p-3 text-center font-bold ${i.qty<=i.reorder?'text-rose-600':'text-emerald-700'}">${i.qty}</td>
+            <td class="p-3 text-center">
+              <div class="inline-flex flex-col items-center">
+                <span class="font-bold ${isCritical ? 'text-rose-600 text-sm' : 'text-emerald-700'}">${i.qty}</span>
+                <span class="text-[10px] text-slate-400">Reorder: ${i.reorder}</span>
+                ${isCritical ? `<span class="text-[9px] font-bold text-rose-600 uppercase tracking-tight flex items-center justify-center gap-0.5 mt-0.5"><i class="fa-solid fa-arrow-down text-[8px]"></i> ≤ Reorder</span>` : ''}
+              </div>
+            </td>
             <td class="p-3 text-center space-x-2">
               <button onclick="editBatch(${i.id})" class="text-blue-600 hover:underline">Edit</button>
               <button onclick="deleteBatch(${i.id})" class="text-rose-600 hover:underline">Delete</button>
             </td>
           </tr>
-        `).join("");
+        `;
+        }).join("");
     }
 
     function renderInvoicesTable(filter = "") {

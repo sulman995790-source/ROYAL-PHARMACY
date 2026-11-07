@@ -44,7 +44,13 @@ import androidx.compose.material.icons.filled.QrCode
 import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColor
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -960,32 +966,41 @@ fun StockItemCard(
   val isInStock = item.stockPacks > 0
   val isLowStock = item.stockPacks <= item.minStockAlert
 
+  val infiniteTransition = rememberInfiniteTransition(label = "criticalStockPulse")
+  val pulsedRedContainer by infiniteTransition.animateColor(
+    initialValue = Color(0xFFFFF1F2),
+    targetValue = Color(0xFFFFE4E6),
+    animationSpec = infiniteRepeatable(
+      animation = tween(durationMillis = 1600, easing = FastOutSlowInEasing),
+      repeatMode = RepeatMode.Reverse
+    ),
+    label = "pulsedRedContainer"
+  )
+  val pulsedRedBorder by infiniteTransition.animateColor(
+    initialValue = Color(0xFFFECDD3),
+    targetValue = Color(0xFFF43F5E),
+    animationSpec = infiniteRepeatable(
+      animation = tween(durationMillis = 1600, easing = FastOutSlowInEasing),
+      repeatMode = RepeatMode.Reverse
+    ),
+    label = "pulsedRedBorder"
+  )
+
   val cardContainerColor = when {
-    item.stockPacks == 0 -> Color(0xFFFFF1F2)
-    isLowStock -> Color(0xFFFFFBEB)
+    isLowStock -> pulsedRedContainer
     else -> Color.White
   }
 
   val cardBorderColor = when {
-    item.stockPacks == 0 -> Color(0xFFFECACA)
-    isLowStock -> Color(0xFFFDE68A)
+    isLowStock -> pulsedRedBorder
     else -> CardBorder
   }
 
-  val animatedContainerColor by animateColorAsState(
-    targetValue = cardContainerColor,
-    label = "cardBgColor"
-  )
-  val animatedBorderColor by animateColorAsState(
-    targetValue = cardBorderColor,
-    label = "cardBorderColor"
-  )
-
   Card(
     shape = RoundedCornerShape(10.dp),
-    colors = CardDefaults.cardColors(containerColor = animatedContainerColor),
+    colors = CardDefaults.cardColors(containerColor = cardContainerColor),
     border = CardDefaults.outlinedCardBorder().copy(
-      brush = androidx.compose.ui.graphics.SolidColor(animatedBorderColor)
+      brush = androidx.compose.ui.graphics.SolidColor(cardBorderColor)
     ),
     modifier = Modifier
       .fillMaxWidth()
@@ -1008,14 +1023,14 @@ fun StockItemCard(
         modifier = Modifier
           .size(44.dp)
           .clip(RoundedCornerShape(8.dp))
-          .background(if (isLowStock) Color(0xFFFEF3C7) else RoyalMagentaLight),
+          .background(if (isLowStock) Color(0xFFFEE2E2) else RoyalMagentaLight),
         contentAlignment = Alignment.Center
       ) {
         Text(
           text = initials,
           fontSize = 14.sp,
           fontWeight = FontWeight.Bold,
-          color = if (isLowStock) Color(0xFFD97706) else RoyalMagenta
+          color = if (isLowStock) StatusRed else RoyalMagenta
         )
       }
 
@@ -1049,30 +1064,30 @@ fun StockItemCard(
           Box(
             modifier = Modifier
               .clip(RoundedCornerShape(4.dp))
-              .background(if (isInStock) (if (isLowStock) Color(0xFFFEF3C7) else StatusGreenLight) else StatusRedLight)
+              .background(if (isLowStock) Color(0xFFFEE2E2) else StatusGreenLight)
               .padding(horizontal = 8.dp, vertical = 2.dp)
           ) {
             Text(
-              text = if (!isInStock) "Stock Out" else if (isLowStock) "Low Stock" else "In Stock",
+              text = if (!isInStock) "Stock Out" else if (isLowStock) "Critical Low" else "In Stock",
               fontSize = 10.sp,
               fontWeight = FontWeight.Bold,
-              color = if (!isInStock) StatusRed else if (isLowStock) Color(0xFFB45309) else StatusGreen
+              color = if (isLowStock) StatusRed else StatusGreen
             )
           }
 
-          if (isLowStock && isInStock) {
+          if (isLowStock) {
             Box(
               modifier = Modifier
                 .clip(RoundedCornerShape(4.dp))
-                .background(Color(0xFFFEF3C7))
-                .border(1.dp, Color(0xFFF59E0B), RoundedCornerShape(4.dp))
+                .background(Color(0xFFFEF2F2))
+                .border(1.dp, Color(0xFFF87171), RoundedCornerShape(4.dp))
                 .padding(horizontal = 6.dp, vertical = 2.dp)
             ) {
               Text(
-                text = "⚠️ REORDER (Min ${item.minStockAlert})",
+                text = "⚠️ REORDER (Stock ${item.stockPacks} ≤ Min ${item.minStockAlert})",
                 fontSize = 10.sp,
                 fontWeight = FontWeight.ExtraBold,
-                color = Color(0xFF92400E)
+                color = Color(0xFFB91C1C)
               )
             }
           }

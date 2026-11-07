@@ -378,7 +378,7 @@ fun ChatBubble(
     ) {
       Column(modifier = Modifier.padding(12.dp)) {
         Text(
-          text = message.text,
+          text = com.example.data.ai.formatClinicalMarkdown(message.text),
           fontSize = 13.sp,
           color = if (isUser) Color.White else TextDark,
           lineHeight = 18.sp
