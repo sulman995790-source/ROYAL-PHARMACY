@@ -42,7 +42,7 @@ class CloudflareService(private val context: Context) {
     private val _cloudflareStatus = MutableStateFlow(CloudflareEdgeStatus())
     val cloudflareStatus: StateFlow<CloudflareEdgeStatus> = _cloudflareStatus.asStateFlow()
 
-    private val _workerEndpoint = MutableStateFlow("https://royal-pharmacy.sulman995790.workers.dev/")
+    private val _workerEndpoint = MutableStateFlow("https://api.royalpharmacy.app/")
     val workerEndpoint: StateFlow<String> = _workerEndpoint.asStateFlow()
 
     private val _turnstileSiteKey = MutableStateFlow("0x4AAAAAAX_cloud_flare_pharmacy_key")
@@ -52,7 +52,7 @@ class CloudflareService(private val context: Context) {
         FreeCdnProvider(
             name = "Cloudflare Workers Free",
             category = "CDN & Serverless Edge",
-            endpointUrl = "https://royal-pharmacy.sulman995790.workers.dev/",
+            endpointUrl = "https://api.royalpharmacy.app/",
             freeQuotaText = "100,000 requests/day • 100% Free Forever",
             isRecommended = true,
             iconName = "shield"
@@ -68,7 +68,7 @@ class CloudflareService(private val context: Context) {
         FreeCdnProvider(
             name = "GitHub Pages Edge",
             category = "Static Hosting & Storage",
-            endpointUrl = "https://sulman995790-source.github.io/ROYAL-PHARMACY/web/",
+            endpointUrl = "https://royalpharmacy.github.io/web/",
             freeQuotaText = "100GB/month • $0 Free Hosting",
             isRecommended = false,
             iconName = "github"

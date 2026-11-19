@@ -56,6 +56,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -140,7 +141,13 @@ fun DrugInteractionCheckerScreen(
     scope.launch {
       isChecking = true
       try {
-        val res = interactionService.checkDrugInteractions(listToCheck)
+        val res = interactionService.checkDrugInteractions(
+          medicines = listToCheck,
+          cachedInventory = medicines,
+          resolveMissingMedicine = { missingBrand ->
+            viewModel.lookupOrEnrichMedicineWithAi(missingBrand, autoSaveToInventory = true).getOrNull()
+          }
+        )
         checkResult = res
       } catch (e: Exception) {
         Toast.makeText(context, "Error scanning interactions: ${e.message}", Toast.LENGTH_SHORT).show()
@@ -564,6 +571,75 @@ fun DrugInteractionCheckerScreen(
 
                 Spacer(modifier = Modifier.height(10.dp))
                 Text(res.clinicalSummary, fontSize = 12.sp, color = TextDark, lineHeight = 17.sp)
+
+                if (res.resolvedSalts.isNotEmpty()) {
+                  Spacer(modifier = Modifier.height(10.dp))
+                  Text(
+                    text = "Active Generic Salts Evaluated (${res.resolvedSalts.size}):",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = RoyalNavy
+                  )
+                  Spacer(modifier = Modifier.height(4.dp))
+                  Row(
+                    modifier = Modifier
+                      .fillMaxWidth()
+                      .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                  ) {
+                    res.resolvedSalts.forEach { salt ->
+                      Box(
+                        modifier = Modifier
+                          .clip(RoundedCornerShape(12.dp))
+                          .background(Color.White.copy(alpha = 0.85f))
+                          .border(1.dp, CardBorder, RoundedCornerShape(12.dp))
+                          .padding(horizontal = 8.dp, vertical = 3.dp)
+                      ) {
+                        Text(salt, fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold, color = TextDark)
+                      }
+                    }
+                  }
+                }
+
+                if (res.saltMappingByBrand.isNotEmpty()) {
+                  Spacer(modifier = Modifier.height(8.dp))
+                  Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    res.saltMappingByBrand.forEach { (brand, salts) ->
+                      Text(
+                        text = "• $brand → ${salts.joinToString(" + ")}",
+                        fontSize = 10.5.sp,
+                        color = TextMuted
+                      )
+                    }
+                  }
+                }
+
+                if (!res.aiError.isNullOrBlank()) {
+                  Spacer(modifier = Modifier.height(10.dp))
+                  Row(
+                    modifier = Modifier
+                      .fillMaxWidth()
+                      .clip(RoundedCornerShape(8.dp))
+                      .background(Color(0xFFFFFBEB))
+                      .border(1.dp, Color(0xFFFCD34D), RoundedCornerShape(8.dp))
+                      .padding(horizontal = 10.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                  ) {
+                    Text(
+                      text = "Cloud AI Verification Warning: ${res.aiError}",
+                      fontSize = 10.5.sp,
+                      color = Color(0xFF92400E),
+                      modifier = Modifier.weight(1f)
+                    )
+                    TextButton(
+                      onClick = { runCheck() },
+                      contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                    ) {
+                      Text("Retry AI", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = RoyalMagenta)
+                    }
+                  }
+                }
 
                 // Food warnings tag
                 if (res.foodWarnings.isNotEmpty()) {

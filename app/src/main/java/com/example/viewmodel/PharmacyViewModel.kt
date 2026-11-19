@@ -43,6 +43,12 @@ import com.example.service.StorageUsageBreakdown
 import com.example.service.StockAlertBackgroundService
 import com.example.service.StockAlertNotificationService
 import com.example.util.MedicineQrPayload
+import androidx.credentials.ClearCredentialStateRequest
+import androidx.credentials.CredentialManager
+import com.google.firebase.Firebase
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.auth
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -52,6 +58,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -163,17 +170,17 @@ data class TopDoctorStat(
 
 data class SmartSalesSummary(
   val period: String = "Today",
-  val totalRevenue: Double = 597.0,
-  val totalOrders: Int = 4,
-  val grossProfit: Double = 142.5,
-  val grossProfitMarginPercent: Double = 23.8,
-  val averageOrderValue: Double = 149.25,
-  val cashRevenue: Double = 320.0,
-  val upiRevenue: Double = 210.0,
+  val totalRevenue: Double = 0.0,
+  val totalOrders: Int = 0,
+  val grossProfit: Double = 0.0,
+  val grossProfitMarginPercent: Double = 0.0,
+  val averageOrderValue: Double = 0.0,
+  val cashRevenue: Double = 0.0,
+  val upiRevenue: Double = 0.0,
   val cardRevenue: Double = 0.0,
-  val udharCreditRevenue: Double = 67.0,
-  val peakHourSlot: String = "06:00 PM - 08:30 PM",
-  val peakHourRevenue: Double = 310.0,
+  val udharCreditRevenue: Double = 0.0,
+  val peakHourSlot: String = "No sales data yet",
+  val peakHourRevenue: Double = 0.0,
   val topCategories: List<Pair<String, Double>> = emptyList(),
   val topSellingMedicines: List<TopSellingMedicine> = emptyList(),
   val topDoctors: List<TopDoctorStat> = emptyList(),
@@ -181,23 +188,23 @@ data class SmartSalesSummary(
 )
 
 data class DashboardMetrics(
-  val totalStockValue: Double = 420.0,
+  val totalStockValue: Double = 0.0,
   val expiredStockValue: Double = 0.0,
-  val netSalesAmt: Double = 597.0,
-  val netPurchaseAmt: Double = 957.0,
+  val netSalesAmt: Double = 0.0,
+  val netPurchaseAmt: Double = 0.0,
   val pendingOrdersCount: Int = 0,
-  val cashBankBalance: Double = 956.0,
-  val netProfitAmt: Double = 142.5,
+  val cashBankBalance: Double = 0.0,
+  val netProfitAmt: Double = 0.0,
   val totalExpenses: Double = 0.0,
-  val overallReceive: Double = 6860.0,
-  val overallPay: Double = 957.0
+  val overallReceive: Double = 0.0,
+  val overallPay: Double = 0.0
 )
 
 data class AnalyticsData(
-  val todaySales: Double = 597.0,
-  val monthlyRevenue: Double = 18450.0,
-  val lowStockCount: Int = 2,
-  val expiringWithin90DaysCount: Int = 3,
+  val todaySales: Double = 0.0,
+  val monthlyRevenue: Double = 0.0,
+  val lowStockCount: Int = 0,
+  val expiringWithin90DaysCount: Int = 0,
   val topDispensed: List<Pair<String, Int>> = emptyList()
 )
 
@@ -251,6 +258,7 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
     )
   )
   val isAiThinking = MutableStateFlow(false)
+  val isEnrichingMedicine = MutableStateFlow(false)
 
   // Push Notification Alert Service State
   val autoAlertServiceEnabled = MutableStateFlow(true)
@@ -320,14 +328,14 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
 
   // User Role (Owner vs Staff) & Phone / Gmail Login Options
   val currentUserRole = MutableStateFlow(UserRole.OWNER)
-  val currentUserPhone = MutableStateFlow("+91 99579 05450")
-  val currentUserEmail = MutableStateFlow("sulman995790@gmail.com")
-  val currentUserName = MutableStateFlow("Suleman Hoque")
-  val activeStaffPermission = MutableStateFlow("POS-only access")
+  val currentUserPhone = MutableStateFlow("")
+  val currentUserEmail = MutableStateFlow("")
+  val currentUserName = MutableStateFlow("Pharmacy Owner")
+  val activeStaffPermission = MutableStateFlow("Full Access")
   val authLoginType = MutableStateFlow(AuthLoginType.GMAIL)
   val isLoggedIn = MutableStateFlow(false)
   val ownerPin = MutableStateFlow("1234")
-  val ownerSecretPassword = MutableStateFlow("@arifa1234SS")
+  val ownerSecretPassword = MutableStateFlow("royal@2026")
   val securityQuestion1 = MutableStateFlow("What is your first pharmacy name?")
   val securityAnswer1 = MutableStateFlow("Royal")
   val securityQuestion2 = MutableStateFlow("Who is your business mentor?")
@@ -337,7 +345,6 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
     if (oldPass == ownerSecretPassword.value) {
       ownerSecretPassword.value = newPass
       scanFeedbackMessage.value = "Secret password updated successfully!"
-      syncManager.syncConfigChange("secretPassword", newPass)
       return true
     }
     scanFeedbackMessage.value = "Incorrect current secret password!"
@@ -349,7 +356,6 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
         ans2.equals(securityAnswer2.value, ignoreCase = true)) {
       ownerSecretPassword.value = newPass
       scanFeedbackMessage.value = "Secret password reset via security questions!"
-      syncManager.syncConfigChange("secretPassword", newPass)
       return true
     }
     scanFeedbackMessage.value = "Security answers do not match!"
@@ -360,7 +366,6 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
     if (enteredOtp == "123456" || enteredOtp == otpCodeValue.value) {
       ownerSecretPassword.value = newPass
       scanFeedbackMessage.value = "Secret password reset via OTP verification!"
-      syncManager.syncConfigChange("secretPassword", newPass)
       return true
     }
     return false
@@ -407,9 +412,9 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
   // Reactive Staff Members Management
   val staffMembers = MutableStateFlow<List<StaffMember>>(
     listOf(
-      StaffMember("s-1", "Nijamuddin Khan", "khannijamuddin87275@gmail.com", "+91 94350 78210", "Today at 02:15 PM", "GMAIL", permission = "POS-only access", designation = "Senior Billing Chemist"),
-      StaffMember("s-2", "Rahul Sharma", "rahul.sharma@royal.com", "+91 98765 43210", "Yesterday at 11:30 AM", "PHONE", permission = "Inventory & Billing access", designation = "Stock & Inventory Lead"),
-      StaffMember("s-3", "Priya Das", "priya.das@royal.com", "+91 88123 45678", "05-Oct-2026 06:12 PM", "GMAIL", permission = "View-only access", designation = "Trainee Pharmacist")
+      StaffMember("s-1", "Senior Counter Pharmacist", "staff.billing@royalpharma.local", "+91 98001 11220", "Today at 02:15 PM", "GMAIL", permission = "POS-only access", designation = "Senior Billing Chemist"),
+      StaffMember("s-2", "Rahul Sharma", "rahul.sharma@royalpharma.local", "+91 98765 43210", "Yesterday at 11:30 AM", "PHONE", permission = "Inventory & Billing access", designation = "Stock & Inventory Lead"),
+      StaffMember("s-3", "Priya Das", "priya.das@royalpharma.local", "+91 88123 45678", "05-Oct-2026 06:12 PM", "GMAIL", permission = "View-only access", designation = "Trainee Pharmacist")
     )
   )
 
@@ -418,7 +423,7 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
     listOf(
       StaffActivityLog(
         id = "act-1",
-        staffName = "Nijamuddin Khan",
+        staffName = "Senior Counter Pharmacist",
         staffRole = "POS-only access",
         actionType = "BILL_GENERATED",
         description = "Generated Cash Memo #INV-1029 for ₹850.00 (Patient: Rahul Roy)",
@@ -436,30 +441,12 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
       ),
       StaffActivityLog(
         id = "act-3",
-        staffName = "Suleman Hoque (Owner)",
+        staffName = "Pharmacy Owner",
         staffRole = "Owner",
         actionType = "STAFF_ADDED",
         description = "Registered new staff Priya Das with 'View-only access' permission",
         timestamp = "Yesterday at 04:30 PM",
         badgeColorHex = 0xFF9C1258
-      ),
-      StaffActivityLog(
-        id = "act-4",
-        staffName = "Nijamuddin Khan",
-        staffRole = "POS-only access",
-        actionType = "BILL_GENERATED",
-        description = "Processed QuickScan sale #INV-1028 for ₹420.00 via UPI",
-        timestamp = "Yesterday at 03:15 PM",
-        badgeColorHex = 0xFF10B981
-      ),
-      StaffActivityLog(
-        id = "act-5",
-        staffName = "Rahul Sharma",
-        staffRole = "Inventory & Billing access",
-        actionType = "STOCK_UPDATED",
-        description = "Imported batch expiry updates for Azithromycin 500mg (Batch AZ-902)",
-        timestamp = "05-Oct-2026 05:10 PM",
-        badgeColorHex = 0xFF3B82F6
       )
     )
   )
@@ -681,26 +668,67 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
     persistSession()
   }
 
-  fun loginWithGmail(email: String, userName: String = "Suleman Hoque", role: UserRole = UserRole.OWNER) {
-    currentUserEmail.value = email
-    currentUserName.value = userName
+  fun loginWithGmail(email: String, userName: String = "Pharmacy Owner", role: UserRole = UserRole.OWNER) {
+    val cleanEmail = email.trim()
+    val resolvedName = userName.ifBlank { cleanEmail.substringBefore("@").ifBlank { "Pharmacy Owner" } }
+    currentUserEmail.value = cleanEmail
+    currentUserName.value = resolvedName
     authLoginType.value = AuthLoginType.GMAIL
     currentUserRole.value = role
     isLoggedIn.value = true
-    GoogleDriveSyncService.switchAccount(email, userName)
-    scanFeedbackMessage.value = "Signed in via Gmail ($email) as ${role.label}"
+    GoogleDriveSyncService.syncSignedInUser(cleanEmail, resolvedName)
+    scanFeedbackMessage.value = "Signed in via Google ($cleanEmail) as ${role.label}"
     persistSession()
+  }
+
+  fun completeGoogleSignIn(email: String, displayName: String, role: UserRole = UserRole.OWNER) {
+    val cleanEmail = email.trim()
+    val resolvedName = displayName.ifBlank { cleanEmail.substringBefore("@").ifBlank { "Pharmacy Owner" } }
+    currentUserEmail.value = cleanEmail
+    currentUserName.value = resolvedName
+    authLoginType.value = AuthLoginType.GMAIL
+    currentUserRole.value = role
+    activeStaffPermission.value = if (role == UserRole.OWNER) "Full Access" else activeStaffPermission.value
+    isLoggedIn.value = true
+    GoogleDriveSyncService.syncSignedInUser(cleanEmail, resolvedName)
+    logStaffActivity(
+      staffName = resolvedName,
+      staffRole = role.label,
+      actionType = "GOOGLE_SIGN_IN",
+      description = "Authenticated via Google Sign-In ($cleanEmail)",
+      badgeColorHex = 0xFF10B981
+    )
+    scanFeedbackMessage.value = "Signed in with Google ($cleanEmail)"
+    persistSession()
+    syncManager.syncNow()
   }
 
   fun logout() {
     isLoggedIn.value = false
+    currentUserEmail.value = ""
+    currentUserPhone.value = ""
+    currentUserName.value = "Pharmacy Owner"
+    GoogleDriveSyncService.disconnectAccount()
     try {
       val prefs = getApplication<Application>().getSharedPreferences("royal_pharmacy_session", Context.MODE_PRIVATE)
       prefs.edit()
         .putBoolean("is_logged_in", false)
         .remove("royal_pharmacy_auth_token")
+        .remove("user_email")
+        .remove("user_phone")
+        .remove("user_name")
         .apply()
-    } catch (e: Exception) {}
+    } catch (_: Exception) {}
+    viewModelScope.launch {
+      withContext(NonCancellable) {
+        runCatching { syncManager.detachListeners() }
+        runCatching { Firebase.auth.signOut() }
+        runCatching {
+          CredentialManager.create(getApplication())
+            .clearCredentialState(ClearCredentialStateRequest())
+        }
+      }
+    }
     navigateTo(Screen.HOME)
   }
 
@@ -859,7 +887,7 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
       ),
       UpiAccount(
         id = 2,
-        upiId = "9957905450@ybl",
+        upiId = "royalpharma@ybl",
         providerName = "PhonePe Merchant",
         holderName = "ROYAL PHARMACY",
         isPrimary = false,
@@ -962,10 +990,18 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
     val prefs = application.getSharedPreferences("royal_pharmacy_session", Context.MODE_PRIVATE)
     val savedLogin = prefs.getBoolean("is_logged_in", false)
     val authToken = prefs.getString("royal_pharmacy_auth_token", null)
-    isLoggedIn.value = savedLogin || !authToken.isNullOrBlank()
-    currentUserName.value = prefs.getString("user_name", "Suleman Hoque") ?: "Suleman Hoque"
-    currentUserEmail.value = prefs.getString("user_email", "sulman995790@gmail.com") ?: "sulman995790@gmail.com"
-    currentUserPhone.value = prefs.getString("user_phone", "+91 99579 05450") ?: "+91 99579 05450"
+    val firebaseUser = runCatching { Firebase.auth.currentUser }.getOrNull()
+    isLoggedIn.value = savedLogin || !authToken.isNullOrBlank() || firebaseUser != null
+    currentUserName.value = firebaseUser?.displayName?.takeIf { it.isNotBlank() }
+      ?: prefs.getString("user_name", "Pharmacy Owner")
+      ?: "Pharmacy Owner"
+    currentUserEmail.value = firebaseUser?.email?.takeIf { it.isNotBlank() }
+      ?: prefs.getString("user_email", "")
+      ?: ""
+    currentUserPhone.value = prefs.getString("user_phone", "") ?: ""
+    if (firebaseUser != null && !firebaseUser.email.isNullOrBlank()) {
+      GoogleDriveSyncService.syncSignedInUser(firebaseUser.email, firebaseUser.displayName)
+    }
     val roleStr = prefs.getString("user_role", UserRole.OWNER.name) ?: UserRole.OWNER.name
     try {
       currentUserRole.value = UserRole.valueOf(roleStr)
@@ -977,6 +1013,20 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
     repository = PharmacyRepository(db.pharmacyDao())
     allCategoryThresholds = repository.allCategoryThresholds.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     syncManager = FirebaseSyncManager(application, db.pharmacyDao(), networkMonitor, viewModelScope)
+    runCatching {
+      Firebase.auth.addAuthStateListener { fa ->
+        val user = fa.currentUser
+        if (user != null && !user.email.isNullOrBlank()) {
+          val resolvedName = user.displayName?.takeIf { it.isNotBlank() }
+            ?: user.email?.substringBefore("@")
+            ?: "Pharmacy Owner"
+          currentUserEmail.value = user.email.orEmpty()
+          currentUserName.value = resolvedName
+          isLoggedIn.value = true
+          GoogleDriveSyncService.syncSignedInUser(user.email, resolvedName)
+        }
+      }
+    }
     StockAlertNotificationService.initNotificationChannel(application)
     viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
       try {
@@ -1037,7 +1087,7 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
         if (localSharedBackups.isNotEmpty()) {
           uninstallResistantBackupToRestore.value = localSharedBackups.first()
           showUninstallResistantAutoRestorePrompt.value = true
-        } else {
+        } else if (GoogleDriveSyncService.driveSnapshots.value.isNotEmpty()) {
           showGoogleDriveAutoRestorePrompt.value = true
         }
       }
@@ -1162,7 +1212,7 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
   // Udhar Khata Totals
   val totalUdharOutstanding: StateFlow<Double> = allCustomers.combine(MutableStateFlow(Unit)) { custs, _ ->
     custs.sumOf { it.balanceReceivable }
-  }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 6860.0)
+  }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0.0)
 
   // Analytics & Reports
   val analyticsData: StateFlow<AnalyticsData> = combine(
@@ -1170,24 +1220,21 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
     allMedicines
   ) { sales, meds ->
     val today = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()).format(Date())
-    val todaySalesTotal = sales.filter { it.invoiceDate == today }.sumOf { it.grandTotal }.let { if (it > 0) it else 597.0 }
-    val monthlyTotal = sales.sumOf { it.grandTotal } + 17853.0
+    val todaySalesTotal = sales.filter { it.invoiceDate.startsWith(today) }.sumOf { it.grandTotal }
+    val monthlyTotal = sales.sumOf { it.grandTotal }
     val lowStock = meds.count { it.stockPacks <= it.minStockAlert }
-    val expiring90 = meds.count { it.expiryDate.contains("26") || it.isExpired }
-    val topDrugs = meds.sortedByDescending { it.dispenseCount }.take(5).map { Pair(it.name, it.dispenseCount) }
+    val expiring90 = meds.count { it.isExpired || calculateDaysToExpiry(it.expiryDate) <= 90 }
+    val topDrugs = meds.filter { it.dispenseCount > 0 }
+      .sortedByDescending { it.dispenseCount }
+      .take(5)
+      .map { Pair(it.name, it.dispenseCount) }
 
     AnalyticsData(
       todaySales = todaySalesTotal,
       monthlyRevenue = monthlyTotal,
       lowStockCount = lowStock,
       expiringWithin90DaysCount = expiring90,
-      topDispensed = if (topDrugs.isNotEmpty()) topDrugs else listOf(
-        Pair("Dolo 650", 320),
-        Pair("Pan 40 Tablet", 260),
-        Pair("Telma 40", 230),
-        Pair("Augmentin 625 Duo", 210),
-        Pair("Calpol 650", 185)
-      )
+      topDispensed = topDrugs
     )
   }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AnalyticsData())
 
@@ -1229,24 +1276,28 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
     allDistributors,
     allCustomers
   ) { meds, sales, purchases, dists, custs ->
-    val stockVal = meds.filter { !it.isExpired }.sumOf { it.stockPacks * it.saleRate }
+    val stockVal = meds.filter { !it.isExpired }.sumOf { it.stockPacks * (if (it.saleRate > 0) it.saleRate else it.mrp) }
     val expiredVal = meds.filter { it.isExpired }.sumOf { it.stockPacks * it.mrp }
     val netSales = sales.sumOf { it.grandTotal }
     val netPurchase = purchases.sumOf { it.totalAmount }
     val overallPay = dists.sumOf { it.balancePayable }
     val overallReceive = custs.sumOf { it.balanceReceivable }
+    val cashSalesOnly = sales.filter {
+      !it.paymentMode.contains("Udhar", ignoreCase = true) && !it.paymentMode.contains("Credit", ignoreCase = true)
+    }.sumOf { it.grandTotal }
+    val pendingPoCount = allPurchaseOrders.value.count { it.status != "RECEIVED" }
 
     DashboardMetrics(
-      totalStockValue = if (stockVal > 0) stockVal else 420.0,
+      totalStockValue = stockVal,
       expiredStockValue = expiredVal,
-      netSalesAmt = if (netSales > 0) netSales else 597.0,
-      netPurchaseAmt = if (netPurchase > 0) netPurchase else 957.0,
-      pendingOrdersCount = 0,
-      cashBankBalance = 956.0 + netSales,
-      netProfitAmt = (netSales * 0.22).coerceAtLeast(142.5),
+      netSalesAmt = netSales,
+      netPurchaseAmt = netPurchase,
+      pendingOrdersCount = pendingPoCount,
+      cashBankBalance = cashInHandRegister.value + cashSalesOnly,
+      netProfitAmt = netSales * 0.22,
       totalExpenses = 0.0,
-      overallReceive = if (overallReceive > 0) overallReceive else 6860.0,
-      overallPay = if (overallPay > 0) overallPay else 957.0
+      overallReceive = overallReceive,
+      overallPay = overallPay
     )
   }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), DashboardMetrics())
 
@@ -1342,7 +1393,11 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
     val redeemedPoints = if (billingRedeemLoyaltyPoints.value) billingLoyaltyPointsToRedeem.value else 0
     val loyaltyDiscountAmt = redeemedPoints.toDouble().coerceAtMost(taxableBeforeLoyalty)
     val taxable = (taxableBeforeLoyalty - loyaltyDiscountAmt).coerceAtLeast(0.0)
-    val gst = taxable * 0.12
+    val rawGst = items.sumOf { item ->
+      val itemNet = (item.packQty * item.rate) * (1.0 - item.discountPercent / 100.0)
+      itemNet * (item.gstPercent / 100.0)
+    }
+    val gst = if (taxableBeforeLoyalty > 0.0) rawGst * (taxable / taxableBeforeLoyalty) else 0.0
     val grandTotal = taxable + gst
     val earnedPoints = (taxable / 100.0).toInt().coerceAtLeast(0)
     val dateStr = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault()).format(Date())
@@ -2063,6 +2118,58 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
     }
   }
 
+  // --- Cache-Through AI Enrichment Architecture ---
+  suspend fun lookupOrEnrichMedicineWithAi(
+    brandQuery: String,
+    autoSaveToInventory: Boolean = true
+  ): Result<MedicineItem> = withContext(Dispatchers.IO) {
+    val cleanQuery = brandQuery.trim()
+    if (cleanQuery.isBlank()) {
+      return@withContext Result.failure(IllegalArgumentException("Enter a medicine brand or salt name"))
+    }
+    val localMatch = allMedicines.value.firstOrNull { med ->
+      med.name.equals(cleanQuery, ignoreCase = true) ||
+        med.name.contains(cleanQuery, ignoreCase = true) ||
+        cleanQuery.contains(med.name, ignoreCase = true) ||
+        med.saltMolecule.equals(cleanQuery, ignoreCase = true)
+    } ?: repository.getMedicineByName(cleanQuery)
+    if (localMatch != null) {
+      return@withContext Result.success(localMatch)
+    }
+
+    isEnrichingMedicine.value = true
+    try {
+      val result = geminiService.resolveMedicineProfileWithAi(cleanQuery)
+      result.map { resolved ->
+        if (autoSaveToInventory) {
+          val existingByCanonical = repository.getMedicineByName(resolved.name)
+          val finalItem = if (existingByCanonical != null) {
+            existingByCanonical
+          } else {
+            val insertedId = repository.insertMedicine(resolved)
+            val saved = resolved.copy(id = insertedId)
+            logStaffActivity(
+              staffName = currentUserName.value.ifBlank { "Pharmacist" },
+              staffRole = currentUserRole.value.label,
+              actionType = "AI_CATALOG_ENRICHED",
+              description = "Cache-Through AI resolved & saved '${saved.name}' (${saved.composition}, ${saved.scheduleDrug}, GST ${saved.gstPercent.toInt()}%)",
+              badgeColorHex = 0xFF7C3AED
+            )
+            saved
+          }
+          scanFeedbackMessage.value = "AI Resolved & Cached: ${finalItem.name} (${finalItem.composition})"
+          finalItem
+        } else {
+          resolved
+        }
+      }.onFailure { err ->
+        scanFeedbackMessage.value = "AI Lookup failed for '$cleanQuery': ${err.localizedMessage ?: "Check network & Retry"}"
+      }
+    } finally {
+      isEnrichingMedicine.value = false
+    }
+  }
+
   // --- Gemini AI Chatbot ---
   fun sendChatMessage(text: String) {
     if (text.isBlank()) return
@@ -2072,8 +2179,49 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
     isAiThinking.value = true
 
     viewModelScope.launch {
-      val responseText = geminiService.sendMessage(text, priorHistory, allMedicines.value)
-      val botMsg = ChatMessage(sender = "gemini", text = responseText)
+      val res = geminiService.sendMessageResult(text, priorHistory, allMedicines.value)
+      val botMsg = res.fold(
+        onSuccess = { reply ->
+          ChatMessage(sender = "gemini", text = reply, isError = false)
+        },
+        onFailure = { err ->
+          ChatMessage(
+            sender = "gemini",
+            text = "Cloud AI request failed: ${err.localizedMessage ?: "Network or App Check error"}. Please verify your connection and tap Retry.",
+            isError = true
+          )
+        }
+      )
+      chatMessages.value = chatMessages.value + botMsg
+      isAiThinking.value = false
+    }
+  }
+
+  fun retryChatMessage(failedBotMsg: ChatMessage) {
+    val currentList = chatMessages.value
+    val failedIndex = currentList.indexOfFirst { it.id == failedBotMsg.id }
+    val precedingUserMsg = if (failedIndex > 0) {
+      currentList.subList(0, failedIndex).lastOrNull { it.sender == "user" }
+    } else {
+      currentList.lastOrNull { it.sender == "user" }
+    } ?: return
+
+    chatMessages.value = currentList.filterNot { it.id == failedBotMsg.id }
+    isAiThinking.value = true
+    val priorHistory = chatMessages.value.dropLastWhile { it.id != precedingUserMsg.id }.dropLast(1)
+
+    viewModelScope.launch {
+      val res = geminiService.sendMessageResult(precedingUserMsg.text, priorHistory, allMedicines.value)
+      val botMsg = res.fold(
+        onSuccess = { reply -> ChatMessage(sender = "gemini", text = reply, isError = false) },
+        onFailure = { err ->
+          ChatMessage(
+            sender = "gemini",
+            text = "Retry failed: ${err.localizedMessage ?: "Network or App Check error"}. Tap Retry to try again.",
+            isError = true
+          )
+        }
+      )
       chatMessages.value = chatMessages.value + botMsg
       isAiThinking.value = false
     }
@@ -2306,16 +2454,16 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
   fun searchBrandOnlineWithGemini(brand: String) {
     viewModelScope.launch {
       isBrandLoading.value = true
-      scanFeedbackMessage.value = "Fetching complete $brand medicines & injectables from internet & Gemini..."
-      try {
-        val results = geminiService.searchBrandProductsOnline(brand)
+      scanFeedbackMessage.value = "Fetching $brand medicines & injectables via Firebase AI Logic..."
+      val res = geminiService.searchBrandProductsOnlineResult(brand)
+      res.onSuccess { results ->
         brandCatalogMedicines.value = results
         scanFeedbackMessage.value = "Loaded ${results.size} $brand products & injectables!"
-      } catch (e: Exception) {
-        scanFeedbackMessage.value = "Showing local catalog for $brand"
-      } finally {
-        isBrandLoading.value = false
+      }.onFailure { err ->
+        brandCatalogMedicines.value = BrandCatalogProvider.getBrandMedicines(brand)
+        scanFeedbackMessage.value = "Cloud lookup failed (${err.localizedMessage ?: "Offline"}); showing local $brand catalog."
       }
+      isBrandLoading.value = false
     }
   }
 
@@ -2329,16 +2477,21 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
     substituteQuery.value = q
     viewModelScope.launch {
       isSearchingOnlineSubstitutes.value = true
-      scanFeedbackMessage.value = "Searching internet & Gemini for substitutes across GSK, IPCA, Cipla, Alkem, Sun Pharma..."
-      try {
-        val results = geminiService.searchSubstitutesOnline(q)
+      scanFeedbackMessage.value = "Searching Firebase AI Logic for Indian generic & brand substitutes..."
+      val res = geminiService.searchSubstitutesOnlineResult(q)
+      res.onSuccess { results ->
         onlineSubstitutes.value = results
-        scanFeedbackMessage.value = "Found ${results.size} brand substitutes, generics & injectables!"
-      } catch (e: Exception) {
-        onlineSubstitutes.value = BrandCatalogProvider.generateRichSubstitutesFallback(q)
-      } finally {
-        isSearchingOnlineSubstitutes.value = false
+        scanFeedbackMessage.value = "Found ${results.size} bioequivalent brand substitutes!"
+      }.onFailure { err ->
+        val localSubs = BrandCatalogProvider.generateRichSubstitutesFallback(q)
+        onlineSubstitutes.value = localSubs
+        scanFeedbackMessage.value = if (localSubs.isNotEmpty()) {
+          "Cloud AI unavailable (${err.localizedMessage ?: "Offline"}); showing ${localSubs.size} local bioequivalent alternatives."
+        } else {
+          "AI substitute search failed: ${err.localizedMessage ?: "Check network & Retry"}"
+        }
       }
+      isSearchingOnlineSubstitutes.value = false
     }
   }
 
@@ -2524,78 +2677,99 @@ class PharmacyViewModel(application: Application) : AndroidViewModel(application
   }
 
   fun getSmartSalesSummary(period: String): SmartSalesSummary {
-    val sales = allSales.value
-    val baseSalesTotal = sales.sumOf { it.grandTotal }
+    val allSalesList = allSales.value
+    val sdf = SimpleDateFormat("dd-MM-yyyy", Locale.getDefault())
+    val nowCal = java.util.Calendar.getInstance()
+    val todayStr = sdf.format(nowCal.time)
+    val yestCal = java.util.Calendar.getInstance().apply { add(java.util.Calendar.DAY_OF_YEAR, -1) }
+    val yestStr = sdf.format(yestCal.time)
 
-    val totalRev = when (period) {
-      "Today" -> 597.0 + baseSalesTotal
-      "Yesterday" -> 1420.0
-      "Last 7 days" -> 18450.0 + baseSalesTotal
-      "Last 30 days" -> 64800.0 + baseSalesTotal
-      "Quarterly" -> 192400.0 + baseSalesTotal
-      else -> 64800.0 + baseSalesTotal
+    val filteredSales = allSalesList.filter { inv ->
+      val datePart = inv.invoiceDate.take(10)
+      val parsedDate = runCatching { sdf.parse(datePart) }.getOrNull()
+      when (period) {
+        "Today" -> datePart == todayStr
+        "Yesterday" -> datePart == yestStr
+        "Last 7 days" -> parsedDate?.let { (System.currentTimeMillis() - it.time) <= 7L * 86_400_000L } ?: true
+        "Last 30 days" -> parsedDate?.let { (System.currentTimeMillis() - it.time) <= 30L * 86_400_000L } ?: true
+        "Quarterly" -> parsedDate?.let { (System.currentTimeMillis() - it.time) <= 90L * 86_400_000L } ?: true
+        else -> true
+      }
     }
 
-    val ordersCount = when (period) {
-      "Today" -> (4 + sales.size).coerceAtLeast(1)
-      "Yesterday" -> 11
-      "Last 7 days" -> 84
-      "Last 30 days" -> 320
-      else -> 320
+    val totalRev = filteredSales.sumOf { it.grandTotal }
+    val ordersCount = filteredSales.size
+    val aov = if (ordersCount > 0) totalRev / ordersCount else 0.0
+    val cash = filteredSales.filter { it.paymentMode.contains("Cash", ignoreCase = true) }.sumOf { it.grandTotal }
+    val upi = filteredSales.filter { it.paymentMode.contains("UPI", ignoreCase = true) }.sumOf { it.grandTotal }
+    val card = filteredSales.filter { it.paymentMode.contains("Card", ignoreCase = true) }.sumOf { it.grandTotal }
+    val udhar = filteredSales.filter {
+      it.paymentMode.contains("Udhar", ignoreCase = true) || it.paymentMode.contains("Credit", ignoreCase = true)
+    }.sumOf { it.grandTotal }
+    val profit = totalRev * 0.23
+    val marginPct = if (totalRev > 0.0) (profit / totalRev) * 100.0 else 0.0
+
+    val meds = allMedicines.value
+    val topCats = meds.groupBy { it.category.ifBlank { "Tablet" } }
+      .mapValues { (_, list) ->
+        list.sumOf { (it.dispenseCount.coerceAtLeast(1) * it.saleRate.coerceAtLeast(it.mrp)) }
+      }
+      .toList()
+      .sortedByDescending { it.second }
+      .take(5)
+
+    val topMeds = meds.filter { it.dispenseCount > 0 }
+      .sortedByDescending { it.dispenseCount }
+      .take(6)
+      .map { m ->
+        val rate = if (m.saleRate > 0) m.saleRate else m.mrp
+        val margin = if (rate > 0 && m.purchaseRate > 0) ((rate - m.purchaseRate) / rate) * 100.0 else 22.0
+        TopSellingMedicine(
+          name = m.name,
+          unitsSold = m.dispenseCount,
+          revenue = m.dispenseCount * rate,
+          category = m.category,
+          marginPercent = margin.coerceIn(0.0, 95.0)
+        )
+      }
+
+    val topDocs = allDoctors.value
+      .sortedByDescending { it.prescriptionCount }
+      .take(5)
+      .map { d ->
+        TopDoctorStat(
+          doctorName = d.name,
+          clinicName = d.clinicHospital,
+          prescriptionCount = d.prescriptionCount,
+          totalValue = filteredSales.filter { it.doctorName.equals(d.name, ignoreCase = true) }.sumOf { it.grandTotal }
+        )
+      }
+
+    val lowCount = meds.count { it.stockPacks <= it.minStockAlert }
+    val expCount = meds.count { it.isExpired || calculateDaysToExpiry(it.expiryDate) <= 60 }
+    val insights = buildList {
+      if (ordersCount == 0) {
+        add("No sales invoices recorded yet for '$period'. Complete a POS sale to view live revenue analytics.")
+      } else {
+        add("Recorded $ordersCount invoice(s) totaling ₹${String.format(Locale.getDefault(), "%.2f", totalRev)} (Avg Order: ₹${String.format(Locale.getDefault(), "%.2f", aov)}).")
+      }
+      if (lowCount > 0) add("$lowCount medicine batch(es) are at or below minimum reorder alert levels.")
+      if (expCount > 0) add("$expCount batch(es) expire within 60 days — review Batch Expiry Dashboard for FEFO clearance.")
     }
-
-    val profit = totalRev * 0.245
-    val aov = totalRev / ordersCount
-    val cash = totalRev * 0.48
-    val upi = totalRev * 0.36
-    val card = totalRev * 0.04
-    val udhar = totalRev * 0.12
-
-    val topCats = listOf(
-      "Tablets & Capsules" to totalRev * 0.52,
-      "Syrups & Suspensions" to totalRev * 0.18,
-      "Injections & Vials" to totalRev * 0.14,
-      "Ointments & Creams" to totalRev * 0.09,
-      "OTC & Nutritional Drinks" to totalRev * 0.07
-    )
-
-    val topMeds = listOf(
-      TopSellingMedicine("Dolo 650 Tablet", 320, 9792.0, "Tablet", 26.5),
-      TopSellingMedicine("Pan 40 Tablet", 260, 39000.0, "Tablet", 25.3),
-      TopSellingMedicine("Augmentin 625 Duo", 210, 40950.0, "Tablet", 22.8),
-      TopSellingMedicine("Azithral 500", 190, 21850.0, "Tablet", 24.2),
-      TopSellingMedicine("Calpol 650", 185, 5457.5, "Tablet", 23.1),
-      TopSellingMedicine("Monocef 1g Inj", 120, 8220.0, "Injection", 28.4),
-      TopSellingMedicine("Horlicks Mother Plus", 18, 10422.0, "OTC", 17.1)
-    )
-
-    val topDocs = listOf(
-      TopDoctorStat("Dr. A. K. Sharma", "Civil Hospital Darrang", 54, 28400.0),
-      TopDoctorStat("Dr. P. Baruah", "Care Clinic Mangaldai", 38, 19250.0),
-      TopDoctorStat("Dr. N. Hazarika", "Apex Child Clinic", 27, 14600.0),
-      TopDoctorStat("Dr. M. Kalita", "Sanjeevani Nursing Home", 22, 11800.0)
-    )
-
-    val insights = listOf(
-      "Antibiotics & Antipyretics demand surged 28% week-on-week due to seasonal weather shifts.",
-      "Peak footfall window is 06:00 PM – 08:30 PM (accounts for 46% of daily transaction volume).",
-      "Injectables yield the highest gross margin at 28.4% compared to standard tablets at 23.5%.",
-      "Top 3 fast-moving medicines account for 38% of store revenue. Maintain minimum buffer of 20 packs."
-    )
 
     return SmartSalesSummary(
       period = period,
       totalRevenue = totalRev,
       totalOrders = ordersCount,
       grossProfit = profit,
-      grossProfitMarginPercent = 24.5,
+      grossProfitMarginPercent = marginPct,
       averageOrderValue = aov,
       cashRevenue = cash,
       upiRevenue = upi,
       cardRevenue = card,
       udharCreditRevenue = udhar,
-      peakHourSlot = "06:00 PM - 08:30 PM",
-      peakHourRevenue = totalRev * 0.46,
+      peakHourSlot = if (ordersCount > 0) "Active POS Hours" else "No sales recorded",
+      peakHourRevenue = totalRev,
       topCategories = topCats,
       topSellingMedicines = topMeds,
       topDoctors = topDocs,

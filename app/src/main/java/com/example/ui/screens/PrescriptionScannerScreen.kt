@@ -206,7 +206,7 @@ fun PrescriptionScannerScreen(
                 .background(Color(0xFFF59E0B))
                 .padding(horizontal = 5.dp, vertical = 1.5.dp)
             ) {
-              Text("Gemini 3.5", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+              Text("Gemini 3.8 Flash", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.Black)
             }
           }
           Text("Multimodal Vision OCR & Google Search Grounding", color = Color(0xFFE2E8F0), fontSize = 11.sp)
@@ -354,7 +354,7 @@ fun PrescriptionScannerScreen(
               CircularProgressIndicator(color = Color(0xFF6B21A8), modifier = Modifier.size(24.dp), strokeWidth = 3.dp)
               Spacer(modifier = Modifier.width(14.dp))
               Column {
-                Text("Gemini 3.5 Flash Vision Analyzing Rx...", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color(0xFF4C1D95))
+                Text("Gemini 3.8 Flash Vision Analyzing Rx...", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color(0xFF4C1D95))
                 Text("Reading doctor handwriting, recognizing salts & matching inventory...", fontSize = 11.sp, color = Color(0xFF6D28D9))
               }
             }
@@ -412,6 +412,31 @@ fun PrescriptionScannerScreen(
       }
 
       if (result != null && !isAnalyzing) {
+        if (!result.errorMessage.isNullOrBlank()) {
+          item {
+            Card(
+              shape = RoundedCornerShape(10.dp),
+              colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFBEB)),
+              border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFF59E0B)),
+              modifier = Modifier.fillMaxWidth()
+            ) {
+              Row(
+                modifier = Modifier.padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+              ) {
+                Icon(Icons.Default.Warning, contentDescription = null, tint = Color(0xFFD97706), modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                  text = result.errorMessage,
+                  fontSize = 11.5.sp,
+                  color = Color(0xFF92400E),
+                  fontWeight = FontWeight.Medium
+                )
+              }
+            }
+          }
+        }
+
         // 3. Doctor & Patient Summary Card
         item {
           Card(
@@ -577,7 +602,17 @@ fun PrescriptionScannerScreen(
                 viewModel.addMedicineToCart(med, drug.packQty)
                 Toast.makeText(context, "Added ${drug.medicineName} to bill", Toast.LENGTH_SHORT).show()
               } else {
-                Toast.makeText(context, "${drug.medicineName} not in inventory. Check substitutes.", Toast.LENGTH_SHORT).show()
+                scope.launch {
+                  Toast.makeText(context, "Resolving ${drug.medicineName} with Gemini AI...", Toast.LENGTH_SHORT).show()
+                  viewModel.lookupOrEnrichMedicineWithAi(drug.medicineName, autoSaveToInventory = true)
+                    .onSuccess { resolvedMed ->
+                      viewModel.addMedicineToCart(resolvedMed, drug.packQty)
+                      Toast.makeText(context, "AI Resolved, Saved & Added ${resolvedMed.name}!", Toast.LENGTH_SHORT).show()
+                    }
+                    .onFailure {
+                      Toast.makeText(context, "${drug.medicineName} not in inventory. Check substitutes.", Toast.LENGTH_SHORT).show()
+                    }
+                }
               }
             },
             onGoogleSearch = {
@@ -787,13 +822,23 @@ fun PrescribedDrugCard(
 
         Button(
           onClick = onAddToBill,
-          colors = ButtonDefaults.buttonColors(containerColor = if (drug.isAvailableInStock) RoyalNavy else Color(0xFF64748B)),
+          colors = ButtonDefaults.buttonColors(containerColor = if (drug.isAvailableInStock) RoyalNavy else RoyalMagenta),
           shape = RoundedCornerShape(6.dp),
           contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp)
         ) {
-          Icon(Icons.Default.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(13.dp))
+          Icon(
+            if (drug.isAvailableInStock) Icons.Default.Add else Icons.Default.AutoAwesome,
+            contentDescription = null,
+            tint = Color.White,
+            modifier = Modifier.size(13.dp)
+          )
           Spacer(modifier = Modifier.width(4.dp))
-          Text("Add to Bill", fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.Bold)
+          Text(
+            if (drug.isAvailableInStock) "Add to Bill" else "AI Resolve & Add",
+            fontSize = 11.sp,
+            color = Color.White,
+            fontWeight = FontWeight.Bold
+          )
         }
       }
     }

@@ -90,7 +90,7 @@ abstract class PharmacyDatabase : RoomDatabase() {
           ayushmanHfrId = "HFR-892104",
           ownerName = "Suleman Hoque",
           phone = "9957905450",
-          email = "sulman995790@gmail.com",
+          email = "contact@royalpharmacy.in",
           drugLicenseForm20 = "DL-ASS-20B-10928",
           form20Expiry = "15-11-2027",
           drugLicenseForm21 = "DL-ASS-21B-10929",

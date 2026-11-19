@@ -75,6 +75,8 @@ class PharmacyRepository(private val dao: PharmacyDao) {
 
   suspend fun findMedicineByBarcode(barcode: String): MedicineItem? = dao.findMedicineByBarcode(barcode)
 
+  suspend fun getMedicineByName(name: String): MedicineItem? = dao.getMedicineByName(name)
+
   suspend fun insertMedicine(medicine: MedicineItem): Long {
     val id = dao.insertMedicine(medicine)
     val json = org.json.JSONObject().apply {

@@ -4,24 +4,27 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
-import android.util.Base64
-import com.example.BuildConfig
+import android.util.Log
+import com.example.data.db.MedicineBatchEntity
 import com.example.data.model.MedicineItem
 import com.example.service.ImageOcrPreprocessor
 import com.example.service.MedicineOcrParser
 import com.google.android.gms.tasks.Tasks
+import com.google.firebase.Firebase
+import com.google.firebase.ai.ai
+import com.google.firebase.ai.type.Schema
+import com.google.firebase.ai.type.content
+import com.google.firebase.ai.type.generationConfig
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
+import kotlinx.coroutines.withTimeout
 import org.json.JSONArray
 import org.json.JSONObject
-import java.io.ByteArrayOutputStream
+import java.net.URLEncoder
 import java.util.concurrent.TimeUnit
 
 data class PrescribedDrug(
@@ -54,7 +57,8 @@ data class PrescriptionScanResult(
   val drugInteractionAlert: String?,
   val googleSearchGroundingQuery: String,
   val rawGeminiOutput: String,
-  val isAiPowered: Boolean = true
+  val isAiPowered: Boolean = true,
+  val errorMessage: String? = null
 )
 
 data class ExtractedRxItem(
@@ -67,137 +71,162 @@ data class ExtractedRxItem(
 
 object GeminiPrescriptionService {
 
-  private val client = OkHttpClient.Builder()
-    .connectTimeout(60, TimeUnit.SECONDS)
-    .readTimeout(60, TimeUnit.SECONDS)
-    .writeTimeout(60, TimeUnit.SECONDS)
-    .build()
-
-  suspend fun scanPrescriptionWithGemini4(
-    imageBytes: ByteArray,
-    availableStock: List<com.example.data.db.MedicineBatchEntity>,
-    customApiKey: String? = null
-  ): Result<List<ExtractedRxItem>> = withContext(Dispatchers.IO) {
-    runCatching {
-      val base64Img = Base64.encodeToString(imageBytes, Base64.NO_WRAP)
-      val stockLines = availableStock.joinToString("\n") {
-        "ID:${it.id}|Brand:${it.brandName}|Salt:${it.genericSalt}|Qty:${it.stockQuantity}|MRP:${it.sellingMrp}"
-      }
-
-      val prompt = """
-        Analyze this prescription image using Gemini 4 Argon visual reasoning.
-        Match every prescribed medicine against our live inventory:
-        $stockLines
-
-        Respond ONLY with a valid JSON array of objects containing:
-        - "prescribedName": String
-        - "dosageSchedule": String (e.g. "1-0-1 after meals x 5 days")
-        - "matchedBatchId": Long or null
-        - "matchedBrandName": String or null
-        - "clinicalNote": String
-      """.trimIndent()
-
-      val keyToUse = customApiKey?.ifBlank { null } ?: try {
-        BuildConfig.GEMINI_API_KEY.ifBlank { System.getenv("GEMINI_API_KEY") ?: "" }
-      } catch (_: Exception) {
-        System.getenv("GEMINI_API_KEY") ?: ""
-      }
-
-      val modelsToTry = listOf("gemini-4-argon", "gemini-3.8-flash", "gemini-3.5-flash")
-      var responseText = ""
-
-      for (model in modelsToTry) {
-        try {
-          val endpoint = "https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$keyToUse"
-          val parts = JSONArray()
-            .put(JSONObject().put("text", prompt))
-            .put(JSONObject().put("inline_data", JSONObject()
-              .put("mime_type", "image/jpeg")
-              .put("data", base64Img)
-            ))
-
-          val body = JSONObject().put("contents", JSONArray().put(JSONObject().put("parts", parts)))
-          val requestBody = body.toString().toRequestBody("application/json".toMediaType())
-          val request = Request.Builder().url(endpoint).post(requestBody).build()
-          val response = client.newCall(request).execute()
-          val rawStr = response.body?.string() ?: ""
-          if (response.isSuccessful) {
-            val json = JSONObject(rawStr)
-            val text = json.getJSONArray("candidates").getJSONObject(0)
-              .getJSONObject("content").getJSONArray("parts")
-              .getJSONObject(0).getString("text")
-              .replace("```json", "").replace("```", "").trim()
-            if (text.isNotBlank()) {
-              responseText = text
-              break
-            }
-          }
-        } catch (_: Exception) {}
-      }
-
-      if (responseText.isBlank()) {
-        return@runCatching availableStock.take(3).map {
-          ExtractedRxItem(
-            prescribedName = it.brandName,
-            dosageSchedule = "1-0-1 After Meals",
-            matchedBatchId = it.id,
-            matchedBrandName = it.brandName,
-            clinicalNote = "Extracted and matched against FEFO stock."
-          )
-        }
-      }
-
-      val arr = JSONArray(responseText)
-      List(arr.length()) { i ->
-        val obj = arr.getJSONObject(i)
-        ExtractedRxItem(
-          prescribedName = obj.optString("prescribedName", "Prescribed Drug"),
-          dosageSchedule = obj.optString("dosageSchedule", "As Directed"),
-          matchedBatchId = if (obj.isNull("matchedBatchId")) null else obj.optLong("matchedBatchId"),
-          matchedBrandName = if (obj.isNull("matchedBrandName")) null else obj.optString("matchedBrandName"),
-          clinicalNote = obj.optString("clinicalNote", "Clinical check verified")
-        )
-      }
-    }
-  }
+  private const val TAG = "GeminiPrescriptionSvc"
+  private const val VISION_MODEL = "gemini-3.8-flash"
 
   private val textRecognizer by lazy {
     TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
   }
 
-  private fun Bitmap.toBase64(): String {
-    val preprocessed = ImageOcrPreprocessor.preprocessForOcr(this, contrastGain = 1.4f, brightnessOffset = 5f, applySharpening = true)
-    val maxDimension = 1200
-    val scaledBitmap = if (preprocessed.width > maxDimension || preprocessed.height > maxDimension) {
-      val ratio = preprocessed.width.toFloat() / preprocessed.height.toFloat()
-      val newWidth = if (preprocessed.width > preprocessed.height) maxDimension else (maxDimension * ratio).toInt()
-      val newHeight = if (preprocessed.height > preprocessed.width) maxDimension else (maxDimension / ratio).toInt()
-      Bitmap.createScaledBitmap(preprocessed, newWidth.coerceAtLeast(1), newHeight.coerceAtLeast(1), true)
-    } else {
-      preprocessed
-    }
-    val outputStream = ByteArrayOutputStream()
-    scaledBitmap.compress(Bitmap.CompressFormat.JPEG, 85, outputStream)
-    return Base64.encodeToString(outputStream.toByteArray(), Base64.NO_WRAP)
+  private val prescriptionSchema = Schema.obj(
+    properties = mapOf(
+      "doctorName" to Schema.string(),
+      "doctorSpeciality" to Schema.string(),
+      "clinicOrHospital" to Schema.string(),
+      "patientName" to Schema.string(),
+      "patientAgeGender" to Schema.string(),
+      "diagnosis" to Schema.string(),
+      "prescriptionDate" to Schema.string(),
+      "medicines" to Schema.array(
+        items = Schema.obj(
+          properties = mapOf(
+            "medicineName" to Schema.string(),
+            "genericSalt" to Schema.string(),
+            "dosage" to Schema.string(),
+            "frequency" to Schema.string(),
+            "duration" to Schema.string(),
+            "packQty" to Schema.integer(),
+            "estPrice" to Schema.double(),
+            "genericSubstituteSuggestion" to Schema.string(),
+            "substitutePriceSavings" to Schema.string(),
+            "googleSearchQuery" to Schema.string(),
+            "safetyWarning" to Schema.string()
+          )
+        )
+      ),
+      "doctorAdvice" to Schema.string(),
+      "drugInteractionAlert" to Schema.string(),
+      "googleSearchGroundingQuery" to Schema.string()
+    )
+  )
+
+  private val extractedRxSchema = Schema.obj(
+    properties = mapOf(
+      "items" to Schema.array(
+        items = Schema.obj(
+          properties = mapOf(
+            "prescribedName" to Schema.string(),
+            "dosageSchedule" to Schema.string(),
+            "matchedBatchId" to Schema.integer(),
+            "matchedBrandName" to Schema.string(),
+            "clinicalNote" to Schema.string()
+          ),
+          optionalProperties = listOf("matchedBatchId", "matchedBrandName")
+        )
+      )
+    )
+  )
+
+  private val visionModel by lazy {
+    Firebase.ai.generativeModel(
+      modelName = VISION_MODEL,
+      generationConfig = generationConfig {
+        temperature = 0.15f
+        responseMimeType = "application/json"
+        responseSchema = prescriptionSchema
+      }
+    )
   }
 
-  private fun isApiKeyValid(key: String): Boolean {
-    val k = key.trim()
-    return k.isNotBlank() &&
-      !k.equals("DEFAULT_GEMINI_API_KEY", ignoreCase = true) &&
-      !k.equals("MY_GEMINI_API_KEY", ignoreCase = true) &&
-      !k.equals("YOUR_API_KEY", ignoreCase = true) &&
-      !k.contains("DEFAULT", ignoreCase = true) &&
-      k.length >= 20
+  private val quickExtractModel by lazy {
+    Firebase.ai.generativeModel(
+      modelName = VISION_MODEL,
+      generationConfig = generationConfig {
+        temperature = 0.1f
+        responseMimeType = "application/json"
+        responseSchema = extractedRxSchema
+      }
+    )
+  }
+
+  private fun Bitmap.scaleForAiVision(): Bitmap {
+    val maxDim = 1200
+    if (width <= maxDim && height <= maxDim) return this
+    val ratio = width.toFloat() / height.toFloat()
+    val newWidth = if (width > height) maxDim else (maxDim * ratio).toInt()
+    val newHeight = if (height > width) maxDim else (maxDim / ratio).toInt()
+    return Bitmap.createScaledBitmap(this, newWidth.coerceAtLeast(1), newHeight.coerceAtLeast(1), true)
+  }
+
+  suspend fun scanPrescriptionWithGemini4(
+    imageBytes: ByteArray,
+    availableStock: List<MedicineBatchEntity>
+  ): Result<List<ExtractedRxItem>> = withContext(Dispatchers.IO) {
+    try {
+      val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+        ?: return@withContext Result.failure(IllegalArgumentException("Unable to decode prescription image"))
+
+      val scaled = bitmap.scaleForAiVision()
+      val stockLines = availableStock.take(80).joinToString("\n") {
+        "ID:${it.id}|Brand:${it.brandName}|Salt:${it.genericSalt}|Qty:${it.stockQuantity}|MRP:${it.sellingMrp}"
+      }
+
+      val prompt = """
+        Analyze this Indian medical prescription image carefully.
+        Match prescribed medicines against our live inventory if available:
+        $stockLines
+
+        Extract every prescribed medicine, dosage schedule (e.g. "1-0-1 after meals x 5 days"),
+        matchedBatchId (or omit if unstocked), matchedBrandName, and concise clinicalNote (including active salt composition).
+      """.trimIndent()
+
+      val response = withTimeout(60_000L) {
+        quickExtractModel.generateContent(
+          content {
+            image(scaled)
+            text(prompt)
+          }
+        )
+      }
+
+      val rawText = response.text?.trim().orEmpty()
+      if (rawText.isBlank()) {
+        return@withContext Result.failure(IllegalStateException("Gemini Vision returned empty response"))
+      }
+
+      val arr = if (rawText.startsWith("[")) {
+        JSONArray(rawText)
+      } else {
+        JSONObject(rawText).optJSONArray("items") ?: JSONArray()
+      }
+
+      val items = List(arr.length()) { i ->
+        val obj = arr.getJSONObject(i)
+        ExtractedRxItem(
+          prescribedName = obj.optString("prescribedName", "Prescribed Drug"),
+          dosageSchedule = obj.optString("dosageSchedule", "As Directed"),
+          matchedBatchId = if (obj.isNull("matchedBatchId") || obj.optLong("matchedBatchId", -1L) <= 0L) null else obj.optLong("matchedBatchId"),
+          matchedBrandName = obj.optString("matchedBrandName").takeIf { it.isNotBlank() && it != "null" },
+          clinicalNote = obj.optString("clinicalNote", "Verified via Cloud AI Vision")
+        )
+      }
+      Result.success(items)
+    } catch (e: CancellationException) {
+      throw e
+    } catch (e: Exception) {
+      Log.e(TAG, "scanPrescriptionWithGemini4 failed", e)
+      Result.failure(e)
+    }
   }
 
   suspend fun extractTextFromBitmap(bitmap: Bitmap): String = withContext(Dispatchers.IO) {
     try {
       val enhancedBitmap = ImageOcrPreprocessor.preprocessForOcr(bitmap)
       val image = InputImage.fromBitmap(enhancedBitmap, 0)
-      val visionText = Tasks.await(textRecognizer.process(image), 5000, TimeUnit.MILLISECONDS)
+      val visionText = Tasks.await(textRecognizer.process(image), 6000, TimeUnit.MILLISECONDS)
       visionText.text
-    } catch (_: Exception) {
+    } catch (e: Exception) {
+      Log.w(TAG, "ML Kit OCR fallback warning: ${e.message}")
       ""
     }
   }
@@ -209,18 +238,10 @@ object GeminiPrescriptionService {
     samplePreset: String?,
     availableInventory: List<MedicineItem>
   ): PrescriptionScanResult = withContext(Dispatchers.IO) {
-    val apiKey = try {
-      BuildConfig.GEMINI_API_KEY.ifBlank { System.getenv("GEMINI_API_KEY") ?: "" }
-    } catch (_: Exception) {
-      System.getenv("GEMINI_API_KEY") ?: ""
-    }
-
-    // If sample preset provided explicitly and no custom image, generate rich preset
     if (bitmap == null && imageUri == null && !samplePreset.isNullOrBlank()) {
       return@withContext generatePresetResult(samplePreset, availableInventory)
     }
 
-    // Try loading bitmap from URI if needed
     val resolvedBitmap = bitmap ?: imageUri?.let { uri ->
       try {
         context.contentResolver.openInputStream(uri)?.use { stream ->
@@ -232,126 +253,75 @@ object GeminiPrescriptionService {
     }
 
     if (resolvedBitmap == null) {
-      return@withContext generatePresetResult("General Physician Rx", availableInventory)
+      return@withContext PrescriptionScanResult(
+        doctorName = "",
+        doctorSpeciality = "",
+        clinicOrHospital = "",
+        patientName = "",
+        patientAgeGender = "",
+        diagnosis = "",
+        prescriptionDate = "Today",
+        medicines = emptyList(),
+        doctorAdvice = "",
+        drugInteractionAlert = null,
+        googleSearchGroundingQuery = "",
+        rawGeminiOutput = "",
+        isAiPowered = false,
+        errorMessage = "No prescription image selected. Capture a photo, pick from gallery, or select a clinical sample above."
+      )
     }
 
-    // Step 1: Perform real On-Device ML Kit OCR extraction on the actual user image
     val extractedOcrText = extractTextFromBitmap(resolvedBitmap)
+    val scaledBitmap = resolvedBitmap.scaleForAiVision()
 
-    // Step 2: If Gemini API Key is available, perform Multimodal AI Vision inference
-    if (isApiKeyValid(apiKey)) {
-      try {
-        val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=$apiKey"
+    val aiErrorReason: String? = try {
+      val prompt = """
+        You are an expert AI clinical pharmacist assistant for ROYAL PHARMACY in India.
+        Analyze this medical prescription image thoroughly.
+        On-device OCR text hints extracted from the image:
+        $extractedOcrText
 
-        val prompt = """
-          You are an expert AI clinical pharmacist assistant for ROYAL PHARMACY.
-          Analyze this medical prescription image thoroughly.
-          OCR extracted text hints from image:
-          $extractedOcrText
+        Extract doctor details, patient details, provisional diagnosis, and ALL prescribed medicines
+        with exact Indian brand names, active generic chemical salts + strengths, dosage, frequency, duration,
+        packQty, estimated Indian MRP in INR, bioequivalent generic substitute suggestion, and any safety/DDI warning.
+      """.trimIndent()
 
-          Instructions:
-          1. Extract Doctor Name, Speciality, Clinic/Hospital Name, Date.
-          2. Extract Patient Name, Age, Gender, and Provisional Diagnosis.
-          3. Extract all prescribed medicines:
-             - Exact Brand name or Formulation
-             - Generic Chemical Salt / Active Composition
-             - Dosage strength
-             - Frequency instructions (e.g. 1-0-1 after food, once daily, TDS)
-             - Duration in days
-             - Approximate quantity to dispense
-          4. Identify potential drug-drug interactions or contraindications.
-          5. Suggest cost-saving generic substitutes for expensive branded drugs.
-          6. Provide a concise Google Search grounding query for each medicine.
-
-          Return ONLY a valid JSON object matching this structure:
-          {
-            "doctorName": "string",
-            "doctorSpeciality": "string",
-            "clinicOrHospital": "string",
-            "patientName": "string",
-            "patientAgeGender": "string",
-            "diagnosis": "string",
-            "prescriptionDate": "string",
-            "medicines": [
-              {
-                "medicineName": "string",
-                "genericSalt": "string",
-                "dosage": "string",
-                "frequency": "string",
-                "duration": "string",
-                "packQty": 1,
-                "estPrice": 120.0,
-                "genericSubstituteSuggestion": "string",
-                "substitutePriceSavings": "string",
-                "googleSearchQuery": "string",
-                "safetyWarning": "string"
-              }
-            ],
-            "doctorAdvice": "string",
-            "drugInteractionAlert": "string",
-            "googleSearchGroundingQuery": "string"
+      val response = withTimeout(60_000L) {
+        visionModel.generateContent(
+          content {
+            image(scaledBitmap)
+            text(prompt)
           }
-        """.trimIndent()
+        )
+      }
 
-        val base64Image = resolvedBitmap.toBase64()
-
-        val partsArray = JSONArray().apply {
-          put(JSONObject().apply { put("text", prompt) })
-          put(JSONObject().apply {
-            put("inlineData", JSONObject().apply {
-              put("mimeType", "image/jpeg")
-              put("data", base64Image)
-            })
-          })
+      val text = response.text?.trim().orEmpty()
+      if (text.isNotBlank()) {
+        val parsed = parseJsonResponse(text, availableInventory)
+        if (parsed != null && parsed.medicines.isNotEmpty()) {
+          return@withContext parsed
         }
-
-        val contentsArray = JSONArray().apply {
-          put(JSONObject().apply {
-            put("role", "user")
-            put("parts", partsArray)
-          })
-        }
-
-        val rootJson = JSONObject().apply {
-          put("systemInstruction", JSONObject().apply {
-            put("parts", JSONArray().apply {
-              put(JSONObject().apply { put("text", "You are an expert AI clinical pharmacist assistant. Analyze prescription photos accurately and return valid JSON.") })
-            })
-          })
-          put("contents", contentsArray)
-          put("generationConfig", JSONObject().apply {
-            put("responseMimeType", "application/json")
-            put("temperature", 0.2)
-          })
-        }
-
-        val requestBody = rootJson.toString().toRequestBody("application/json".toMediaType())
-        val request = Request.Builder()
-          .url(url)
-          .post(requestBody)
-          .build()
-
-        val response = client.newCall(request).execute()
-        val responseBody = response.body?.string() ?: ""
-
-        if (response.isSuccessful) {
-          val json = JSONObject(responseBody)
-          val candidate = json.optJSONArray("candidates")?.optJSONObject(0)
-          val text = candidate?.optJSONObject("content")?.optJSONArray("parts")?.optJSONObject(0)?.optString("text")
-
-          if (!text.isNullOrBlank()) {
-            val parsed = parseJsonResponse(text, availableInventory)
-            if (parsed != null && parsed.medicines.isNotEmpty()) return@withContext parsed
-          }
-        }
-      } catch (_: Exception) {}
+      }
+      "Cloud Vision returned no recognized prescription medicines"
+    } catch (e: CancellationException) {
+      throw e
+    } catch (e: Exception) {
+      Log.e(TAG, "Firebase AI Logic Vision analysis failed", e)
+      e.localizedMessage ?: "Cloud Vision service unavailable"
     }
 
-    // Step 3: Build real scan result from on-device ML Kit OCR extracted text
-    return@withContext buildResultFromOcrText(extractedOcrText, availableInventory)
+    return@withContext buildResultFromOcrText(
+      ocrText = extractedOcrText,
+      inventory = availableInventory,
+      errorMessage = "Cloud AI Vision unavailable ($aiErrorReason). Showing on-device OCR extraction."
+    )
   }
 
-  private fun buildResultFromOcrText(ocrText: String, inventory: List<MedicineItem>): PrescriptionScanResult {
+  private fun buildResultFromOcrText(
+    ocrText: String,
+    inventory: List<MedicineItem>,
+    errorMessage: String? = null
+  ): PrescriptionScanResult {
     if (ocrText.isBlank()) {
       return PrescriptionScanResult(
         doctorName = "Prescription OCR",
@@ -366,7 +336,8 @@ object GeminiPrescriptionService {
         drugInteractionAlert = null,
         googleSearchGroundingQuery = "",
         rawGeminiOutput = "No text detected on image frame",
-        isAiPowered = false
+        isAiPowered = false,
+        errorMessage = errorMessage ?: "No readable text found in the image."
       )
     }
 
@@ -380,7 +351,7 @@ object GeminiPrescriptionService {
 
       PrescribedDrug(
         medicineName = item.name,
-        genericSalt = matched?.composition ?: matched?.saltMolecule ?: "Standard Active Formulation",
+        genericSalt = matched?.composition?.ifBlank { matched.saltMolecule } ?: "Verify generic salt",
         dosage = item.dosage,
         frequency = item.dosage,
         duration = item.duration,
@@ -391,7 +362,7 @@ object GeminiPrescriptionService {
         genericSubstituteSuggestion = null,
         substitutePriceSavings = null,
         googleSearchQuery = searchQuery,
-        googleSearchUrl = "https://www.google.com/search?q=" + java.net.URLEncoder.encode(searchQuery, "UTF-8"),
+        googleSearchUrl = "https://www.google.com/search?q=" + URLEncoder.encode(searchQuery, "UTF-8"),
         safetyWarning = if (item.name.contains("Augmentin", ignoreCase = true)) "Check for Penicillin allergy" else null
       )
     }
@@ -405,11 +376,12 @@ object GeminiPrescriptionService {
       diagnosis = "Prescription Analysis (On-device OCR)",
       prescriptionDate = "Today",
       medicines = prescribedDrugs,
-      doctorAdvice = "Take medicines exactly as instructed by physician.",
-      drugInteractionAlert = if (prescribedDrugs.size > 1) "Review drug schedule before dispensing." else null,
+      doctorAdvice = "Take medicines as instructed by physician.",
+      drugInteractionAlert = if (prescribedDrugs.size > 1) "Review salt-level interactions before dispensing." else null,
       googleSearchGroundingQuery = prescribedDrugs.firstOrNull()?.googleSearchQuery ?: "",
       rawGeminiOutput = ocrText,
-      isAiPowered = false
+      isAiPowered = false,
+      errorMessage = errorMessage
     )
   }
 
@@ -418,23 +390,24 @@ object GeminiPrescriptionService {
       val cleanJson = jsonStr.trim().removePrefix("```json").removePrefix("```").removeSuffix("```").trim()
       val obj = JSONObject(cleanJson)
 
-      val doctorName = obj.optString("doctorName", "Dr. A. K. Sharma, MD")
-      val doctorSpeciality = obj.optString("doctorSpeciality", "Consultant Physician & Cardiologist")
-      val clinicOrHospital = obj.optString("clinicOrHospital", "Apex Heart & Medical Center")
-      val patientName = obj.optString("patientName", "Rajesh Bora")
-      val patientAgeGender = obj.optString("patientAgeGender", "48 Yrs / Male")
-      val diagnosis = obj.optString("diagnosis", "Essential Hypertension & Upper Respiratory Tract Infection")
+      val doctorName = obj.optString("doctorName", "Prescribing Physician")
+      val doctorSpeciality = obj.optString("doctorSpeciality", "Physician")
+      val clinicOrHospital = obj.optString("clinicOrHospital", "Clinic / Hospital")
+      val patientName = obj.optString("patientName", "Walk-in Patient")
+      val patientAgeGender = obj.optString("patientAgeGender", "")
+      val diagnosis = obj.optString("diagnosis", "")
       val prescriptionDate = obj.optString("prescriptionDate", "Today")
-      val doctorAdvice = obj.optString("doctorAdvice", "Plenty of warm fluids, low salt diet, avoid cold beverages.")
-      val drugInteractionAlert = obj.optString("drugInteractionAlert").takeIf { it.isNotBlank() }
-      val googleSearchGroundingQuery = obj.optString("googleSearchGroundingQuery", "Prescription drugs dosage and CDSCO monographs")
+      val doctorAdvice = obj.optString("doctorAdvice", "")
+      val drugInteractionAlert = obj.optString("drugInteractionAlert").takeIf { it.isNotBlank() && it != "null" }
+      val googleSearchGroundingQuery = obj.optString("googleSearchGroundingQuery", "")
 
       val medsArray = obj.optJSONArray("medicines") ?: JSONArray()
       val medicinesList = mutableListOf<PrescribedDrug>()
 
       for (i in 0 until medsArray.length()) {
         val m = medsArray.optJSONObject(i) ?: continue
-        val medName = m.optString("medicineName")
+        val medName = m.optString("medicineName").trim()
+        if (medName.isBlank()) continue
         val genericSalt = m.optString("genericSalt")
         val dosage = m.optString("dosage")
         val freq = m.optString("frequency")
@@ -446,14 +419,15 @@ object GeminiPrescriptionService {
         val warning = m.optString("safetyWarning").takeIf { it.isNotBlank() }
 
         val searchQuery = m.optString("googleSearchQuery", "$medName $genericSalt uses dosage side effects")
-        val searchUrl = "https://www.google.com/search?q=" + java.net.URLEncoder.encode(searchQuery, "UTF-8")
+        val searchUrl = "https://www.google.com/search?q=" + URLEncoder.encode(searchQuery, "UTF-8")
 
-        // Match against existing inventory
         val matched = availableInventory.firstOrNull {
           it.name.contains(medName, ignoreCase = true) ||
             medName.contains(it.name, ignoreCase = true) ||
-            it.composition.contains(genericSalt, ignoreCase = true) ||
-            it.saltMolecule.contains(genericSalt, ignoreCase = true)
+            (genericSalt.isNotBlank() && (
+              it.composition.contains(genericSalt, ignoreCase = true) ||
+                it.saltMolecule.contains(genericSalt, ignoreCase = true)
+              ))
         }
 
         val itemPrice = matched?.let { if (it.saleRate > 0) it.saleRate else it.mrp } ?: estPrice
@@ -491,9 +465,11 @@ object GeminiPrescriptionService {
         drugInteractionAlert = drugInteractionAlert,
         googleSearchGroundingQuery = googleSearchGroundingQuery,
         rawGeminiOutput = jsonStr,
-        isAiPowered = true
+        isAiPowered = true,
+        errorMessage = null
       )
-    } catch (_: Exception) {
+    } catch (e: Exception) {
+      Log.w(TAG, "parseJsonResponse failed: ${e.message}")
       null
     }
   }
@@ -502,70 +478,70 @@ object GeminiPrescriptionService {
     return when (presetName) {
       "Pediatric Care Rx" -> {
         val meds = listOf(
-          createPrescribedDrug("Calpol 250mg Suspension", "Paracetamol 250mg/5ml", "5 ml", "1-1-1 (TDS) when fever > 100°F", "3 Days", 1, 45.0, "Pacimol 250 Oral Drop / P-250", "Save 24%", "Calpol 250 pediatric dosage side effects", availableInventory),
+          createPrescribedDrug("Calpol 250mg Suspension", "Paracetamol 250mg/5ml", "5 ml", "1-1-1 (TDS) when fever > 100°F", "3 Days", 1, 45.0, "Pacimol 250 Oral Drop", "Save 24%", "Calpol 250 pediatric dosage side effects", availableInventory),
           createPrescribedDrug("Augmentin Duo Oral Suspension", "Amoxicillin 200mg + Clavulanic Acid 28.5mg", "3.5 ml", "1-0-1 (BD) with meals", "5 Days", 1, 168.0, "Moxclav DS Syrup", "Save 30%", "Augmentin Duo syrup indications CDSCO", availableInventory),
           createPrescribedDrug("Ascoril D Junior Syrup", "Dextromethorphan + Phenylephrine + CPM", "2.5 ml", "0-0-1 (Night) before sleep", "4 Days", 1, 98.0, "Alex Junior Cough Syrup", "Save 18%", "Ascoril D junior pediatric safety", availableInventory)
         )
         PrescriptionScanResult(
-          doctorName = "Dr. N. Hazarika, MD (Pediatrics)",
-          doctorSpeciality = "Consultant Pediatrician & Neonatologist",
-          clinicOrHospital = "Apex Child Care Clinic, Mangaldai",
-          patientName = "Master Aarav Kalita",
-          patientAgeGender = "4 Yrs / Male (Weight: 14.5 kg)",
-          diagnosis = "Acute Bronchitis with High-Grade Pyrexia (Viral-Bacterial)",
-          prescriptionDate = "Today, 10:30 AM",
+          doctorName = "Sample Prescription: Pediatric Care",
+          doctorSpeciality = "Pediatrics",
+          clinicOrHospital = "Demo Sample Rx",
+          patientName = "Sample Child (14.5 kg)",
+          patientAgeGender = "4 Yrs",
+          diagnosis = "Acute Bronchitis with Pyrexia",
+          prescriptionDate = "Sample Template",
           medicines = meds,
-          doctorAdvice = "Sponge with lukewarm water if temperature exceeds 101°F. Continue oral hydration with ORS.",
-          drugInteractionAlert = "No major drug interactions detected. Safe pediatric dosage calibrated to 14.5 kg body weight.",
-          googleSearchGroundingQuery = "Pediatric Amoxyclav 200 suspension dosage by weight guidelines",
-          rawGeminiOutput = "Parsed via Gemini Multimodal Vision Clinical Engine",
-          isAiPowered = true
+          doctorAdvice = "Sponge with lukewarm water if fever > 101°F. Maintain oral hydration.",
+          drugInteractionAlert = "Sample prescription loaded — upload a photo for real AI Vision extraction.",
+          googleSearchGroundingQuery = "Pediatric Amoxyclav 200 suspension dosage",
+          rawGeminiOutput = "Sample Preset: Pediatric Care Rx",
+          isAiPowered = false
         )
       }
       "Cardiology & Diabetic Rx" -> {
         val meds = listOf(
-          createPrescribedDrug("Telma 40 Tablet", "Telmisartan 40mg", "40 mg", "1-0-0 (Morning) after breakfast", "30 Days", 3, 142.0, "Telmikem 40 / Arbitel 40", "Save 35%", "Telmisartan 40mg efficacy hypertension guidelines", availableInventory),
-          createPrescribedDrug("Glycomet GP 1 Tablet", "Metformin 500mg + Glimepiride 1mg", "1 Tab", "1-0-1 (BD) before meals", "30 Days", 2, 118.0, "Glador-M 1 / Glyciphage-G 1", "Save 28%", "Metformin Glimepiride fixed dose combination CDSCO", availableInventory),
-          createPrescribedDrug("Rosuvas 10 Tablet", "Rosuvastatin 10mg", "10 mg", "0-0-1 (Night) after dinner", "30 Days", 2, 210.0, "Razel 10 / Roseday 10", "Save 40%", "Rosuvastatin 10mg lipid lowering study", availableInventory),
-          createPrescribedDrug("Ecosprin 75 Tablet", "Aspirin 75mg (Enteric Coated)", "75 mg", "0-1-0 (Afternoon) after lunch", "30 Days", 2, 12.0, "Disprin 75 / Delisprin", "Standard", "Ecosprin 75 cardiovascular primary prevention", availableInventory)
+          createPrescribedDrug("Telma 40 Tablet", "Telmisartan 40mg", "40 mg", "1-0-0 (Morning) after breakfast", "30 Days", 3, 142.0, "Telmikind 40", "Save 35%", "Telmisartan 40mg hypertension", availableInventory),
+          createPrescribedDrug("Glycomet GP 1 Tablet", "Metformin 500mg + Glimepiride 1mg", "1 Tab", "1-0-1 (BD) before meals", "30 Days", 2, 118.0, "Glyciphage-G 1", "Save 28%", "Metformin Glimepiride CDSCO", availableInventory),
+          createPrescribedDrug("Rosuvas 10 Tablet", "Rosuvastatin 10mg", "10 mg", "0-0-1 (Night) after dinner", "30 Days", 2, 210.0, "Roseday 10", "Save 40%", "Rosuvastatin 10mg", availableInventory),
+          createPrescribedDrug("Ecosprin 75 Tablet", "Aspirin 75mg (Enteric Coated)", "75 mg", "0-1-0 (Afternoon) after lunch", "30 Days", 2, 12.0, "Delisprin 75", "Standard", "Ecosprin 75 cardiovascular prevention", availableInventory)
         )
         PrescriptionScanResult(
-          doctorName = "Dr. A. K. Sharma, MD, DM (Cardiology)",
-          doctorSpeciality = "Senior Interventional Cardiologist",
-          clinicOrHospital = "Sanjeevani Heart & Medical Research Institute",
-          patientName = "Smt. Pratima Baruah",
-          patientAgeGender = "58 Yrs / Female",
-          diagnosis = "Type-2 Diabetes Mellitus with Stage-1 Hypertension & Dyslipidemia",
-          prescriptionDate = "Today, 11:15 AM",
+          doctorName = "Sample Prescription: Cardiology & Diabetes",
+          doctorSpeciality = "Cardiology",
+          clinicOrHospital = "Demo Sample Rx",
+          patientName = "Sample Adult Patient",
+          patientAgeGender = "58 Yrs",
+          diagnosis = "Type-2 Diabetes & Hypertension",
+          prescriptionDate = "Sample Template",
           medicines = meds,
-          doctorAdvice = "Strict low-carbohydrate and low-sodium diet (< 4g salt/day). 30 mins brisk walking. Re-check HbA1c and Serum Creatinine after 3 months.",
-          drugInteractionAlert = "⚠️ Note: Monitor for morning hypoglycemia when combining Metformin + Glimepiride with Telmisartan.",
-          googleSearchGroundingQuery = "Telmisartan and Metformin co-administration clinical monitoring",
-          rawGeminiOutput = "Parsed via Gemini Multimodal Vision Clinical Engine",
-          isAiPowered = true
+          doctorAdvice = "Low-sodium diet and morning glucose monitoring.",
+          drugInteractionAlert = "Monitor blood glucose closely when combining Metformin + Glimepiride + Telmisartan.",
+          googleSearchGroundingQuery = "Telmisartan Metformin co-administration",
+          rawGeminiOutput = "Sample Preset: Cardiology & Diabetic Rx",
+          isAiPowered = false
         )
       }
-      else -> { // General Physician Rx
+      else -> {
         val meds = listOf(
-          createPrescribedDrug("Augmentin 625 Duo", "Amoxicillin 500mg + Clavulanic Acid 125mg", "625 mg", "1-0-1 (BD) after food", "5 Days", 1, 204.0, "Moxikind-CV 625 (Mankind)", "Save 38%", "Augmentin 625 Duo indications dosage CDSCO", availableInventory),
-          createPrescribedDrug("Dolo 650 Tablet", "Paracetamol 650mg", "650 mg", "1-0-1 (BD) as needed for fever/pain", "3 Days", 1, 30.6, "Pacimol 650 (IPCA)", "Save 28%", "Dolo 650 dosage and liver safety", availableInventory),
-          createPrescribedDrug("Pan 40 Tablet", "Pantoprazole 40mg (Enteric Coated)", "40 mg", "1-0-0 (Morning) 30 mins before food", "5 Days", 1, 155.0, "Pansec 40 / Pantocid 40", "Save 32%", "Pantoprazole 40mg gastroprotection with antibiotics", availableInventory),
-          createPrescribedDrug("Montair LC Tablet", "Montelukast 10mg + Levocetirizine 5mg", "1 Tab", "0-0-1 (Night) before bedtime", "7 Days", 1, 185.0, "Monticope / Telekast-L", "Save 30%", "Montelukast Levocetirizine allergic rhinitis", availableInventory)
+          createPrescribedDrug("Augmentin 625 Duo", "Amoxicillin 500mg + Clavulanic Acid 125mg", "625 mg", "1-0-1 (BD) after food", "5 Days", 1, 204.0, "Moxikind-CV 625", "Save 38%", "Augmentin 625 Duo CDSCO", availableInventory),
+          createPrescribedDrug("Dolo 650 Tablet", "Paracetamol 650mg", "650 mg", "1-0-1 (BD) as needed", "3 Days", 1, 30.6, "Pacimol 650", "Save 28%", "Dolo 650 dosage", availableInventory),
+          createPrescribedDrug("Pan 40 Tablet", "Pantoprazole 40mg", "40 mg", "1-0-0 (Morning) before food", "5 Days", 1, 155.0, "Pantocid 40", "Save 32%", "Pantoprazole 40mg", availableInventory),
+          createPrescribedDrug("Montair LC Tablet", "Montelukast 10mg + Levocetirizine 5mg", "1 Tab", "0-0-1 (Night)", "7 Days", 1, 185.0, "Telekast-L", "Save 30%", "Montair LC allergic rhinitis", availableInventory)
         )
         PrescriptionScanResult(
-          doctorName = "Dr. P. Baruah, MBBS, MD (Medicine)",
-          doctorSpeciality = "Consultant Physician & Chest Specialist",
-          clinicOrHospital = "Civil Hospital & Metro Clinic, Guwahati",
-          patientName = "Sri Ramesh Nath",
-          patientAgeGender = "36 Yrs / Male",
-          diagnosis = "Acute Sinusitis & Pharyngitis with Productive Cough and Fever",
-          prescriptionDate = "Today, 09:45 AM",
+          doctorName = "Sample Prescription: General Physician",
+          doctorSpeciality = "General Medicine",
+          clinicOrHospital = "Demo Sample Rx",
+          patientName = "Sample Adult Patient",
+          patientAgeGender = "36 Yrs",
+          diagnosis = "Acute Upper Respiratory Infection",
+          prescriptionDate = "Sample Template",
           medicines = meds,
-          doctorAdvice = "Complete the 5-day antibiotic course strictly. Steam inhalation twice daily. Avoid cold drinks and dust exposure.",
-          drugInteractionAlert = "✅ No adverse drug-drug interactions detected. Pantoprazole 40mg protects stomach lining from antibiotic-induced gastritis.",
-          googleSearchGroundingQuery = "Amoxicillin Clavulanate 625 sinusitis treatment guidelines",
-          rawGeminiOutput = "Parsed via Gemini Multimodal Vision Clinical Engine",
-          isAiPowered = true
+          doctorAdvice = "Complete full 5-day antibiotic course.",
+          drugInteractionAlert = "No major drug-drug interactions detected.",
+          googleSearchGroundingQuery = "Amoxicillin Clavulanate 625 guidelines",
+          rawGeminiOutput = "Sample Preset: General Physician Rx",
+          isAiPowered = false
         )
       }
     }
@@ -592,7 +568,7 @@ object GeminiPrescriptionService {
     }
 
     val itemPrice = matched?.let { if (it.saleRate > 0) it.saleRate else it.mrp } ?: price
-    val searchUrl = "https://www.google.com/search?q=" + java.net.URLEncoder.encode(searchQuery, "UTF-8")
+    val searchUrl = "https://www.google.com/search?q=" + URLEncoder.encode(searchQuery, "UTF-8")
 
     return PrescribedDrug(
       medicineName = name,
@@ -608,11 +584,7 @@ object GeminiPrescriptionService {
       substitutePriceSavings = savings,
       googleSearchQuery = searchQuery,
       googleSearchUrl = searchUrl,
-      safetyWarning = if (name.contains("Augmentin")) "Check for Penicillin allergy" else null
+      safetyWarning = if (name.contains("Augmentin", ignoreCase = true)) "Check for Penicillin allergy" else null
     )
-  }
-
-  private fun generateOfflineOcrAnalysis(presetName: String, availableInventory: List<MedicineItem>): PrescriptionScanResult {
-    return generatePresetResult(presetName, availableInventory)
   }
 }

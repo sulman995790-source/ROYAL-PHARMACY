@@ -1,7 +1,23 @@
 package com.example.ui.screens
 
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
+import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialCancellationException
+import androidx.credentials.exceptions.GetCredentialException
+import androidx.credentials.exceptions.NoCredentialException
+import com.example.R
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.google.firebase.Firebase
+import com.google.firebase.auth.GoogleAuthProvider
+import com.google.firebase.auth.auth
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -71,6 +87,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -131,10 +148,64 @@ fun CloudSyncScreen(
   val syncHistory by viewModel.syncHistory.collectAsState()
   val pendingCount by viewModel.pendingSyncCount.collectAsState()
 
-  // Dialog states
+  // Dialog & Auth states
+  val scope = rememberCoroutineScope()
+  val firestoreSyncError by viewModel.syncManager.syncError.collectAsState()
+  var isGoogleSigningIn by remember { mutableStateOf(false) }
+  var googleAuthError by remember { mutableStateOf<String?>(null) }
   var showAccountDialog by remember { mutableStateOf(false) }
   var showFrequencyDialog by remember { mutableStateOf(false) }
   var snapshotToRestore by remember { mutableStateOf<DriveBackupSnapshot?>(null) }
+
+  suspend fun performDriveGoogleSignIn() {
+    isGoogleSigningIn = true
+    googleAuthError = null
+    try {
+      val webClientId = context.getString(R.string.default_web_client_id)
+      val credentialManager = CredentialManager.create(context)
+      val primaryOption = GetSignInWithGoogleOption.Builder(webClientId).build()
+      val result = try {
+        credentialManager.getCredential(
+          context = context,
+          request = GetCredentialRequest.Builder().addCredentialOption(primaryOption).build()
+        )
+      } catch (_: NoCredentialException) {
+        val fallbackOption = GetGoogleIdOption.Builder()
+          .setFilterByAuthorizedAccounts(false)
+          .setServerClientId(webClientId)
+          .build()
+        credentialManager.getCredential(
+          context = context,
+          request = GetCredentialRequest.Builder().addCredentialOption(fallbackOption).build()
+        )
+      }
+      val credential = result.credential
+      if (credential is CustomCredential &&
+        credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+      ) {
+        val googleCred = GoogleIdTokenCredential.createFrom(credential.data)
+        val firebaseCred = GoogleAuthProvider.getCredential(googleCred.idToken, null)
+        val authResult = Firebase.auth.signInWithCredential(firebaseCred).await()
+        val user = authResult.user
+        val email = user?.email ?: googleCred.id
+        val name = user?.displayName ?: googleCred.displayName ?: email.substringBefore("@")
+        viewModel.completeGoogleSignIn(email, name, viewModel.currentUserRole.value)
+        Toast.makeText(context, "Connected Google Account: $email", Toast.LENGTH_SHORT).show()
+      } else {
+        googleAuthError = "Unsupported credential returned from Google Sign-In."
+      }
+    } catch (_: GetCredentialCancellationException) {
+      googleAuthError = "Google Sign-In was cancelled."
+    } catch (e: GetCredentialException) {
+      Log.w("CloudSyncScreen", "Google Sign-In credential error", e)
+      googleAuthError = "Google Sign-In unavailable: ${e.errorMessage ?: "Check Google account on device"}"
+    } catch (e: Exception) {
+      Log.e("CloudSyncScreen", "Firebase Google Sign-In error", e)
+      googleAuthError = "Sign-In failed: ${e.localizedMessage ?: "Please try again"}"
+    } finally {
+      isGoogleSigningIn = false
+    }
+  }
 
   Column(
     modifier = modifier
@@ -615,17 +686,61 @@ fun CloudSyncScreen(
                     Text("Switch Account", fontSize = 12.sp, color = Color.White)
                   }
                 } else {
-                  Button(
-                    onClick = { viewModel.connectGoogleDrive("sulman995790@gmail.com", "Suleman Hoque") },
-                    shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = RoyalMagenta),
-                    modifier = Modifier.fillMaxWidth().testTag("btn_connect_google")
-                  ) {
-                    Icon(Icons.Default.AccountCircle, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Sign in with Google Account", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                  Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                      onClick = { scope.launch { performDriveGoogleSignIn() } },
+                      enabled = !isGoogleSigningIn,
+                      shape = RoundedCornerShape(8.dp),
+                      colors = ButtonDefaults.buttonColors(containerColor = RoyalMagenta),
+                      modifier = Modifier.fillMaxWidth().testTag("btn_connect_google")
+                    ) {
+                      if (isGoogleSigningIn) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Connecting Google Account...", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                      } else {
+                        Icon(Icons.Default.AccountCircle, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Sign in with Google Account", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                      }
+                    }
+                    if (!googleAuthError.isNullOrBlank()) {
+                      Text(
+                        text = googleAuthError!!,
+                        fontSize = 11.5.sp,
+                        color = StatusRed,
+                        fontWeight = FontWeight.Medium
+                      )
+                    }
                   }
                 }
+              }
+            }
+          }
+        }
+
+        if (!firestoreSyncError.isNullOrBlank()) {
+          item {
+            Card(
+              shape = RoundedCornerShape(10.dp),
+              colors = CardDefaults.cardColors(containerColor = Color(0xFFFEF2F2)),
+              border = CardDefaults.outlinedCardBorder().copy(
+                brush = androidx.compose.ui.graphics.SolidColor(Color(0xFFFCA5A5))
+              ),
+              modifier = Modifier.fillMaxWidth().testTag("card_firestore_sync_error")
+            ) {
+              Row(
+                modifier = Modifier.padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+              ) {
+                Icon(Icons.Default.CloudOff, contentDescription = null, tint = StatusRed, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                  text = firestoreSyncError!!,
+                  fontSize = 12.sp,
+                  color = Color(0xFF991B1B),
+                  fontWeight = FontWeight.Medium
+                )
               }
             }
           }
@@ -1768,7 +1883,7 @@ fun CloudSyncScreen(
               Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(
                   onClick = {
-                    endpointInput = "https://royal-pharmacy.sulman995790.workers.dev/"
+                    endpointInput = "https://edge.royalpharmacy.in/"
                     turnstileInput = "0x4AAAAAAX_cloud_flare_pharmacy_key"
                   },
                   modifier = Modifier.weight(1f).testTag("btn_cf_reset_defaults")
@@ -2059,7 +2174,7 @@ fun CloudSyncScreen(
                 OutlinedTextField(
                   value = customEmailInput,
                   onValueChange = { customEmailInput = it },
-                  label = { Text("Google Email (e.g. sulman995790@gmail.com)") },
+                  label = { Text("Google Email (e.g. owner@yourpharmacy.com)") },
                   singleLine = true,
                   modifier = Modifier.fillMaxWidth().testTag("input_google_account_email")
                 )

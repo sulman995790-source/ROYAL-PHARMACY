@@ -74,7 +74,7 @@ data class BusinessProfile(
   val ayushmanHfrId: String = "",
   val ownerName: String = "Suleman Hoque",
   val phone: String = "9957905450",
-  val email: String = "sulman995790@gmail.com",
+  val email: String = "contact@royalpharmacy.in",
   val drugLicenseForm20: String = "DL-20B-784146-2024",
   val form20Expiry: String = "31-12-2028",
   val drugLicenseForm21: String = "DL-21B-784146-2024",

@@ -1,8 +1,184 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // Deny all access by default (zero-trust fail-closed posture)
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null && request.auth.uid != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9._-]+$');
+    }
+
+    function isNonEmptyBoundedString(val, maxLen) {
+      return val is string && val.size() >= 1 && val.size() <= maxLen;
+    }
+
+    function isBoundedString(val, maxLen) {
+      return val is string && val.size() <= maxLen;
+    }
+
+    function isValidTimestamps(data, isCreate) {
+      return (isCreate
+          ? (data.createdAt is timestamp && data.createdAt <= request.time)
+          : (data.createdAt == resource.data.createdAt))
+        && data.updatedAt is timestamp
+        && data.updatedAt <= request.time;
+    }
+
+    function isValidMedicineRecord(data, userId, isCreate) {
+      return data.keys().hasAll(['userId', 'name', 'stockPacks', 'mrp', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly([
+          'userId', 'localId', 'name', 'manufacturer', 'composition', 'saltMolecule',
+          'category', 'hsnCode', 'batchNumber', 'expiryDate', 'stockPacks', 'mrp',
+          'purchaseRate', 'saleRate', 'gstPercent', 'rackLocation', 'scheduleDrug',
+          'isEssential', 'isLifeSaving', 'minStockAlert', '_lastUpdatedBy',
+          'createdAt', 'updatedAt'
+        ])
+        && data.userId == userId
+        && isNonEmptyBoundedString(data.name, 200)
+        && data.stockPacks is int && data.stockPacks >= 0 && data.stockPacks <= 1000000
+        && data.mrp is number && data.mrp >= 0 && data.mrp <= 1000000
+        && (!('localId' in data) || (data.localId is int && data.localId >= 0))
+        && (!('manufacturer' in data) || isBoundedString(data.manufacturer, 160))
+        && (!('composition' in data) || isBoundedString(data.composition, 400))
+        && (!('saltMolecule' in data) || isBoundedString(data.saltMolecule, 400))
+        && (!('category' in data) || isBoundedString(data.category, 80))
+        && (!('hsnCode' in data) || isBoundedString(data.hsnCode, 32))
+        && (!('batchNumber' in data) || isBoundedString(data.batchNumber, 80))
+        && (!('expiryDate' in data) || isBoundedString(data.expiryDate, 40))
+        && (!('purchaseRate' in data) || (data.purchaseRate is number && data.purchaseRate >= 0 && data.purchaseRate <= 1000000))
+        && (!('saleRate' in data) || (data.saleRate is number && data.saleRate >= 0 && data.saleRate <= 1000000))
+        && (!('gstPercent' in data) || (data.gstPercent is number && data.gstPercent >= 0 && data.gstPercent <= 28))
+        && (!('rackLocation' in data) || isBoundedString(data.rackLocation, 120))
+        && (!('scheduleDrug' in data) || isBoundedString(data.scheduleDrug, 40))
+        && (!('isEssential' in data) || data.isEssential is bool)
+        && (!('isLifeSaving' in data) || data.isLifeSaving is bool)
+        && (!('minStockAlert' in data) || (data.minStockAlert is int && data.minStockAlert >= 0 && data.minStockAlert <= 100000))
+        && (!('_lastUpdatedBy' in data) || isBoundedString(data._lastUpdatedBy, 40))
+        && isValidTimestamps(data, isCreate);
+    }
+
+    function isValidSaleRecord(data, userId, isCreate) {
+      return data.keys().hasAll(['userId', 'invoiceNumber', 'grandTotal', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly([
+          'userId', 'localId', 'invoiceNumber', 'customerName', 'grandTotal',
+          'paymentMode', 'invoiceDate', 'itemCount', '_lastUpdatedBy',
+          'createdAt', 'updatedAt'
+        ])
+        && data.userId == userId
+        && isNonEmptyBoundedString(data.invoiceNumber, 80)
+        && data.grandTotal is number && data.grandTotal >= 0 && data.grandTotal <= 10000000
+        && (!('localId' in data) || (data.localId is int && data.localId >= 0))
+        && (!('customerName' in data) || isBoundedString(data.customerName, 160))
+        && (!('paymentMode' in data) || isBoundedString(data.paymentMode, 40))
+        && (!('invoiceDate' in data) || isBoundedString(data.invoiceDate, 40))
+        && (!('itemCount' in data) || (data.itemCount is int && data.itemCount >= 0 && data.itemCount <= 10000))
+        && (!('_lastUpdatedBy' in data) || isBoundedString(data._lastUpdatedBy, 40))
+        && isValidTimestamps(data, isCreate);
+    }
+
+    function isValidLedgerRecord(data, userId, expectedType, isCreate) {
+      return data.keys().hasAll(['userId', 'entityType', 'payloadJson', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly([
+          'userId', 'entityType', 'localId', 'action', 'payloadJson',
+          '_lastUpdatedBy', 'createdAt', 'updatedAt'
+        ])
+        && data.userId == userId
+        && data.entityType == expectedType
+        && isBoundedString(data.payloadJson, 8000)
+        && (!('localId' in data) || (data.localId is int && data.localId >= 0))
+        && (!('action' in data) || isBoundedString(data.action, 40))
+        && (!('_lastUpdatedBy' in data) || isBoundedString(data._lastUpdatedBy, 40))
+        && isValidTimestamps(data, isCreate);
+    }
+
+    function isValidConfigRecord(data, userId, isCreate) {
+      return data.keys().hasAll(['userId', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly([
+          'userId', 'globalSafetyThreshold', 'autoSyncEnabled', 'businessName',
+          '_lastUpdatedBy', 'createdAt', 'updatedAt'
+        ])
+        && data.userId == userId
+        && (!('globalSafetyThreshold' in data) || (data.globalSafetyThreshold is int && data.globalSafetyThreshold >= 0 && data.globalSafetyThreshold <= 100000))
+        && (!('autoSyncEnabled' in data) || data.autoSyncEnabled is bool)
+        && (!('businessName' in data) || isBoundedString(data.businessName, 160))
+        && (!('_lastUpdatedBy' in data) || isBoundedString(data._lastUpdatedBy, 40))
+        && isValidTimestamps(data, isCreate);
+    }
+
+    match /users/{userId} {
+      match /inventory/{medicineId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(medicineId) && isValidMedicineRecord(request.resource.data, userId, true);
+        allow update: if isOwner(userId) && isValidId(medicineId) && isValidMedicineRecord(request.resource.data, userId, false);
+        allow delete: if isOwner(userId) && isValidId(medicineId);
+      }
+
+      match /sales/{saleId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(saleId) && isValidSaleRecord(request.resource.data, userId, true);
+        allow update: if isOwner(userId) && isValidId(saleId) && isValidSaleRecord(request.resource.data, userId, false);
+        allow delete: if isOwner(userId) && isValidId(saleId);
+      }
+
+      match /customers/{customerId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(customerId) && isValidLedgerRecord(request.resource.data, userId, 'CUSTOMER', true);
+        allow update: if isOwner(userId) && isValidId(customerId) && isValidLedgerRecord(request.resource.data, userId, 'CUSTOMER', false);
+        allow delete: if isOwner(userId) && isValidId(customerId);
+      }
+
+      match /udhar_transactions/{txnId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(txnId) && isValidLedgerRecord(request.resource.data, userId, 'UDHAR', true);
+        allow update: if isOwner(userId) && isValidId(txnId) && isValidLedgerRecord(request.resource.data, userId, 'UDHAR', false);
+        allow delete: if isOwner(userId) && isValidId(txnId);
+      }
+
+      match /purchases/{purchaseId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(purchaseId) && isValidLedgerRecord(request.resource.data, userId, 'PURCHASE', true);
+        allow update: if isOwner(userId) && isValidId(purchaseId) && isValidLedgerRecord(request.resource.data, userId, 'PURCHASE', false);
+        allow delete: if isOwner(userId) && isValidId(purchaseId);
+      }
+
+      match /patients/{patientId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(patientId) && isValidLedgerRecord(request.resource.data, userId, 'PATIENT', true);
+        allow update: if isOwner(userId) && isValidId(patientId) && isValidLedgerRecord(request.resource.data, userId, 'PATIENT', false);
+        allow delete: if isOwner(userId) && isValidId(patientId);
+      }
+
+      match /suppliers/{supplierId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(supplierId) && isValidLedgerRecord(request.resource.data, userId, 'SUPPLIER', true);
+        allow update: if isOwner(userId) && isValidId(supplierId) && isValidLedgerRecord(request.resource.data, userId, 'SUPPLIER', false);
+        allow delete: if isOwner(userId) && isValidId(supplierId);
+      }
+
+      match /doctors/{doctorId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(doctorId) && isValidLedgerRecord(request.resource.data, userId, 'DOCTOR', true);
+        allow update: if isOwner(userId) && isValidId(doctorId) && isValidLedgerRecord(request.resource.data, userId, 'DOCTOR', false);
+        allow delete: if isOwner(userId) && isValidId(doctorId);
+      }
+
+      match /config/{configId} {
+        allow get, list: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(configId) && isValidConfigRecord(request.resource.data, userId, true);
+        allow update: if isOwner(userId) && isValidId(configId) && isValidConfigRecord(request.resource.data, userId, false);
+        allow delete: if isOwner(userId) && isValidId(configId);
+      }
     }
   }
 }

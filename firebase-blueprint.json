@@ -1,0 +1,201 @@
+{
+  "entities": {
+    "MedicineRecord": {
+      "title": "MedicineRecord",
+      "description": "User-scoped retail pharmacy medicine inventory item with salt composition, GST slab, CDSCO schedule, and batch stock",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner Firebase Auth UID"
+        },
+        "localId": {
+          "type": "integer",
+          "description": "Local Room primary key"
+        },
+        "name": {
+          "type": "string",
+          "description": "Medicine brand name"
+        },
+        "manufacturer": {
+          "type": "string",
+          "description": "Pharmaceutical manufacturer"
+        },
+        "composition": {
+          "type": "string",
+          "description": "Full active salt composition"
+        },
+        "saltMolecule": {
+          "type": "string",
+          "description": "Primary generic salt molecule(s)"
+        },
+        "category": {
+          "type": "string",
+          "description": "Dosage form category"
+        },
+        "hsnCode": {
+          "type": "string",
+          "description": "Indian HSN tax classification code"
+        },
+        "batchNumber": {
+          "type": "string",
+          "description": "Batch identifier"
+        },
+        "expiryDate": {
+          "type": "string",
+          "description": "Expiry date MM/YY"
+        },
+        "stockPacks": {
+          "type": "integer",
+          "description": "Current stock packs available"
+        },
+        "mrp": {
+          "type": "number",
+          "description": "Maximum Retail Price in INR"
+        },
+        "purchaseRate": {
+          "type": "number",
+          "description": "Purchase rate in INR"
+        },
+        "saleRate": {
+          "type": "number",
+          "description": "Selling rate in INR"
+        },
+        "gstPercent": {
+          "type": "number",
+          "description": "Indian GST slab percentage (0, 5, 12, or 18)"
+        },
+        "rackLocation": {
+          "type": "string",
+          "description": "Physical pharmacy shelf/rack location"
+        },
+        "scheduleDrug": {
+          "type": "string",
+          "description": "CDSCO drug schedule (OTC, Schedule H, Schedule H1, Schedule X)"
+        },
+        "isEssential": {
+          "type": "boolean",
+          "description": "Essential medicine flag"
+        },
+        "isLifeSaving": {
+          "type": "boolean",
+          "description": "Life-saving medicine flag"
+        },
+        "minStockAlert": {
+          "type": "integer",
+          "description": "Minimum reorder stock alert threshold"
+        },
+        "_lastUpdatedBy": {
+          "type": "string",
+          "description": "Origin client identifier (ANDROID_APP or WEB_PORTAL)"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp on creation (submitted via FieldValue.serverTimestamp())"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp on last update (submitted via FieldValue.serverTimestamp())"
+        }
+      },
+      "required": [
+        "userId",
+        "name",
+        "stockPacks",
+        "mrp",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "SaleRecord": {
+      "title": "SaleRecord",
+      "description": "User-scoped retail pharmacy POS sale invoice",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "localId": { "type": "integer" },
+        "invoiceNumber": { "type": "string" },
+        "customerName": { "type": "string" },
+        "grandTotal": { "type": "number" },
+        "paymentMode": { "type": "string" },
+        "invoiceDate": { "type": "string" },
+        "itemCount": { "type": "integer" },
+        "_lastUpdatedBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "invoiceNumber", "grandTotal", "createdAt", "updatedAt"]
+    },
+    "LedgerRecord": {
+      "title": "LedgerRecord",
+      "description": "User-scoped customer, patient, doctor, supplier, purchase, or udhar ledger entry",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "entityType": { "type": "string" },
+        "localId": { "type": "integer" },
+        "action": { "type": "string" },
+        "payloadJson": { "type": "string" },
+        "_lastUpdatedBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "entityType", "payloadJson", "createdAt", "updatedAt"]
+    },
+    "PharmacyConfig": {
+      "title": "PharmacyConfig",
+      "description": "User-scoped pharmacy operational configuration settings",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "globalSafetyThreshold": { "type": "integer" },
+        "autoSyncEnabled": { "type": "boolean" },
+        "businessName": { "type": "string" },
+        "_lastUpdatedBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/inventory/{medicineId}": {
+      "schema": { "$ref": "#/entities/MedicineRecord" },
+      "description": "User-isolated pharmacy medicine stock catalog"
+    },
+    "/users/{userId}/sales/{saleId}": {
+      "schema": { "$ref": "#/entities/SaleRecord" },
+      "description": "User-isolated pharmacy POS sales invoices"
+    },
+    "/users/{userId}/customers/{customerId}": {
+      "schema": { "$ref": "#/entities/LedgerRecord" },
+      "description": "User-isolated pharmacy customers"
+    },
+    "/users/{userId}/udhar_transactions/{txnId}": {
+      "schema": { "$ref": "#/entities/LedgerRecord" },
+      "description": "User-isolated pharmacy credit/udhar ledger"
+    },
+    "/users/{userId}/purchases/{purchaseId}": {
+      "schema": { "$ref": "#/entities/LedgerRecord" },
+      "description": "User-isolated supplier purchase invoices"
+    },
+    "/users/{userId}/patients/{patientId}": {
+      "schema": { "$ref": "#/entities/LedgerRecord" },
+      "description": "User-isolated clinical patient CRM records"
+    },
+    "/users/{userId}/suppliers/{supplierId}": {
+      "schema": { "$ref": "#/entities/LedgerRecord" },
+      "description": "User-isolated distributor/supplier directory"
+    },
+    "/users/{userId}/doctors/{doctorId}": {
+      "schema": { "$ref": "#/entities/LedgerRecord" },
+      "description": "User-isolated prescribing doctors directory"
+    },
+    "/users/{userId}/config/{configId}": {
+      "schema": { "$ref": "#/entities/PharmacyConfig" },
+      "description": "User-isolated pharmacy ERP settings"
+    }
+  }
+}

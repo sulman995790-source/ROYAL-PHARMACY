@@ -1,4 +1,4 @@
-const CACHE_NAME = 'royal-pharmacy-v4.0-argon';
+const CACHE_NAME = 'royal-pharmacy-v4.2-neon';
 const ASSETS = [
   './',
   './index.html',

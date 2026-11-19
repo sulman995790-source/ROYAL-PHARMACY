@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -23,6 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Delete
@@ -34,11 +36,13 @@ import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -54,10 +58,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -71,6 +77,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.clinical.DrugInteractionService
+import com.example.data.clinical.InteractionCheckResult
+import com.example.data.clinical.InteractionSeverity
 import com.example.data.model.BillItem
 import com.example.data.model.MedicineItem
 import com.example.ui.theme.CardBorder
@@ -85,6 +94,7 @@ import com.example.ui.theme.TextLight
 import com.example.ui.theme.TextMuted
 import com.example.viewmodel.PharmacyViewModel
 import com.example.viewmodel.Screen
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -132,6 +142,16 @@ fun AddSaleScreen(
   var showBatchQrScannerDialog by remember { mutableStateOf(false) }
   var paymentMode by remember { mutableStateOf("Cash") }
 
+  val scope = rememberCoroutineScope()
+  val isEnrichingMedicine by viewModel.isEnrichingMedicine.collectAsState()
+  val ddiService = remember { DrugInteractionService() }
+  var cartDdiResult by remember { mutableStateOf<InteractionCheckResult?>(null) }
+  var isCheckingCartDdi by remember { mutableStateOf(false) }
+
+  LaunchedEffect(cartItems) {
+    cartDdiResult = null
+  }
+
   val userRole by viewModel.currentUserRole.collectAsState()
   var showProfitDetails by remember { mutableStateOf(false) }
 
@@ -141,7 +161,10 @@ fun AddSaleScreen(
   val taxableBeforeLoyalty = subtotal - itemDiscount
   val loyaltyDiscount = if (redeemLoyalty) loyaltyPointsToRedeem.toDouble().coerceAtMost(taxableBeforeLoyalty) else 0.0
   val taxable = (taxableBeforeLoyalty - loyaltyDiscount).coerceAtLeast(0.0)
-  val gst = taxable * 0.12 // 12% standard medicine GST
+  val rawGst = cartItems.sumOf {
+    ((it.packQty * it.rate) * (1.0 - it.discountPercent / 100.0)) * (it.gstPercent / 100.0)
+  }
+  val gst = if (taxableBeforeLoyalty > 0.0) rawGst * (taxable / taxableBeforeLoyalty) else 0.0
   val grandTotal = taxable + gst
   val pointsToEarn = (taxable / 100.0).toInt().coerceAtLeast(0)
   val totalProfit = (taxable - totalCost).coerceAtLeast(0.0)
@@ -551,6 +574,121 @@ fun AddSaleScreen(
             )
           }
 
+          if (cartItems.size >= 2) {
+            item {
+              Card(
+                shape = RoundedCornerShape(10.dp),
+                colors = CardDefaults.cardColors(
+                  containerColor = when (cartDdiResult?.overallSeverity) {
+                    InteractionSeverity.SEVERE_CONTRAINDICATED -> Color(0xFFFEF2F2)
+                    InteractionSeverity.MODERATE_MONITOR -> Color(0xFFFFFBEB)
+                    InteractionSeverity.NO_KNOWN_INTERACTION -> Color(0xFFF0FDF4)
+                    else -> Color(0xFFF5F3FF)
+                  }
+                ),
+                border = CardDefaults.outlinedCardBorder().copy(
+                  brush = androidx.compose.ui.graphics.SolidColor(
+                    when (cartDdiResult?.overallSeverity) {
+                      InteractionSeverity.SEVERE_CONTRAINDICATED -> Color(0xFFFCA5A5)
+                      InteractionSeverity.MODERATE_MONITOR -> Color(0xFFFCD34D)
+                      InteractionSeverity.NO_KNOWN_INTERACTION -> Color(0xFFBBF7D0)
+                      else -> Color(0xFFDDD6FE)
+                    }
+                  )
+                ),
+                modifier = Modifier.fillMaxWidth().testTag("card_pos_ddi_check")
+              ) {
+                Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                  Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                  ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                      Icon(
+                        imageVector = if (cartDdiResult?.overallSeverity == InteractionSeverity.SEVERE_CONTRAINDICATED || cartDdiResult?.overallSeverity == InteractionSeverity.MODERATE_MONITOR)
+                          Icons.Default.Warning else Icons.Default.AutoAwesome,
+                        contentDescription = null,
+                        tint = if (cartDdiResult?.overallSeverity == InteractionSeverity.SEVERE_CONTRAINDICATED) StatusRed else RoyalNavy,
+                        modifier = Modifier.size(18.dp)
+                      )
+                      Spacer(modifier = Modifier.width(6.dp))
+                      Text(
+                        text = "Salt-Level DDI Clinical Check (${cartItems.size} items)",
+                        fontSize = 12.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextDark
+                      )
+                    }
+                    TextButton(
+                      onClick = { viewModel.navigateTo(Screen.DRUG_INTERACTION_CHECKER) },
+                      contentPadding = PaddingValues(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                      Text("Full Checker →", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = RoyalMagenta)
+                    }
+                  }
+
+                  val ddi = cartDdiResult
+                  if (ddi != null) {
+                    Text(
+                      text = ddi.clinicalSummary,
+                      fontSize = 11.5.sp,
+                      color = TextDark,
+                      fontWeight = FontWeight.Medium
+                    )
+                    if (ddi.resolvedSalts.isNotEmpty()) {
+                      Text(
+                        text = "Salts: ${ddi.resolvedSalts.joinToString(", ")}",
+                        fontSize = 10.5.sp,
+                        color = TextMuted
+                      )
+                    }
+                    if (!ddi.aiError.isNullOrBlank()) {
+                      Text(
+                        text = "Note: ${ddi.aiError}",
+                        fontSize = 10.5.sp,
+                        color = StatusRed
+                      )
+                    }
+                  }
+
+                  Button(
+                    onClick = {
+                      scope.launch {
+                        isCheckingCartDdi = true
+                        try {
+                          cartDdiResult = ddiService.checkDrugInteractions(
+                            medicines = cartItems.map { it.medicineName },
+                            cachedInventory = medicines,
+                            resolveMissingMedicine = { query ->
+                              viewModel.lookupOrEnrichMedicineWithAi(query, autoSaveToInventory = true).getOrNull()
+                            }
+                          )
+                        } finally {
+                          isCheckingCartDdi = false
+                        }
+                      }
+                    },
+                    enabled = !isCheckingCartDdi,
+                    colors = ButtonDefaults.buttonColors(containerColor = RoyalNavy),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth().testTag("btn_run_pos_ddi")
+                  ) {
+                    if (isCheckingCartDdi) {
+                      CircularProgressIndicator(color = Color.White, modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                      Spacer(modifier = Modifier.width(6.dp))
+                      Text("Resolving Salts & Checking DDI...", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    } else {
+                      Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+                      Spacer(modifier = Modifier.width(6.dp))
+                      Text(if (cartDdiResult == null) "Run Salt-Level DDI Check" else "Re-Check Cart Interactions", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                  }
+                }
+              }
+            }
+          }
+
           // 6. Summary Breakdown
           item {
             Card(
@@ -656,7 +794,7 @@ fun AddSaleScreen(
                   modifier = Modifier.fillMaxWidth(),
                   horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                  Text("GST (CGST 6% + SGST 6%)", fontSize = 12.sp, color = TextMuted)
+                  Text("GST (CGST + SGST)", fontSize = 12.sp, color = TextMuted)
                   Text(String.format(Locale.getDefault(), "₹%.2f", gst), fontSize = 12.sp, color = TextDark)
                 }
 
@@ -812,6 +950,7 @@ fun AddSaleScreen(
         SearchItemForBillingContent(
           medicines = medicines,
           showCostPrice = showProfitDetails && userRole == com.example.viewmodel.UserRole.OWNER,
+          isEnriching = isEnrichingMedicine,
           onItemSelect = { med ->
             viewModel.addMedicineToCart(med, 1)
             showItemSearchSheet = false
@@ -819,6 +958,19 @@ fun AddSaleScreen(
           onScanClick = {
             showItemSearchSheet = false
             viewModel.navigateTo(Screen.QUICK_SCAN)
+          },
+          onAiLookupAndAdd = { brandQuery ->
+            scope.launch {
+              viewModel.lookupOrEnrichMedicineWithAi(brandQuery, autoSaveToInventory = true)
+                .onSuccess { med ->
+                  viewModel.addMedicineToCart(med, 1)
+                  showItemSearchSheet = false
+                  Toast.makeText(context, "AI Resolved & Added ${med.name}", Toast.LENGTH_SHORT).show()
+                }
+                .onFailure { err ->
+                  Toast.makeText(context, "AI lookup failed: ${err.localizedMessage ?: "Check network"}", Toast.LENGTH_LONG).show()
+                }
+            }
           }
         )
       }
@@ -958,8 +1110,10 @@ fun CartItemRow(
 fun SearchItemForBillingContent(
   medicines: List<MedicineItem>,
   showCostPrice: Boolean = false,
+  isEnriching: Boolean = false,
   onItemSelect: (MedicineItem) -> Unit,
-  onScanClick: () -> Unit
+  onScanClick: () -> Unit,
+  onAiLookupAndAdd: (String) -> Unit = {}
 ) {
   var query by remember { mutableStateOf("") }
   var showQrDialogForMed by remember { mutableStateOf<MedicineItem?>(null) }
@@ -1102,6 +1256,49 @@ fun SearchItemForBillingContent(
                 fontWeight = FontWeight.Bold,
                 color = RoyalMagenta
               )
+            }
+          }
+        }
+      }
+      if (filtered.isEmpty() && query.isNotBlank()) {
+        item {
+          Card(
+            shape = RoundedCornerShape(10.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F3FF)),
+            border = CardDefaults.outlinedCardBorder().copy(
+              brush = androidx.compose.ui.graphics.SolidColor(Color(0xFFDDD6FE))
+            ),
+            modifier = Modifier.fillMaxWidth().testTag("card_pos_ai_enrich_empty")
+          ) {
+            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+              Text(
+                text = "'${query.trim()}' not found in local catalog",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextDark
+              )
+              Text(
+                text = "Resolve generic salts, HSN, GST & CDSCO schedule with Gemini AI and add straight to this bill.",
+                fontSize = 11.sp,
+                color = TextMuted
+              )
+              Button(
+                onClick = { onAiLookupAndAdd(query.trim()) },
+                enabled = !isEnriching,
+                colors = ButtonDefaults.buttonColors(containerColor = RoyalMagenta),
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.fillMaxWidth().testTag("btn_pos_ai_lookup_add")
+              ) {
+                if (isEnriching) {
+                  CircularProgressIndicator(color = Color.White, modifier = Modifier.size(15.dp), strokeWidth = 2.dp)
+                  Spacer(modifier = Modifier.width(6.dp))
+                  Text("Resolving Brand with AI...", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                } else {
+                  Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color.White, modifier = Modifier.size(15.dp))
+                  Spacer(modifier = Modifier.width(6.dp))
+                  Text("✨ AI Lookup & Add '${query.trim()}'", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+              }
             }
           }
         }

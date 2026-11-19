@@ -27,6 +27,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
@@ -69,6 +70,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -87,6 +89,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -115,6 +118,7 @@ import com.example.ui.theme.TextLight
 import com.example.ui.theme.TextMuted
 import com.example.viewmodel.PharmacyViewModel
 import com.example.viewmodel.Screen
+import kotlinx.coroutines.launch
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -124,6 +128,8 @@ fun StockScreen(
   modifier: Modifier = Modifier
 ) {
   val context = LocalContext.current
+  val scope = rememberCoroutineScope()
+  val isEnrichingMedicine by viewModel.isEnrichingMedicine.collectAsState()
   val medicines by viewModel.allMedicines.collectAsState()
   val criticalMedicines by viewModel.criticalLowStockMedicines.collectAsState()
   var searchQuery by remember { mutableStateOf(viewModel.globalSearchQuery.value) }
@@ -470,6 +476,60 @@ fun StockScreen(
             )
           }
 
+          if (filteredMedicines.isEmpty() && searchQuery.isNotBlank()) {
+            item {
+              Card(
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F3FF)),
+                border = CardDefaults.outlinedCardBorder().copy(
+                  brush = androidx.compose.ui.graphics.SolidColor(Color(0xFFDDD6FE))
+                ),
+                modifier = Modifier.fillMaxWidth().testTag("card_stock_ai_enrich_empty")
+              ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                  Text(
+                    text = "'${searchQuery.trim()}' not found in local stock",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextDark
+                  )
+                  Text(
+                    text = "Resolve Indian brand salts, dosage form, GST slab & CDSCO schedule via Gemini AI and cache it automatically.",
+                    fontSize = 11.5.sp,
+                    color = TextMuted
+                  )
+                  Button(
+                    onClick = {
+                      scope.launch {
+                        viewModel.lookupOrEnrichMedicineWithAi(searchQuery.trim(), autoSaveToInventory = true)
+                          .onSuccess { med ->
+                            Toast.makeText(context, "Saved '${med.name}' (${med.composition}) to DB", Toast.LENGTH_SHORT).show()
+                          }
+                          .onFailure { err ->
+                            Toast.makeText(context, "AI Resolve failed: ${err.localizedMessage ?: "Retry"}", Toast.LENGTH_LONG).show()
+                          }
+                      }
+                    },
+                    enabled = !isEnrichingMedicine,
+                    colors = ButtonDefaults.buttonColors(containerColor = RoyalMagenta),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth().testTag("btn_stock_ai_resolve_save")
+                  ) {
+                    if (isEnrichingMedicine) {
+                      CircularProgressIndicator(color = Color.White, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                      Spacer(modifier = Modifier.width(8.dp))
+                      Text("Resolving via Gemini AI...", fontSize = 12.5.sp, fontWeight = FontWeight.Bold)
+                    } else {
+                      Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                      Spacer(modifier = Modifier.width(8.dp))
+                      Text("✨ AI Resolve & Save Brand to DB", fontSize = 12.5.sp, fontWeight = FontWeight.Bold)
+                    }
+                  }
+                }
+              }
+            }
+          }
+
           item {
             Spacer(modifier = Modifier.height(80.dp))
           }
@@ -737,6 +797,7 @@ fun StockScreen(
     if (showManualAddDialog) {
       ManualAddMedicineDialog(
         onDismiss = { showManualAddDialog = false },
+        onAiAutoFill = { query -> viewModel.lookupOrEnrichMedicineWithAi(query, autoSaveToInventory = false) },
         onSave = { newMed ->
           viewModel.addNewMedicine(newMed)
           showManualAddDialog = false
@@ -1431,8 +1492,15 @@ fun DeleteStockDialog(
 @Composable
 fun ManualAddMedicineDialog(
   onDismiss: () -> Unit,
+  onAiAutoFill: (suspend (String) -> Result<MedicineItem>)? = null,
   onSave: (MedicineItem) -> Unit
 ) {
+  val context = LocalContext.current
+  val scope = rememberCoroutineScope()
+  var isAutoFilling by remember { mutableStateOf(false) }
+  var scheduleDrug by remember { mutableStateOf("Schedule H") }
+  var gstPercent by remember { mutableStateOf(12.0) }
+  var category by remember { mutableStateOf("Tablet") }
   var name by remember { mutableStateOf("") }
   var manufacturer by remember { mutableStateOf("") }
   var composition by remember { mutableStateOf("") }
@@ -1469,6 +1537,50 @@ fun ManualAddMedicineDialog(
             placeholder = { Text("e.g. Dolo 650mg") },
             modifier = Modifier.fillMaxWidth().testTag("input_medicine_name")
           )
+          if (onAiAutoFill != null) {
+            Spacer(modifier = Modifier.height(6.dp))
+            OutlinedButton(
+              onClick = {
+                scope.launch {
+                  isAutoFilling = true
+                  onAiAutoFill(name.trim())
+                    .onSuccess { med ->
+                      if (med.name.isNotBlank()) name = med.name
+                      if (med.manufacturer.isNotBlank()) manufacturer = med.manufacturer
+                      if (med.composition.isNotBlank()) composition = med.composition
+                      if (med.mrp > 0.0) mrp = med.mrp.toString()
+                      if (med.saleRate > 0.0) saleRate = med.saleRate.toString()
+                      if (med.purchaseRate > 0.0) purchaseRate = med.purchaseRate.toString()
+                      scheduleDrug = med.scheduleDrug
+                      gstPercent = med.gstPercent
+                      category = med.category
+                      Toast.makeText(
+                        context,
+                        "AI Auto-Filled (${med.scheduleDrug} • GST ${med.gstPercent.toInt()}%)",
+                        Toast.LENGTH_SHORT
+                      ).show()
+                    }
+                    .onFailure { err ->
+                      Toast.makeText(context, "AI Auto-Fill failed: ${err.localizedMessage ?: "Retry"}", Toast.LENGTH_SHORT).show()
+                    }
+                  isAutoFilling = false
+                }
+              },
+              enabled = name.isNotBlank() && !isAutoFilling,
+              shape = RoundedCornerShape(8.dp),
+              modifier = Modifier.fillMaxWidth().testTag("btn_manual_add_ai_autofill")
+            ) {
+              if (isAutoFilling) {
+                CircularProgressIndicator(color = RoyalMagenta, modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("Resolving Brand Profile...", fontSize = 11.5.sp, color = RoyalMagenta, fontWeight = FontWeight.Bold)
+              } else {
+                Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = RoyalMagenta, modifier = Modifier.size(14.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("✨ AI Auto-Fill Salts, GST & Schedule", fontSize = 11.5.sp, color = RoyalMagenta, fontWeight = FontWeight.Bold)
+              }
+            }
+          }
         }
         item {
           OutlinedTextField(
@@ -1609,9 +1721,13 @@ fun ManualAddMedicineDialog(
                 name = name,
                 manufacturer = manufacturer.ifBlank { "Royal Generic" },
                 composition = composition,
+                saltMolecule = composition,
+                category = category,
                 mrp = mrpVal,
                 saleRate = sRate,
                 purchaseRate = pRate,
+                gstPercent = gstPercent,
+                scheduleDrug = scheduleDrug,
                 batchNumber = batchNumber.ifBlank { "RX990" },
                 expiryDate = expiryDate,
                 stockPacks = packs,

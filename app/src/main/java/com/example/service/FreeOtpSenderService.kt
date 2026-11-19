@@ -3,14 +3,9 @@ package com.example.service
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.telephony.SmsManager
-import android.util.Log
 import android.widget.Toast
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.net.HttpURLConnection
-import java.net.URL
-import java.net.URLEncoder
 
 enum class OtpChannel {
     ALL_AUTO,
@@ -28,10 +23,9 @@ data class OtpDispatchResult(
 
 object FreeOtpSenderService {
 
-    private const val TAG = "FreeOtpSenderService"
-
     /**
-     * Dispatches OTP automatically across selected channels.
+     * Prepares OTP dispatch state cleanly without prohibited SEND_SMS background calls
+     * or hardcoded external gateway URLs; actual device send actions use user-initiated intents.
      */
     suspend fun autoDispatchOtp(
         context: Context,
@@ -39,60 +33,18 @@ object FreeOtpSenderService {
         emailAddress: String,
         otpCode: String,
         channel: OtpChannel = OtpChannel.ALL_AUTO
-    ): OtpDispatchResult = withContext(Dispatchers.IO) {
+    ): OtpDispatchResult = withContext(Dispatchers.Default) {
         val cleanPhone = phoneNumber.replace(Regex("\\D"), "")
-        val formattedPhone = if (cleanPhone.length == 10) "91$cleanPhone" else cleanPhone
-        val targetEmail = if (emailAddress.isNotBlank()) emailAddress else "sulman995790@gmail.com"
-
-        val smsText = "Your ROYAL PHARMACY security OTP is: $otpCode. Valid for 10 minutes."
-
-        var smsSent = false
-        var whatsappSent = false
-        var emailSent = false
-
-        // 1. Direct Android SMS Manager dispatch if permission granted or intent launch
-        if (channel == OtpChannel.SMS || channel == OtpChannel.ALL_AUTO) {
-            try {
-                val smsManager: SmsManager = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-                    context.getSystemService(SmsManager::class.java)
-                } else {
-                    @Suppress("DEPRECATION")
-                    SmsManager.getDefault()
-                }
-                smsManager.sendTextMessage("+$formattedPhone", null, smsText, null, null)
-                smsSent = true
-                Log.d(TAG, "Direct SMS dispatched to +$formattedPhone")
-            } catch (e: Exception) {
-                Log.w(TAG, "Direct SMS Manager required permission or user prompt fallback: ${e.message}")
-            }
-        }
-
-        // 2. Free Webhook / REST Gateway dispatch (TextBee / Free OTP Gateway)
-        try {
-            val encodedMsg = URLEncoder.encode(smsText, "UTF-8")
-            val gatewayUrl = "https://textbee.dev/api/v1/gateway/send-sms?phone=+$formattedPhone&message=$encodedMsg"
-            val url = URL(gatewayUrl)
-            val conn = url.openConnection() as HttpURLConnection
-            conn.connectTimeout = 3000
-            conn.readTimeout = 3000
-            conn.requestMethod = "GET"
-            val code = conn.responseCode
-            if (code == 200) {
-                smsSent = true
-                Log.d(TAG, "Free Webhook OTP dispatched to +$formattedPhone")
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Free API dispatch exception: ${e.message}")
-        }
+        val targetEmail = if (emailAddress.isNotBlank()) emailAddress else "contact@royalpharmacy.in"
 
         val resultMsg = when (channel) {
-            OtpChannel.ALL_AUTO -> "OTP $otpCode auto-dispatched via SMS, WhatsApp & Gmail!"
-            OtpChannel.SMS -> "OTP $otpCode dispatched via SMS to +91 $cleanPhone"
+            OtpChannel.ALL_AUTO -> "Verification code $otpCode ready via SMS, WhatsApp, or Email."
+            OtpChannel.SMS -> "Verification code $otpCode ready for +91 $cleanPhone via Messaging app."
             OtpChannel.WHATSAPP -> "WhatsApp OTP link prepared for +91 $cleanPhone"
-            OtpChannel.GMAIL -> "Gmail OTP prepared for $targetEmail"
+            OtpChannel.GMAIL -> "Email OTP prepared for $targetEmail"
         }
 
-        return@withContext OtpDispatchResult(
+        OtpDispatchResult(
             success = true,
             otpCode = otpCode,
             channel = channel,
@@ -121,7 +73,7 @@ object FreeOtpSenderService {
     }
 
     /**
-     * Opens SMS app with pre-filled OTP message.
+     * Opens SMS app with pre-filled OTP message using zero-permission ACTION_SENDTO intent.
      */
     fun launchSmsOtp(context: Context, phoneNumber: String, otpCode: String) {
         val cleanPhone = phoneNumber.replace(Regex("\\D"), "")
@@ -143,7 +95,7 @@ object FreeOtpSenderService {
      * Opens Gmail / Mail app with pre-filled OTP message.
      */
     fun launchGmailOtp(context: Context, emailAddress: String, otpCode: String) {
-        val targetEmail = if (emailAddress.isNotBlank()) emailAddress else "sulman995790@gmail.com"
+        val targetEmail = if (emailAddress.isNotBlank()) emailAddress else "contact@royalpharmacy.in"
         val subject = Uri.encode("Royal Pharmacy Verification OTP Code")
         val body = Uri.encode("Your ROYAL PHARMACY security OTP code is: $otpCode\n\nValid for 10 minutes. Please enter this code in the login screen.")
         val mailIntent = Intent(Intent.ACTION_SENDTO).apply {

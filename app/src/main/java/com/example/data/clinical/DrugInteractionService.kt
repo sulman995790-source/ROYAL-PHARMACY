@@ -1,22 +1,24 @@
 package com.example.data.clinical
 
-import com.example.BuildConfig
+import android.util.Log
 import com.example.data.model.MedicineItem
+import com.google.firebase.Firebase
+import com.google.firebase.ai.ai
+import com.google.firebase.ai.type.Schema
+import com.google.firebase.ai.type.content
+import com.google.firebase.ai.type.generationConfig
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
+import kotlinx.coroutines.withTimeout
 import org.json.JSONArray
 import org.json.JSONObject
-import java.util.concurrent.TimeUnit
 
 enum class InteractionSeverity {
-  SEVERE_CONTRAINDICATED, // Red 🔴
-  MODERATE_MONITOR,       // Amber 🟠
-  MINOR_CAUTION,          // Blue 🟡
-  NO_KNOWN_INTERACTION    // Green 🟢
+  SEVERE_CONTRAINDICATED, // Red
+  MODERATE_MONITOR,       // Amber
+  MINOR_CAUTION,          // Blue
+  NO_KNOWN_INTERACTION    // Green
 }
 
 data class DrugPairInteraction(
@@ -36,190 +38,213 @@ data class InteractionCheckResult(
   val interactions: List<DrugPairInteraction>,
   val clinicalSummary: String,
   val foodWarnings: List<String>,
+  val resolvedSalts: List<String> = emptyList(),
+  val saltMappingByBrand: Map<String, List<String>> = emptyMap(),
+  val aiError: String? = null,
   val timestamp: Long = System.currentTimeMillis()
 )
 
 class DrugInteractionService {
-  private val client = OkHttpClient.Builder()
-    .connectTimeout(30, TimeUnit.SECONDS)
-    .readTimeout(30, TimeUnit.SECONDS)
-    .build()
 
-  // Offline Curated Clinical Interaction Database (CDSCO & Standard Pharmacology Reference)
+  companion object {
+    private const val TAG = "DrugInteractionSvc"
+    private const val DDI_MODEL = "gemini-3.8-flash"
+  }
+
+  private val ddiSchema = Schema.obj(
+    properties = mapOf(
+      "interactions" to Schema.array(
+        items = Schema.obj(
+          properties = mapOf(
+            "drug1" to Schema.string(description = "Brand or salt name 1"),
+            "drug2" to Schema.string(description = "Brand or salt name 2"),
+            "severity" to Schema.enumeration(
+              values = listOf("SEVERE_CONTRAINDICATED", "MODERATE_MONITOR", "MINOR_CAUTION"),
+              description = "Severity classification"
+            ),
+            "riskTitle" to Schema.string(description = "Short clinical risk headline"),
+            "mechanism" to Schema.string(description = "Pharmacokinetic or pharmacodynamic mechanism"),
+            "clinicalAdvice" to Schema.string(description = "Actionable guidance for pharmacist"),
+            "foodPrecaution" to Schema.string(description = "Food or timing precaution if any"),
+            "alternativeSuggestion" to Schema.string(description = "Safer therapeutic alternative")
+          )
+        )
+      ),
+      "clinicalSummary" to Schema.string(description = "Concise clinical verdict"),
+      "foodWarnings" to Schema.array(items = Schema.string())
+    )
+  )
+
+  private val ddiModel by lazy {
+    Firebase.ai.generativeModel(
+      modelName = DDI_MODEL,
+      generationConfig = generationConfig {
+        temperature = 0.1f
+        responseMimeType = "application/json"
+        responseSchema = ddiSchema
+      },
+      systemInstruction = content {
+        text("You are an expert clinical pharmacologist evaluating salt-level drug-drug and drug-food interactions in India.")
+      }
+    )
+  }
+
   private val offlineInteractions = listOf(
-    // 1. Nitrates + PDE5 Inhibitors (Fatal Hypotension)
     DrugPairInteraction(
       drug1 = "Nitroglycerin / Isosorbide",
       drug2 = "Sildenafil / Tadalafil",
       severity = InteractionSeverity.SEVERE_CONTRAINDICATED,
       riskTitle = "Fatal Refractory Hypotension & Cardiovascular Collapse",
-      mechanism = "Synergistic cGMP-mediated vasodilation leading to severe precipitously low blood pressure and cardiac arrest.",
-      clinicalAdvice = "ABSOLUTELY CONTRAINDICATED. Do not co-prescribe. Maintain at least a 24-48 hour separation interval if PDE5 inhibitor was ingested.",
-      alternativeSuggestion = "Consult cardiologist for alternative anti-anginal therapy (e.g. Beta-blockers or Ranolazine)."
+      mechanism = "Synergistic cGMP-mediated vasodilation leading to severe precipitously low blood pressure.",
+      clinicalAdvice = "CONTRAINDICATED. Maintain at least a 24-48 hour separation interval.",
+      alternativeSuggestion = "Consult cardiologist for beta-blockers or ranolazine."
     ),
-    // 2. Warfarin / Anticoagulants + NSAIDs
     DrugPairInteraction(
       drug1 = "Warfarin / Acenocoumarol",
       drug2 = "Aspirin / Ibuprofen / Diclofenac",
       severity = InteractionSeverity.SEVERE_CONTRAINDICATED,
       riskTitle = "Severe GI Hemorrhage & Major Bleeding Risk",
-      mechanism = "NSAIDs inhibit COX-1 platelet aggregation and cause gastric mucosal erosion, multiplying anticoagulant bleeding risk.",
-      clinicalAdvice = "Avoid combination. If analgesia is required, use Paracetamol (up to 2g/day max) with regular INR monitoring.",
-      alternativeSuggestion = "Paracetamol or topical analgesics (Volini / Diclofenac Gel)."
+      mechanism = "NSAIDs inhibit COX-1 platelet aggregation and erode gastric mucosa, multiplying anticoagulant bleeding risk.",
+      clinicalAdvice = "Avoid combination. Use Paracetamol (max 2g/day) with INR monitoring.",
+      alternativeSuggestion = "Paracetamol or topical Diclofenac gel."
     ),
-    // 3. Clopidogrel + Omeprazole
     DrugPairInteraction(
       drug1 = "Clopidogrel",
       drug2 = "Omeprazole / Esomeprazole",
       severity = InteractionSeverity.MODERATE_MONITOR,
-      riskTitle = "Reduced Antiplatelet Efficacy (Thrombosis Risk)",
-      mechanism = "Omeprazole competitively inhibits CYP2C19 enzyme, preventing bioactivation of Clopidogrel into its active metabolite.",
-      clinicalAdvice = "Switch proton-pump inhibitor to Pantoprazole or Rabeprazole, which exhibit significantly less CYP2C19 inhibition.",
-      alternativeSuggestion = "Substitute Omeprazole with Pantoprazole 40mg or Famotidine 20mg."
+      riskTitle = "Reduced Antiplatelet Efficacy (CYP2C19 Inhibition)",
+      mechanism = "Omeprazole inhibits CYP2C19 bioactivation of Clopidogrel into its active antiplatelet metabolite.",
+      clinicalAdvice = "Switch PPI to Pantoprazole 40mg or Rabeprazole 20mg.",
+      alternativeSuggestion = "Pantoprazole 40mg (Pan 40) or Famotidine 20mg."
     ),
-    // 4. Statins + Macrolide Antibiotics
     DrugPairInteraction(
       drug1 = "Atorvastatin / Simvastatin",
       drug2 = "Clarithromycin / Erythromycin",
       severity = InteractionSeverity.SEVERE_CONTRAINDICATED,
       riskTitle = "Rhabdomyolysis & Acute Renal Failure",
-      mechanism = "Macrolides are potent CYP3A4 inhibitors, increasing serum statin concentrations up to 5-10 fold, causing skeletal muscle breakdown.",
-      clinicalAdvice = "Temporarily suspend statin therapy during course of Clarithromycin, or use Azithromycin (not a strong CYP3A4 inhibitor).",
-      alternativeSuggestion = "Switch antibiotic to Azithromycin 500mg or Amoxicillin-Clavulanate."
+      mechanism = "Potent CYP3A4 inhibition raises serum statin concentrations 5-10 fold.",
+      clinicalAdvice = "Hold statin during antibiotic therapy or switch antibiotic to Azithromycin.",
+      alternativeSuggestion = "Azithromycin 500mg."
     ),
-    // 5. ACE Inhibitors / ARBs + Spironolactone / Potassium
     DrugPairInteraction(
       drug1 = "Telmisartan / Ramipril / Enalapril",
-      drug2 = "Spironolactone / Potassium Supplements",
+      drug2 = "Spironolactone / Potassium",
       severity = InteractionSeverity.MODERATE_MONITOR,
       riskTitle = "Severe Hyperkalemia & Cardiac Arrhythmia",
-      mechanism = "Additive potassium-sparing effect in the distal nephron leading to toxic serum potassium levels (>5.5 mEq/L).",
-      clinicalAdvice = "Monitor serum potassium and renal creatinine within 7-14 days of initiation. Advise low-potassium diet (limit bananas, coconut water).",
-      foodPrecaution = "Avoid potassium-enriched salt substitutes and excessive coconut water."
+      mechanism = "Additive potassium retention in the distal nephron leading to hyperkalemia (>5.5 mEq/L).",
+      clinicalAdvice = "Monitor serum potassium and renal creatinine within 7-14 days.",
+      foodPrecaution = "Avoid potassium salt substitutes and excess coconut water."
     ),
-    // 6. Fluoroquinolones + Antacids / Multivitamins
     DrugPairInteraction(
       drug1 = "Ciprofloxacin / Levofloxacin / Norfloxacin",
       drug2 = "Antacids (Aluminium/Magnesium) / Calcium / Iron",
       severity = InteractionSeverity.MODERATE_MONITOR,
-      riskTitle = "Severely Impaired Antibiotic Absorption (Chelation)",
-      mechanism = "Polyvalent cations (Al3+, Mg2+, Ca2+, Fe2+) form insoluble chelate complexes with quinolones, reducing absorption by up to 80%.",
-      clinicalAdvice = "Separate administration times: Take Fluoroquinolones at least 2 hours before or 4-6 hours after antacids/minerals.",
-      foodPrecaution = "Do not take with milk or calcium-fortified juices."
+      riskTitle = "Impaired Antibiotic Absorption (Chelation)",
+      mechanism = "Polyvalent cations form insoluble chelates in the gut, cutting fluoroquinolone absorption up to 80%.",
+      clinicalAdvice = "Separate administration by 2 hours before or 4-6 hours after minerals/antacids.",
+      foodPrecaution = "Do not take with milk or calcium-fortified beverages."
     ),
-    // 7. Methotrexate + NSAIDs
     DrugPairInteraction(
       drug1 = "Methotrexate",
       drug2 = "Ibuprofen / Naproxen / Diclofenac",
       severity = InteractionSeverity.SEVERE_CONTRAINDICATED,
-      riskTitle = "Methotrexate Toxicity (Bone Marrow Suppression & Pancytopenia)",
-      mechanism = "NSAIDs reduce renal blood flow and competitive renal tubular clearance of Methotrexate, causing fatal toxicity.",
-      clinicalAdvice = "Strictly avoid high-dose NSAIDs. Monitor CBC and hepatic enzymes closely if low-dose co-administration is necessary.",
-      alternativeSuggestion = "Use Paracetamol or low-dose Prednisolone under rheumatologist supervision."
+      riskTitle = "Methotrexate Toxicity & Bone Marrow Suppression",
+      mechanism = "NSAIDs decrease renal tubular clearance of Methotrexate.",
+      clinicalAdvice = "Avoid high-dose NSAIDs; monitor CBC and liver enzymes.",
+      alternativeSuggestion = "Paracetamol under rheumatologist supervision."
     ),
-    // 8. SSRIs + Tramadol
     DrugPairInteraction(
       drug1 = "Escitalopram / Sertraline / Fluoxetine",
       drug2 = "Tramadol / Tapentadol",
       severity = InteractionSeverity.SEVERE_CONTRAINDICATED,
       riskTitle = "Serotonin Syndrome & Seizure Risk",
-      mechanism = "Additive serotonergic enhancement causing hyperthermia, clonus, autonomic instability, and lowers seizure threshold.",
-      clinicalAdvice = "Avoid combination. If pain relief needed, consider Paracetamol, topical agents, or low-dose Codeine.",
-      alternativeSuggestion = "Paracetamol 650mg or Etoricoxib 90mg."
+      mechanism = "Additive serotonergic excess and lowered seizure threshold.",
+      clinicalAdvice = "Avoid co-administration.",
+      alternativeSuggestion = "Paracetamol 650mg or Etoricoxib."
     ),
-    // 9. Metformin + Alcohol
     DrugPairInteraction(
       drug1 = "Metformin",
       drug2 = "Alcohol / Ethanol",
       severity = InteractionSeverity.MODERATE_MONITOR,
-      riskTitle = "Lactic Acidosis Risk & Hypoglycemia",
-      mechanism = "Alcohol inhibits gluconeogenesis and potentiates Metformin's effect on lactate metabolism in the liver.",
-      clinicalAdvice = "Warn patient against binge drinking or chronic excessive alcohol consumption while on Metformin.",
-      foodPrecaution = "Strictly avoid alcoholic beverages while taking Metformin."
+      riskTitle = "Lactic Acidosis & Hypoglycemia Risk",
+      mechanism = "Alcohol inhibits gluconeogenesis and impairs lactate clearance.",
+      clinicalAdvice = "Advise patient to avoid heavy or binge alcohol use.",
+      foodPrecaution = "Strictly avoid alcoholic beverages."
     ),
-    // 10. Doxycycline + Dairy Products / Iron
     DrugPairInteraction(
       drug1 = "Doxycycline / Tetracycline",
-      drug2 = "Milk / Calcium / Iron Supplements / Shelcal",
+      drug2 = "Calcium / Iron / Milk",
       severity = InteractionSeverity.MINOR_CAUTION,
       riskTitle = "Chelation & Reduced Bioavailability",
-      mechanism = "Calcium and polyvalent cations bind Doxycycline in the digestive tract preventing therapeutic blood levels.",
-      clinicalAdvice = "Take Doxycycline with a full glass of water, at least 2 hours apart from dairy products, milk, cheese, or antacids.",
-      foodPrecaution = "Avoid consuming milk, curd, or dairy within 2 hours of taking medication."
+      mechanism = "Divalent/trivalent cations bind tetracycline antibiotics in the GI tract.",
+      clinicalAdvice = "Separate Doxycycline and calcium/iron by at least 2 hours.",
+      foodPrecaution = "Avoid dairy products within 2 hours of dosing."
     ),
-    // 11. Digoxin + Amiodarone
     DrugPairInteraction(
-      drug1 = "Digoxin / Lanoxin",
-      drug2 = "Amiodarone / Cordarone",
+      drug1 = "Digoxin",
+      drug2 = "Amiodarone",
       severity = InteractionSeverity.SEVERE_CONTRAINDICATED,
-      riskTitle = "Digoxin Toxicity (Fatal Arrhythmia & Heart Block)",
-      mechanism = "Amiodarone inhibits P-glycoprotein renal clearance of Digoxin, doubling serum Digoxin concentrations.",
-      clinicalAdvice = "Reduce Digoxin dose by 50% immediately if Amiodarone is initiated. Monitor serum Digoxin levels and ECG closely.",
-      alternativeSuggestion = "Alternative rate control agent (Beta-blocker) under cardiologist guidance."
+      riskTitle = "Digoxin Toxicity & Heart Block",
+      mechanism = "Amiodarone inhibits P-glycoprotein renal clearance of Digoxin, doubling serum levels.",
+      clinicalAdvice = "Reduce Digoxin dose by 50% and monitor ECG/serum levels.",
+      alternativeSuggestion = "Beta-blocker rate control under cardiologist guidance."
     ),
-    // 12. Lithium + NSAIDs
     DrugPairInteraction(
       drug1 = "Lithium",
-      drug2 = "Ibuprofen / Diclofenac / Naproxen / Combiflam",
+      drug2 = "Ibuprofen / Diclofenac / Naproxen",
       severity = InteractionSeverity.SEVERE_CONTRAINDICATED,
-      riskTitle = "Severe Lithium Toxicity (Tremors, Ataxia, Renal Failure)",
-      mechanism = "NSAIDs reduce renal prostaglandin synthesis and decrease renal lithium clearance, causing toxic accumulation.",
-      clinicalAdvice = "Avoid NSAIDs in patients on Lithium. Use Paracetamol or Aspirin for pain relief.",
+      riskTitle = "Lithium Toxicity & Renal Injury",
+      mechanism = "NSAIDs reduce renal lithium excretion causing toxic accumulation.",
+      clinicalAdvice = "Avoid NSAIDs in patients taking Lithium.",
       alternativeSuggestion = "Paracetamol 650mg."
     ),
-    // 13. Metronidazole + Alcohol
     DrugPairInteraction(
-      drug1 = "Metronidazole / Flagyl / Tinidazole",
+      drug1 = "Metronidazole / Tinidazole",
       drug2 = "Alcohol / Ethanol",
       severity = InteractionSeverity.SEVERE_CONTRAINDICATED,
-      riskTitle = "Disulfiram-like Reaction (Severe Vomiting, Tachycardia)",
-      mechanism = "Metronidazole inhibits aldehyde dehydrogenase, causing toxic acetaldehyde buildup in blood.",
-      clinicalAdvice = "Strictly abstain from alcohol during and for 48 hours after completing Metronidazole therapy.",
-      foodPrecaution = "Avoid all alcoholic beverages, wine, and alcohol-containing cough syrups."
+      riskTitle = "Disulfiram-like Reaction",
+      mechanism = "Inhibits aldehyde dehydrogenase causing acute acetaldehyde accumulation.",
+      clinicalAdvice = "Abstain from alcohol during and for 48 hours after therapy.",
+      foodPrecaution = "Avoid alcohol and alcohol-containing syrups."
     ),
-    // 14. Levothyroxine + Calcium / Iron
     DrugPairInteraction(
-      drug1 = "Levothyroxine / Eltroxin / Thyronorm",
-      drug2 = "Calcium / Iron / Shelcal / Autrin",
+      drug1 = "Levothyroxine",
+      drug2 = "Calcium / Iron",
       severity = InteractionSeverity.MODERATE_MONITOR,
-      riskTitle = "Decreased Thyroid Hormone Absorption (Hypothyroidism)",
-      mechanism = "Calcium carbonate and ferrous sulfate bind levothyroxine in the stomach, forming non-absorbable chelates.",
-      clinicalAdvice = "Take Levothyroxine on an empty stomach in the morning, at least 4 hours before calcium or iron supplements.",
-      foodPrecaution = "Take on an empty stomach with plain water at least 30-60 mins before breakfast."
+      riskTitle = "Reduced Thyroid Hormone Absorption",
+      mechanism = "Calcium and iron salts form insoluble complexes with levothyroxine.",
+      clinicalAdvice = "Take Levothyroxine on an empty stomach at least 4 hours before calcium/iron.",
+      foodPrecaution = "Take with plain water 30-60 mins before breakfast."
     ),
-    // 15. Theophylline + Ciprofloxacin
     DrugPairInteraction(
-      drug1 = "Theophylline / Deriphyllin",
-      drug2 = "Ciprofloxacin / Ciplox",
+      drug1 = "Theophylline / Etofylline",
+      drug2 = "Ciprofloxacin",
       severity = InteractionSeverity.MODERATE_MONITOR,
-      riskTitle = "Theophylline Toxicity (Seizures, Cardiac Tachycardia)",
-      mechanism = "Ciprofloxacin is a potent CYP1A2 inhibitor that blocks hepatic degradation of Theophylline.",
-      clinicalAdvice = "Reduce theophylline dosage by 30-50% and monitor serum levels, or switch to an alternative antibiotic.",
-      alternativeSuggestion = "Switch to Azithromycin or Amoxyclav."
+      riskTitle = "Theophylline Toxicity (Tachycardia, Seizures)",
+      mechanism = "Ciprofloxacin inhibits CYP1A2 clearance of theophylline.",
+      clinicalAdvice = "Reduce theophylline dose 30-50% or switch antibiotic.",
+      alternativeSuggestion = "Azithromycin or Amoxicillin-Clavulanate."
     ),
-    // 16. Sildenafil + Nitroglycerin
     DrugPairInteraction(
-      drug1 = "Sildenafil / Tadalafil / Manforce",
-      drug2 = "Nitroglycerin / Sorbitrate / Monit",
-      severity = InteractionSeverity.SEVERE_CONTRAINDICATED,
-      riskTitle = "Fatal Refractory Hypotension & Cardiac Collapse",
-      mechanism = "Excessive cGMP buildup causing massive systemic vasodilation.",
-      clinicalAdvice = "ABSOLUTELY CONTRAINDICATED. Do not administer nitrates within 24-48 hours of PDE5 inhibitors.",
-      alternativeSuggestion = "Beta-blocker or Calcium channel blocker for chest pain."
+      drug1 = "Azithromycin",
+      drug2 = "Domperidone",
+      severity = InteractionSeverity.MODERATE_MONITOR,
+      riskTitle = "Additive QT Prolongation & Arrhythmia Risk",
+      mechanism = "Both agents prolong cardiac ventricular repolarization (QTc interval).",
+      clinicalAdvice = "Use caution in elderly or cardiac patients; avoid in baseline QT prolongation.",
+      alternativeSuggestion = "Substitute Domperidone with Ondansetron cautiously or Metoclopramide after review."
     ),
-    // 17. Paracetamol + Alcohol (Chronic)
     DrugPairInteraction(
-      drug1 = "Paracetamol / Dolo / Calpol / Pacimol",
+      drug1 = "Paracetamol",
       drug2 = "Alcohol / Ethanol",
       severity = InteractionSeverity.MODERATE_MONITOR,
-      riskTitle = "Hepatotoxicity & Liver Damage Risk",
-      mechanism = "Chronic alcohol induces CYP2E1, converting Paracetamol into toxic NAPQI metabolite faster than glutathione can detoxify.",
-      clinicalAdvice = "Limit daily Paracetamol intake to under 2g in patients with regular alcohol consumption.",
-      foodPrecaution = "Avoid consuming alcohol while taking high-dose paracetamol."
+      riskTitle = "Hepatotoxicity Risk",
+      mechanism = "Chronic ethanol induces CYP2E1 increasing toxic NAPQI formation.",
+      clinicalAdvice = "Limit Paracetamol to <= 2g/day in chronic alcohol users.",
+      foodPrecaution = "Avoid alcohol during high-dose Paracetamol therapy."
     )
   )
 
-  // Brand Name to Active Molecule Mapping for Smart Indian Retail Search
   private val brandToMoleculesMap = mapOf(
     "dolo" to listOf("paracetamol"),
     "calpol" to listOf("paracetamol"),
@@ -227,126 +252,188 @@ class DrugInteractionService {
     "crocin" to listOf("paracetamol"),
     "t-98" to listOf("paracetamol"),
     "paracip" to listOf("paracetamol"),
-    "febrex" to listOf("paracetamol"),
+    "febrex" to listOf("paracetamol", "chlorpheniramine"),
     "combiflam" to listOf("ibuprofen", "paracetamol"),
     "brufen" to listOf("ibuprofen"),
     "zerodol-p" to listOf("aceclofenac", "paracetamol"),
+    "zerodol-sp" to listOf("aceclofenac", "paracetamol", "serratiopeptidase"),
     "zerodol" to listOf("aceclofenac"),
     "voveran" to listOf("diclofenac"),
     "volini" to listOf("diclofenac"),
-    "augmentin" to listOf("amoxicillin", "clavulanate"),
-    "clavam" to listOf("amoxicillin", "clavulanate"),
-    "moxikind" to listOf("amoxicillin", "clavulanate"),
-    "amoxyclav" to listOf("amoxicillin", "clavulanate"),
+    "augmentin" to listOf("amoxicillin", "clavulanic acid"),
+    "clavam" to listOf("amoxicillin", "clavulanic acid"),
+    "moxikind" to listOf("amoxicillin", "clavulanic acid"),
     "pan 40" to listOf("pantoprazole"),
-    "pan" to listOf("pantoprazole"),
+    "pan-d" to listOf("pantoprazole", "domperidone"),
+    "pan d" to listOf("pantoprazole", "domperidone"),
     "pantocid" to listOf("pantoprazole"),
     "pantosec" to listOf("pantoprazole"),
-    "pan-d" to listOf("pantoprazole", "domperidone"),
-    "omeprazole" to listOf("omeprazole"),
     "omez" to listOf("omeprazole"),
     "razo" to listOf("rabeprazole"),
-    "rablet" to listOf("rabeprazole"),
-    "clopidogrel" to listOf("clopidogrel"),
     "clopilet" to listOf("clopidogrel"),
     "ecosprin" to listOf("aspirin"),
-    "aspirin" to listOf("aspirin"),
-    "warfarin" to listOf("warfarin"),
+    "warf" to listOf("warfarin"),
     "coumadin" to listOf("warfarin"),
-    "sorbitrate" to listOf("nitroglycerin", "isosorbide"),
-    "nitroglycerin" to listOf("nitroglycerin"),
-    "sildenafil" to listOf("sildenafil"),
+    "sorbitrate" to listOf("isosorbide", "nitroglycerin"),
     "manforce" to listOf("sildenafil"),
-    "tadalafil" to listOf("tadalafil"),
     "azithral" to listOf("azithromycin"),
     "azee" to listOf("azithromycin"),
     "ciplox" to listOf("ciprofloxacin"),
     "cifran" to listOf("ciprofloxacin"),
-    "ciprofloxacin" to listOf("ciprofloxacin"),
     "monocef" to listOf("ceftriaxone"),
     "taxim-o" to listOf("cefixime"),
+    "telma-h" to listOf("telmisartan", "hydrochlorothiazide"),
     "telma" to listOf("telmisartan"),
-    "telmisartan" to listOf("telmisartan"),
-    "spironolactone" to listOf("spironolactone"),
     "aldactone" to listOf("spironolactone"),
-    "digoxin" to listOf("digoxin"),
     "lanoxin" to listOf("digoxin"),
-    "amiodarone" to listOf("amiodarone"),
     "cordarone" to listOf("amiodarone"),
     "flagyl" to listOf("metronidazole"),
     "metrogyl" to listOf("metronidazole"),
-    "metronidazole" to listOf("metronidazole"),
     "shelcal" to listOf("calcium", "vitamin d3"),
     "asthalin" to listOf("salbutamol"),
-    "clarithromycin" to listOf("clarithromycin"),
-    "atorvastatin" to listOf("atorvastatin"),
-    "lipitor" to listOf("atorvastatin"),
-    "doxycycline" to listOf("doxycycline"),
-    "methotrexate" to listOf("methotrexate"),
     "deriphyllin" to listOf("theophylline", "etofylline"),
-    "alcohol" to listOf("alcohol", "ethanol"),
-    "antacid" to listOf("antacids", "digene")
+    "thyronorm" to listOf("levothyroxine"),
+    "eltroxin" to listOf("levothyroxine"),
+    "glycomet-gp" to listOf("metformin", "glimepiride"),
+    "glycomet" to listOf("metformin"),
+    "montair-lc" to listOf("montelukast", "levocetirizine"),
+    "rosuvas" to listOf("rosuvastatin")
   )
 
-  private fun resolveMolecules(drugInput: String): List<String> {
+  private fun parseSaltString(rawSalt: String): List<String> {
+    return rawSalt
+      .split("+", ",", "/", "&", " and ")
+      .map { token ->
+        token.lowercase()
+          .replace(Regex("\\d+(\\.\\d+)?\\s*(mg|mcg|g|ml|iu|%|w/v)"), "")
+          .replace(Regex("\\b(ip|bp|usp|sr|er|xr|dt|md|ds|duo|plus|forte)\\b"), "")
+          .replace(Regex("[^a-z\\s-]"), " ")
+          .trim()
+      }
+      .filter { it.length >= 3 }
+      .distinct()
+  }
+
+  private fun resolveLocalSalts(drugInput: String, cachedInventory: List<MedicineItem>): List<String> {
     val lower = drugInput.lowercase().trim()
     val found = mutableListOf<String>()
-    found.add(lower)
+
+    // 1. Check cached Room inventory first (Cache-Through persisted salts)
+    val cachedMatch = cachedInventory.firstOrNull { med ->
+      med.name.equals(drugInput, ignoreCase = true) ||
+        med.name.contains(drugInput, ignoreCase = true) ||
+        drugInput.contains(med.name, ignoreCase = true)
+    }
+    if (cachedMatch != null) {
+      val saltSource = cachedMatch.saltMolecule.ifBlank { cachedMatch.composition }
+      if (saltSource.isNotBlank()) {
+        found.addAll(parseSaltString(saltSource))
+      }
+    }
+
+    // 2. Check static Indian brand -> salt map
     brandToMoleculesMap.forEach { (brand, molecules) ->
       if (lower.contains(brand)) {
         found.addAll(molecules)
       }
     }
+
+    // 3. Fallback if user typed raw generic molecule directly
+    if (found.isEmpty()) {
+      found.addAll(parseSaltString(lower))
+    }
+
     return found.distinct()
   }
 
-  suspend fun checkDrugInteractions(medicines: List<String>): InteractionCheckResult = withContext(Dispatchers.IO) {
-    if (medicines.size < 2) {
-      val singleDrug = medicines.firstOrNull() ?: ""
-      val singleResolved = resolveMolecules(singleDrug)
-      val singleWarnings = offlineInteractions.filter { rule ->
-        val rule1Matches = rule.drug1.lowercase().split("/").any { part -> singleResolved.any { it.contains(part.trim()) } }
-        val rule2Matches = rule.drug2.lowercase().split("/").any { part -> singleResolved.any { it.contains(part.trim()) } }
-        rule1Matches || rule2Matches
-      }.take(3)
-
-      val foodList = singleWarnings.mapNotNull { it.foodPrecaution.takeIf { p -> p.isNotBlank() } }.distinct()
-
+  suspend fun checkDrugInteractions(
+    medicines: List<String>,
+    cachedInventory: List<MedicineItem> = emptyList(),
+    resolveMissingMedicine: (suspend (String) -> MedicineItem?)? = null
+  ): InteractionCheckResult = withContext(Dispatchers.IO) {
+    val cleanDrugs = medicines.map { it.trim() }.filter { it.isNotBlank() }.distinct()
+    if (cleanDrugs.isEmpty()) {
       return@withContext InteractionCheckResult(
-        totalDrugsChecked = medicines.size,
-        overallSeverity = if (singleWarnings.isNotEmpty()) InteractionSeverity.MINOR_CAUTION else InteractionSeverity.NO_KNOWN_INTERACTION,
-        interactions = singleWarnings,
-        clinicalSummary = if (singleWarnings.isNotEmpty()) "Monograph loaded for $singleDrug. Select an additional medicine to evaluate co-administration safety." else "Select at least 2 medicines to evaluate drug-drug, drug-food, and pharmacokinetic interactions.",
-        foodWarnings = foodList
+        totalDrugsChecked = 0,
+        overallSeverity = InteractionSeverity.NO_KNOWN_INTERACTION,
+        interactions = emptyList(),
+        clinicalSummary = "Add at least 2 medicines to run Salt-Level Drug-Drug Interaction screening.",
+        foodWarnings = emptyList()
       )
     }
 
-    // First check local high-priority clinical pairings with fuzzy molecule resolution
-    val localMatches = mutableListOf<DrugPairInteraction>()
-    for (i in 0 until medicines.size) {
-      for (j in (i + 1) until medicines.size) {
-        val molsA = resolveMolecules(medicines[i])
-        val molsB = resolveMolecules(medicines[j])
+    // Step 1: Resolve active generic salts per brand (Local DB -> Static Map -> Cache-Through AI)
+    val saltMapping = linkedMapOf<String, List<String>>()
+    for (drug in cleanDrugs) {
+      var salts = resolveLocalSalts(drug, cachedInventory)
+      val matchedCached = cachedInventory.any {
+        it.name.equals(drug, ignoreCase = true) || it.name.contains(drug, ignoreCase = true)
+      }
+      val matchedKnownMap = brandToMoleculesMap.keys.any { drug.lowercase().contains(it) }
 
-        // 1. CRITICAL DUPLICATE ACTIVE THERAPY / SAME INGREDIENT OVERDOSE CHECK
-        val ignoredTokens = setOf("drops", "syrup", "tablet", "tablets", "inj", "injection", "capsule", "suspension", "drops 15 ml", "drops 15ml", "650", "500", "40", "625", "pediatric", "infant")
-        val activeIngredientsA = molsA.filter { it !in ignoredTokens && it.length > 3 }
-        val activeIngredientsB = molsB.filter { it !in ignoredTokens && it.length > 3 }
-        val commonActive = activeIngredientsA.firstOrNull { a ->
-          activeIngredientsB.any { b -> b == a || (b.contains(a) && a.length > 4) || (a.contains(b) && b.length > 4) }
+      if (!matchedCached && !matchedKnownMap && resolveMissingMedicine != null) {
+        val aiResolvedMed = resolveMissingMedicine(drug)
+        if (aiResolvedMed != null) {
+          val saltSource = aiResolvedMed.saltMolecule.ifBlank { aiResolvedMed.composition }
+          val aiSalts = parseSaltString(saltSource)
+          if (aiSalts.isNotEmpty()) {
+            salts = aiSalts
+          }
+        }
+      }
+      saltMapping[drug] = salts.ifEmpty { listOf(drug.lowercase()) }
+    }
+
+    val deduplicatedSalts = saltMapping.values.flatten().distinct()
+
+    if (cleanDrugs.size < 2 && deduplicatedSalts.size < 2) {
+      val singleDrug = cleanDrugs.first()
+      val singleSalts = saltMapping[singleDrug].orEmpty()
+      val singleWarnings = offlineInteractions.filter { rule ->
+        val r1 = rule.drug1.lowercase().split("/").map { it.trim() }
+        val r2 = rule.drug2.lowercase().split("/").map { it.trim() }
+        r1.any { p -> singleSalts.any { it.contains(p) || p.contains(it) } } ||
+          r2.any { p -> singleSalts.any { it.contains(p) || p.contains(it) } }
+      }.take(3)
+      val foodList = singleWarnings.mapNotNull { it.foodPrecaution.takeIf { p -> p.isNotBlank() } }.distinct()
+
+      return@withContext InteractionCheckResult(
+        totalDrugsChecked = cleanDrugs.size,
+        overallSeverity = if (singleWarnings.isNotEmpty()) InteractionSeverity.MINOR_CAUTION else InteractionSeverity.NO_KNOWN_INTERACTION,
+        interactions = singleWarnings,
+        clinicalSummary = if (singleWarnings.isNotEmpty()) {
+          "Resolved active salts for $singleDrug (${singleSalts.joinToString(", ")}). Add a second medicine to evaluate co-administration safety."
+        } else {
+          "Resolved active salts for $singleDrug (${singleSalts.joinToString(", ")}). Add another medicine to screen pairs."
+        },
+        foodWarnings = foodList,
+        resolvedSalts = deduplicatedSalts,
+        saltMappingByBrand = saltMapping
+      )
+    }
+
+    // Step 2: Deterministic Salt-Level Duplicate Overdose + Curated CDSCO Rule Screen
+    val localMatches = mutableListOf<DrugPairInteraction>()
+    for (i in cleanDrugs.indices) {
+      for (j in (i + 1) until cleanDrugs.size) {
+        val molsA = saltMapping[cleanDrugs[i]].orEmpty()
+        val molsB = saltMapping[cleanDrugs[j]].orEmpty()
+
+        val commonActive = molsA.firstOrNull { a ->
+          a.length > 3 && molsB.any { b -> b == a || (b.contains(a) && a.length > 4) || (a.contains(b) && b.length > 4) }
         }
 
         if (commonActive != null) {
-          val saltCapitalized = commonActive.replaceFirstChar { it.uppercase() }
+          val saltCap = commonActive.replaceFirstChar { it.uppercase() }
           localMatches.add(
             DrugPairInteraction(
-              drug1 = medicines[i],
-              drug2 = medicines[j],
+              drug1 = cleanDrugs[i],
+              drug2 = cleanDrugs[j],
               severity = InteractionSeverity.SEVERE_CONTRAINDICATED,
-              riskTitle = "DUPLICATE ACTIVE INGREDIENT ($saltCapitalized) - TOXIC OVERDOSE HAZARD",
-              mechanism = "Both '${medicines[i]}' and '${medicines[j]}' contain the active salt $saltCapitalized. Co-administration results in duplicate dosing and severe toxicity (e.g. acute Paracetamol poisoning leading to hepatic necrosis / liver failure; NSAID GI hemorrhage).",
-              clinicalAdvice = "ABSOLUTELY CONTRAINDICATED TO DISPENSE TOGETHER. Dispense only ONE single preparation and warn the patient against taking multiple brand names of $saltCapitalized.",
-              alternativeSuggestion = "Select either ${medicines[i]} OR ${medicines[j]}. Do not dispense concurrent brand duplicates."
+              riskTitle = "DUPLICATE ACTIVE SALT ($saltCap) — TOXIC OVERDOSE RISK",
+              mechanism = "Both '${cleanDrugs[i]}' and '${cleanDrugs[j]}' contain active salt $saltCap, risking cumulative overdose toxicity.",
+              clinicalAdvice = "CONTRAINDICATED TO DISPENSE TOGETHER. Dispense only one brand containing $saltCap.",
+              alternativeSuggestion = "Retain either ${cleanDrugs[i]} or ${cleanDrugs[j]}."
             )
           )
         }
@@ -354,31 +441,28 @@ class DrugInteractionService {
         val found = offlineInteractions.firstOrNull { rule ->
           val r1Parts = rule.drug1.lowercase().split("/").map { it.trim() }
           val r2Parts = rule.drug2.lowercase().split("/").map { it.trim() }
-
-          val aMatchesR1 = r1Parts.any { p -> molsA.any { it.contains(p) || p.contains(it) } }
-          val bMatchesR2 = r2Parts.any { p -> molsB.any { it.contains(p) || p.contains(it) } }
-          val aMatchesR2 = r2Parts.any { p -> molsA.any { it.contains(p) || p.contains(it) } }
-          val bMatchesR1 = r1Parts.any { p -> molsB.any { it.contains(p) || p.contains(it) } }
-
-          (aMatchesR1 && bMatchesR2) || (aMatchesR2 && bMatchesR1)
+          val aR1 = r1Parts.any { p -> molsA.any { it.contains(p) || p.contains(it) } }
+          val bR2 = r2Parts.any { p -> molsB.any { it.contains(p) || p.contains(it) } }
+          val aR2 = r2Parts.any { p -> molsA.any { it.contains(p) || p.contains(it) } }
+          val bR1 = r1Parts.any { p -> molsB.any { it.contains(p) || p.contains(it) } }
+          (aR1 && bR2) || (aR2 && bR1)
         }
 
         if (found != null) {
-          localMatches.add(found.copy(drug1 = medicines[i], drug2 = medicines[j]))
+          localMatches.add(found.copy(drug1 = cleanDrugs[i], drug2 = cleanDrugs[j]))
         }
       }
     }
 
-    // Call Gemini for comprehensive real-time pharmacology cross-check
-    val geminiResult = callGeminiInteractionApi(medicines)
+    // Step 3: Cloud AI Salt-Level Pharmacology Verification via Firebase AI Logic
+    val (geminiResult, aiErr) = callFirebaseDdiModel(cleanDrugs, saltMapping, deduplicatedSalts)
 
     val finalInteractions = if (geminiResult != null && geminiResult.interactions.isNotEmpty()) {
-      // Merge unique interactions
-      (localMatches + geminiResult.interactions).distinctBy { "${it.drug1}-${it.drug2}" }
-    } else if (localMatches.isNotEmpty()) {
-      localMatches
+      (localMatches + geminiResult.interactions).distinctBy {
+        "${it.drug1.lowercase()}|${it.drug2.lowercase()}|${it.riskTitle.take(20)}"
+      }
     } else {
-      emptyList()
+      localMatches
     }
 
     val maxSeverity = when {
@@ -388,117 +472,72 @@ class DrugInteractionService {
       else -> InteractionSeverity.NO_KNOWN_INTERACTION
     }
 
-    val summary = when (maxSeverity) {
-      InteractionSeverity.SEVERE_CONTRAINDICATED -> "CRITICAL ALERT: Contraindicated drug combination detected. Potential for severe clinical toxicity or cardiovascular collapse. Do not dispense without consulting prescribing physician."
-      InteractionSeverity.MODERATE_MONITOR -> "MODERATE INTERACTION: Interaction requires dose adjustment, time-spacing (2-4 hours), or close clinical/lab monitoring (INR, renal, electrolytes)."
-      InteractionSeverity.MINOR_CAUTION -> "MINOR INTERACTION: Minimal clinical significance. Advise patient regarding food timing and mild symptoms."
-      InteractionSeverity.NO_KNOWN_INTERACTION -> "SAFE: No major drug-drug or pharmacokinetic contraindications detected among the selected medicines. Follow standard dosage schedules."
+    val summary = geminiResult?.clinicalSummary?.takeIf { it.isNotBlank() } ?: when (maxSeverity) {
+      InteractionSeverity.SEVERE_CONTRAINDICATED ->
+        "CONTRAINDICATED COMBINATION DETECTED across active salts (${deduplicatedSalts.joinToString(", ")}). Do not dispense without prescriber consultation."
+      InteractionSeverity.MODERATE_MONITOR ->
+        "MODERATE INTERACTION: Adjust dose spacing (2-4 hrs) or monitor clinical labs."
+      InteractionSeverity.MINOR_CAUTION ->
+        "MINOR CAUTION: Counsel patient regarding food/timing instructions."
+      InteractionSeverity.NO_KNOWN_INTERACTION ->
+        "SAFE COMBINATION: No major pharmacokinetic or pharmacodynamic contraindications detected across salts (${deduplicatedSalts.joinToString(", ")})."
     }
 
-    val foodPrecautions = finalInteractions.mapNotNull { it.foodPrecaution.takeIf { p -> p.isNotBlank() } }.distinct()
+    val foodPrecautions = (finalInteractions.mapNotNull { it.foodPrecaution.takeIf { p -> p.isNotBlank() } } +
+      (geminiResult?.foodWarnings ?: emptyList())).distinct()
 
     InteractionCheckResult(
-      totalDrugsChecked = medicines.size,
+      totalDrugsChecked = cleanDrugs.size,
       overallSeverity = maxSeverity,
       interactions = finalInteractions,
       clinicalSummary = summary,
-      foodWarnings = foodPrecautions
+      foodWarnings = foodPrecautions,
+      resolvedSalts = deduplicatedSalts,
+      saltMappingByBrand = saltMapping,
+      aiError = aiErr
     )
   }
 
-  private fun isApiKeyValid(key: String): Boolean {
-    val k = key.trim()
-    return k.isNotBlank() &&
-      !k.equals("DEFAULT_GEMINI_API_KEY", ignoreCase = true) &&
-      !k.equals("MY_GEMINI_API_KEY", ignoreCase = true) &&
-      !k.equals("YOUR_API_KEY", ignoreCase = true) &&
-      !k.contains("DEFAULT", ignoreCase = true) &&
-      k.length >= 20
-  }
-
-  private suspend fun callGeminiInteractionApi(medicines: List<String>): InteractionCheckResult? = withContext(Dispatchers.IO) {
-    val apiKey = try {
-      BuildConfig.GEMINI_API_KEY
-    } catch (e: Exception) {
-      ""
-    }
-
-    if (!isApiKeyValid(apiKey)) return@withContext null
-
+  private suspend fun callFirebaseDdiModel(
+    brands: List<String>,
+    saltMapping: Map<String, List<String>>,
+    deduplicatedSalts: List<String>
+  ): Pair<InteractionCheckResult?, String?> = withContext(Dispatchers.IO) {
     try {
-      val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=$apiKey"
+      val breakdown = saltMapping.entries.joinToString("\n") { (brand, salts) ->
+        "- $brand => Active Salts: ${salts.joinToString(" + ")}"
+      }
       val prompt = """
-        You are a clinical pharmacologist. Check drug-drug interactions between these medicines: ${medicines.joinToString(", ")}.
-        Return ONLY valid JSON in this exact structure:
-        {
-          "interactions": [
-            {
-              "drug1": "Name",
-              "drug2": "Name",
-              "severity": "SEVERE_CONTRAINDICATED" | "MODERATE_MONITOR" | "MINOR_CAUTION",
-              "riskTitle": "Short Risk Title",
-              "mechanism": "Pharmacological mechanism in 1-2 lines",
-              "clinicalAdvice": "Actionable pharmacist guidance",
-              "foodPrecaution": "Specific food/drink warning if any",
-              "alternativeSuggestion": "Safer alternative drug"
-            }
-          ],
-          "clinicalSummary": "Overall clinical verdict",
-          "foodWarnings": ["Food warning 1", "Food warning 2"]
-        }
-        If no interaction exists, return "interactions": [] and "clinicalSummary": "No known interactions".
+        Evaluate Salt-Level Drug-Drug Interactions for the following Indian pharmacy cart/prescription:
+        $breakdown
+
+        Deduplicated Active Generic Salts List: ${deduplicatedSalts.joinToString(", ")}
+
+        Check pharmacokinetic (CYP450, P-gp, renal/hepatic) and pharmacodynamic (QT prolongation, bleeding, hyperkalemia, duplicate-ingredient overdose) interactions.
+        Return every clinically relevant pair and actionable pharmacist guidance.
       """.trimIndent()
 
-      val bodyJson = JSONObject().apply {
-        put("systemInstruction", JSONObject().apply {
-          put("parts", JSONArray().apply {
-            put(JSONObject().apply { put("text", "You are an expert clinical pharmacologist. Check drug-drug interactions accurately. Return strictly JSON.") })
-          })
-        })
-        put("contents", JSONArray().apply {
-          put(JSONObject().apply {
-            put("role", "user")
-            put("parts", JSONArray().apply {
-              put(JSONObject().apply { put("text", prompt) })
-            })
-          })
-        })
-        put("generationConfig", JSONObject().apply {
-          put("responseMimeType", "application/json")
-          put("temperature", 0.1)
-        })
+      val response = withTimeout(60_000L) {
+        ddiModel.generateContent(prompt)
+      }
+      val textContent = response.text?.trim().orEmpty()
+      if (textContent.isBlank()) {
+        return@withContext null to "Firebase AI returned empty DDI response"
       }
 
-      val request = Request.Builder()
-        .url(url)
-        .post(bodyJson.toString().toRequestBody("application/json".toMediaType()))
-        .build()
-
-      val response = client.newCall(request).execute()
-      val responseString = response.body?.string() ?: return@withContext null
-
-      val root = JSONObject(responseString)
-      val candidates = root.optJSONArray("candidates") ?: return@withContext null
-      val firstCandidate = candidates.optJSONObject(0) ?: return@withContext null
-      val textContent = firstCandidate.optJSONObject("content")
-        ?.optJSONArray("parts")
-        ?.optJSONObject(0)
-        ?.optString("text") ?: return@withContext null
-
-      val cleanJson = textContent.trim().removePrefix("```json").removePrefix("```").removeSuffix("```").trim()
+      val cleanJson = textContent.removePrefix("```json").removePrefix("```").removeSuffix("```").trim()
       val parsed = JSONObject(cleanJson)
       val interactionsArray = parsed.optJSONArray("interactions") ?: JSONArray()
       val interactionsList = mutableListOf<DrugPairInteraction>()
 
       for (k in 0 until interactionsArray.length()) {
-        val obj = interactionsArray.getJSONObject(k)
+        val obj = interactionsArray.optJSONObject(k) ?: continue
         val sevStr = obj.optString("severity", "MODERATE_MONITOR")
         val sevEnum = when (sevStr) {
           "SEVERE_CONTRAINDICATED" -> InteractionSeverity.SEVERE_CONTRAINDICATED
           "MINOR_CAUTION" -> InteractionSeverity.MINOR_CAUTION
           else -> InteractionSeverity.MODERATE_MONITOR
         }
-
         interactionsList.add(
           DrugPairInteraction(
             drug1 = obj.optString("drug1"),
@@ -517,19 +556,29 @@ class DrugInteractionService {
       val foodArr = parsed.optJSONArray("foodWarnings")
       if (foodArr != null) {
         for (f in 0 until foodArr.length()) {
-          foodList.add(foodArr.getString(f))
+          val w = foodArr.optString(f).trim()
+          if (w.isNotBlank()) foodList.add(w)
         }
       }
 
-      InteractionCheckResult(
-        totalDrugsChecked = medicines.size,
-        overallSeverity = if (interactionsList.any { it.severity == InteractionSeverity.SEVERE_CONTRAINDICATED }) InteractionSeverity.SEVERE_CONTRAINDICATED else InteractionSeverity.MODERATE_MONITOR,
+      val result = InteractionCheckResult(
+        totalDrugsChecked = brands.size,
+        overallSeverity = when {
+          interactionsList.any { it.severity == InteractionSeverity.SEVERE_CONTRAINDICATED } -> InteractionSeverity.SEVERE_CONTRAINDICATED
+          interactionsList.any { it.severity == InteractionSeverity.MODERATE_MONITOR } -> InteractionSeverity.MODERATE_MONITOR
+          interactionsList.any { it.severity == InteractionSeverity.MINOR_CAUTION } -> InteractionSeverity.MINOR_CAUTION
+          else -> InteractionSeverity.NO_KNOWN_INTERACTION
+        },
         interactions = interactionsList,
-        clinicalSummary = parsed.optString("clinicalSummary", "Interaction review complete."),
+        clinicalSummary = parsed.optString("clinicalSummary", ""),
         foodWarnings = foodList
       )
+      result to null
+    } catch (e: CancellationException) {
+      throw e
     } catch (e: Exception) {
-      null
+      Log.e(TAG, "Cloud AI DDI assessment failed", e)
+      null to (e.localizedMessage ?: "Cloud AI DDI service unavailable; displaying curated CDSCO salt rules.")
     }
   }
 }

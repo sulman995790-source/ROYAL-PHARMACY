@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Royal Pharmacy ERP v4.0 — Powered by Gemini 4 Argon</title>
+  <title>Royal Pharmacy ERP v4.2 — Powered by Gemini 4 Neon</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -52,7 +52,7 @@
         </div>
         <div>
           <h1 class="font-bold text-base tracking-wide leading-none">ROYAL PHARMACY</h1>
-          <span class="text-[11px] text-emerald-400 font-semibold">GEMINI 4 ARGON ERP</span>
+          <span class="text-[11px] text-emerald-400 font-semibold">GEMINI 4 NEON ERP</span>
         </div>
       </div>
 
@@ -94,7 +94,7 @@
     </div>
 
     <div class="p-3 border-t border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
-      <span id="ai-status-badge"><i class="fa-solid fa-bolt text-amber-400 mr-1"></i> Gemini 4 Ready</span>
+      <span id="ai-status-badge"><i class="fa-solid fa-bolt text-amber-400 mr-1"></i> Gemini 4 Neon Ready</span>
       <button onclick="exportFullBackup()" class="hover:text-white underline">Backup</button>
     </div>
   </aside>
@@ -113,7 +113,7 @@
           <i class="fa-solid fa-search absolute left-2.5 top-2 text-slate-400 text-xs"></i>
         </div>
         <button onclick="switchTab('ocr')" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm">
-          <i class="fa-solid fa-camera"></i> Scan Rx (Gemini 4)
+          <i class="fa-solid fa-camera"></i> Scan Rx (Neon)
         </button>
         <button onclick="switchTab('pos')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm">
           <i class="fa-solid fa-plus"></i> POS Bill
@@ -180,19 +180,51 @@
             <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
               <div class="flex justify-between items-center">
                 <label class="text-xs font-bold uppercase text-slate-500">Select Batch (FEFO Auto-Sorted by Earliest Expiry)</label>
-                <span class="text-[11px] text-emerald-600 font-semibold">Barcodes & QR Supported</span>
+                <span class="text-[11px] text-emerald-600 font-semibold">Barcodes, QR & AI Catalog Ready</span>
               </div>
               <div class="flex gap-2">
                 <select id="pos-med-select" class="flex-1 border rounded-lg px-3 py-2 text-xs"></select>
                 <input type="number" id="pos-qty" value="1" min="1" class="w-20 border rounded-lg px-2 py-2 text-xs text-center" />
                 <button onclick="addPosItem()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-xs font-bold">+ Add</button>
               </div>
+
+              <!-- Cache-Through AI Brand Lookup & Ultra-Low-Latency Hydrogen Autocomplete -->
+              <div class="pt-2 border-t border-slate-100 space-y-2">
+                <div class="flex justify-between items-center">
+                  <label class="text-[11px] font-bold text-purple-700 flex items-center gap-1.5">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    Missing Brand? Instant AI Lookup (Hydrogen Autocomplete + Neon Enrichment)
+                  </label>
+                  <span id="pos-ai-lookup-status" class="text-[10px] text-slate-500"></span>
+                </div>
+                <div class="flex gap-2 relative">
+                  <input
+                    id="pos-brand-ai-input"
+                    oninput="handlePosBrandAutocomplete(this.value)"
+                    placeholder="Type any Indian brand (e.g. Telma-H, Augmentin 625 Duo, Pan-D)..."
+                    class="flex-1 border border-purple-200 rounded-lg px-3 py-1.5 text-xs focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                  />
+                  <button
+                    onclick="aiLookupAndAddPos()"
+                    id="btn-pos-ai-add"
+                    class="bg-purple-600 hover:bg-purple-700 text-white px-3.5 py-1.5 rounded-lg text-xs font-bold shrink-0 flex items-center gap-1.5"
+                  >
+                    <i class="fa-solid fa-sparkles"></i> AI Resolve & Add
+                  </button>
+                </div>
+                <div id="pos-hydrogen-suggestions" class="hidden flex flex-wrap gap-1.5 pt-1"></div>
+              </div>
             </div>
 
             <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
               <div class="p-3 border-b flex justify-between items-center">
                 <h3 class="font-bold text-xs uppercase text-slate-600">Current POS Cart</h3>
-                <button onclick="posCart=[];renderPosCart();" class="text-xs text-rose-600 hover:underline">Clear All</button>
+                <div class="flex items-center gap-3">
+                  <button onclick="runSaltDdiCheck()" id="btn-pos-ddi-check" class="text-xs bg-indigo-50 text-indigo-700 border border-indigo-200 px-2.5 py-1 rounded-md font-semibold hover:bg-indigo-100">
+                    <i class="fa-solid fa-shield-virus mr-1"></i> Salt-Level DDI Check
+                  </button>
+                  <button onclick="clearPosCart()" class="text-xs text-rose-600 hover:underline">Clear All</button>
+                </div>
               </div>
               <table class="w-full text-left border-collapse text-xs">
                 <thead class="bg-slate-50 text-slate-500 uppercase">
@@ -211,15 +243,18 @@
               </table>
             </div>
 
-            <!-- Live Clinical Warning -->
-            <div id="pos-ddi-alert" class="hidden bg-rose-50 border border-rose-300 text-rose-900 p-3.5 rounded-xl text-xs flex items-start justify-between gap-3">
-              <div>
-                <h4 class="font-bold text-rose-700"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Clinical Drug-Drug Interaction Alert</h4>
-                <p id="pos-ddi-text" class="mt-1"></p>
+            <!-- Live Salt-Level Clinical Warning & DDI Structured Report -->
+            <div id="pos-ddi-alert" class="hidden bg-rose-50 border border-rose-300 text-rose-900 p-4 rounded-xl text-xs space-y-2">
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <h4 class="font-bold text-rose-700"><i class="fa-solid fa-triangle-exclamation mr-1"></i> Salt-Level Drug-Drug Interaction (DDI) Screening</h4>
+                  <p id="pos-ddi-text" class="mt-1"></p>
+                </div>
+                <button onclick="runSaltDdiCheck()" class="bg-rose-700 hover:bg-rose-800 text-white px-3 py-1.5 rounded-lg font-semibold shrink-0">
+                  Deep Audit (Gemini 4 Neon)
+                </button>
               </div>
-              <button onclick="auditCartWithGemini4()" class="bg-rose-700 text-white px-3 py-1.5 rounded-lg font-semibold shrink-0">
-                Deep Audit (Gemini 4)
-              </button>
+              <div id="pos-ddi-structured" class="space-y-2"></div>
             </div>
           </div>
 
@@ -266,7 +301,7 @@
 
               <div class="border-t pt-3 space-y-1">
                 <div class="flex justify-between text-slate-500"><span>Gross MRP Total:</span><span id="pos-gross">₹0.00</span></div>
-                <div class="flex justify-between text-slate-500"><span>Included GST:</span><span id="pos-gst">₹0.00</span></div>
+                <div class="flex justify-between text-slate-500"><span>Included GST (Weighted):</span><span id="pos-gst">₹0.00</span></div>
                 <div class="flex justify-between text-emerald-600"><span>Discount:</span><span id="pos-disc-val">-₹0.00</span></div>
                 <div class="flex justify-between text-base font-bold text-slate-900 pt-2 border-t"><span>Net Payable:</span><span id="pos-net">₹0.00</span></div>
               </div>
@@ -287,18 +322,18 @@
         </div>
       </section>
 
-      <!-- TAB 3: GEMINI 4 ARGON MULTIMODAL PRESCRIPTION SCANNER -->
+      <!-- TAB 3: GEMINI 4 NEON MULTIMODAL PRESCRIPTION SCANNER -->
       <section id="tab-ocr" class="tab-content hidden space-y-6">
         <div class="bg-white p-6 rounded-xl border border-purple-200 shadow-sm space-y-4">
           <div class="flex justify-between items-center">
             <div>
               <h3 class="font-bold text-base text-slate-800 flex items-center gap-2">
                 <i class="fa-solid fa-wand-magic-sparkles text-purple-600"></i>
-                Gemini 4 Argon (`gemini-4-argon`) Prescription Vision & Auto-Cart
+                Gemini 4 Neon (<code class="text-xs bg-purple-50 px-1.5 py-0.5 rounded">gemini-4-neon</code>) Prescription Vision & Auto-Cart
               </h3>
-              <p class="text-xs text-slate-500 mt-0.5">Upload a handwritten/printed prescription image or paste raw clinical notes to auto-match FEFO inventory batches.</p>
+              <p class="text-xs text-slate-500 mt-0.5">Upload a handwritten/printed prescription image or paste raw clinical notes to resolve uncached brands & auto-match FEFO batches.</p>
             </div>
-            <span class="px-3 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800">Model: gemini-4-argon</span>
+            <span class="px-3 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800">Model: gemini-4-neon</span>
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -307,13 +342,13 @@
               <img id="rx-preview" class="max-h-48 mx-auto rounded-lg hidden border" />
               <textarea id="rx-text-input" rows="4" placeholder="Or type/paste raw prescription text here (e.g. 'Tab Augmentin 625 BD x 5 days, Tab Dolo 650 SOS, Cap Pan-D OD')..." class="w-full border rounded-lg p-2.5 text-xs"></textarea>
               <button onclick="analyzePrescriptionWithGemini4()" id="btn-run-ocr" class="w-full bg-purple-600 hover:bg-purple-700 text-white py-2.5 rounded-lg text-xs font-bold shadow">
-                <i class="fa-solid fa-bolt mr-1"></i> Extract & Match Stock with Gemini 4 Argon
+                <i class="fa-solid fa-bolt mr-1"></i> Extract & Match Stock with Gemini 4 Neon
               </button>
             </div>
 
             <div class="bg-slate-50 p-4 rounded-xl border flex flex-col justify-between">
               <div>
-                <h4 class="font-bold text-xs uppercase text-slate-500 mb-2">Gemini 4 Argon Extraction Result</h4>
+                <h4 class="font-bold text-xs uppercase text-slate-500 mb-2">Gemini 4 Neon Extraction Result</h4>
                 <div id="rx-ai-output" class="text-xs space-y-2 text-slate-700 max-h-64 overflow-y-auto">
                   Upload a prescription or enter clinical text to extract medicines, dosage instructions, and automatic FEFO stock matches.
                 </div>
@@ -329,9 +364,12 @@
       <!-- TAB 4: INVENTORY & BATCHES (ADD, EDIT, DELETE, CSV IMPORT) -->
       <section id="tab-inventory" class="tab-content hidden space-y-6">
         <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
-          <div class="flex justify-between items-center">
-            <h3 id="inv-form-title" class="font-bold text-sm text-slate-800">Add / Update Medicine Batch</h3>
+          <div class="flex flex-wrap justify-between items-center gap-2">
+            <h3 id="inv-form-title" class="font-bold text-sm text-slate-800">Add / Update Medicine Batch (Cache-Through AI Ready)</h3>
             <div class="flex gap-2">
+              <button onclick="autoFillInventoryFormWithAI()" id="btn-inv-ai-autofill" class="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> AI Auto-Fill Salts, GST & Schedule
+              </button>
               <label class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer">
                 <i class="fa-solid fa-file-csv mr-1"></i> Import CSV
                 <input type="file" accept=".csv" onchange="importInventoryCsv(event)" class="hidden" />
@@ -369,6 +407,7 @@
               Save Batch
             </button>
           </div>
+          <div id="inv-ai-feedback" class="hidden text-xs p-2.5 rounded-lg"></div>
         </div>
 
         <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
@@ -421,27 +460,26 @@
       <!-- TAB 6: GEMINI 4 CLINICAL PHARMACIST AI & TOOLS -->
       <section id="tab-clinical" class="tab-content hidden space-y-6">
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <!-- Gemini 4 Argon Pharmacist Chat -->
+          <!-- Gemini 4 Neon Pharmacist Chat -->
           <div class="lg:col-span-2 bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col h-[480px]">
             <div class="flex justify-between items-center border-b pb-3 mb-3">
               <div>
-                <h3 class="font-bold text-sm text-slate-800"><i class="fa-solid fa-robot text-emerald-600 mr-1.5"></i>Gemini 4 Argon Clinical Pharmacist Agent</h3>
-                <p class="text-[11px] text-slate-500">Ask about drug interactions, renal dose adjustments, pregnancy safety, or inventory salt alternatives.</p>
+                <h3 class="font-bold text-sm text-slate-800"><i class="fa-solid fa-robot text-emerald-600 mr-1.5"></i>Gemini 4 Neon Clinical Pharmacist Agent</h3>
+                <p class="text-[11px] text-slate-500">Ask about salt-level interactions, renal dose adjustments, pregnancy safety, or inventory substitutes.</p>
               </div>
               <select id="gemini-model-select" class="border rounded-lg px-2 py-1 text-xs font-semibold bg-slate-50">
-                <option value="gemini-4-argon">gemini-4-argon (Frontier Reasoning)</option>
-                <option value="gemini-3.8-flash">gemini-3.8-flash (High-Speed Workhorse)</option>
-                <option value="gemini-3.5-flash">gemini-3.5-flash (Standard Model)</option>
+                <option value="gemini-4-neon">gemini-4-neon (Clinical & Enrichment)</option>
+                <option value="gemini-4-hydrogen">gemini-4-hydrogen (Ultra-Low Latency)</option>
               </select>
             </div>
             <div id="clinical-chat-box" class="flex-1 overflow-y-auto space-y-3 p-3 bg-slate-50 rounded-lg text-xs custom-scroll">
               <div class="bg-white p-3 rounded-lg border shadow-sm">
-                <strong>Gemini 4 Argon Pharmacist:</strong> Namaste! I have live access to your Royal Pharmacy inventory and clinical pharmacology knowledge. How can I assist you today?
+                <strong>Gemini 4 Neon Pharmacist:</strong> Namaste! I use the official <code>@google/genai</code> SDK with live access to your Royal Pharmacy inventory and CDSCO/pharmacology knowledge. How can I assist you today?
               </div>
             </div>
             <div class="mt-3 flex gap-2">
-              <input id="clinical-chat-input" onkeydown="if(event.key==='Enter')sendClinicalChat()" placeholder="Ask Gemini 4 Argon (e.g. 'Is Azithromycin safe with Warfarin? Which substitutes do we have in stock?')..." class="flex-1 border rounded-lg px-3 py-2 text-xs" />
-              <button onclick="sendClinicalChat()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-xs font-bold">Ask Gemini 4</button>
+              <input id="clinical-chat-input" onkeydown="if(event.key==='Enter')sendClinicalChat()" placeholder="Ask Gemini 4 Neon (e.g. 'Is Azithromycin safe with Warfarin? Which substitutes do we have in stock?')..." class="flex-1 border rounded-lg px-3 py-2 text-xs" />
+              <button onclick="sendClinicalChat()" id="btn-clinical-send" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-xs font-bold">Ask Gemini 4</button>
             </div>
           </div>
 
@@ -449,7 +487,7 @@
           <div class="space-y-4">
             <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
               <h4 class="font-bold text-xs uppercase text-slate-600">Instant Salt Substitute Finder</h4>
-              <input type="text" oninput="searchSaltSubstitutes(this.value)" placeholder="Type brand or salt (e.g. Augmentin, Paracetamol)..." class="w-full border rounded-lg p-2 text-xs" />
+              <input type="text" id="salt-sub-input" oninput="searchSaltSubstitutes(this.value)" placeholder="Type brand or salt (e.g. Augmentin, Paracetamol)..." class="w-full border rounded-lg p-2 text-xs" />
               <div id="salt-sub-results" class="space-y-2 text-xs max-h-40 overflow-y-auto"></div>
             </div>
 
@@ -572,7 +610,7 @@
       <!-- TAB 11: SETTINGS & GEMINI 4 API KEY -->
       <section id="tab-settings" class="tab-content hidden space-y-6">
         <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm max-w-2xl space-y-4 text-xs">
-          <h3 class="font-bold text-base text-slate-800">Pharmacy Profile & Gemini 4 Argon Configuration</h3>
+          <h3 class="font-bold text-base text-slate-800">Pharmacy Profile & Gemini 4 Neon Configuration</h3>
           <div class="space-y-3">
             <div>
               <label class="font-bold text-slate-600">Pharmacy Name</label>
@@ -593,9 +631,9 @@
               <input id="cfg-upi" class="w-full mt-1 border p-2 rounded-lg" />
             </div>
             <div>
-              <label class="font-bold text-purple-700">Google AI Studio API Key (For Live Gemini 4 Argon `gemini-4-argon`)</label>
+              <label class="font-bold text-purple-700">Google AI Studio API Key (Official @google/genai SDK — Gemini 4 Neon & Hydrogen)</label>
               <input type="password" id="cfg-gemini-key" placeholder="AIzaSy..." class="w-full mt-1 border border-purple-300 p-2 rounded-lg" />
-              <p class="text-[11px] text-slate-400 mt-1">Stored locally in your browser's encrypted storage. Uses `gemini-4-argon` with automatic fallback to `gemini-3.8-flash` and `gemini-3.5-flash`.</p>
+              <p class="text-[11px] text-slate-400 mt-1">Stored locally in your browser's storage. Powers <code>gemini-4-neon</code> (Cache-Through Catalog Enrichment, Salt-Level DDI with High Thinking, Rx Vision, Clinical Chat) and <code>gemini-4-hydrogen</code> (ultra-low-latency autocomplete).</p>
             </div>
             <button onclick="saveSettings()" class="bg-emerald-600 text-white px-5 py-2.5 rounded-lg font-bold">Save Configuration</button>
           </div>
@@ -625,11 +663,16 @@
     <div style="text-align:center; margin-top:10px; font-size:10px;">Thank You! Wishing You Speedy Recovery.</div>
   </div>
 
-  <script>
+  <script type="module">
+    import { GoogleGenAI, Type } from "https://esm.sh/@google/genai";
+
     // Register Offline PWA Service Worker
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js').catch(() => {});
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("./sw.js").catch(() => {});
     }
+
+    const MODEL_NEON = "gemini-4-neon";
+    const MODEL_HYDROGEN = "gemini-4-hydrogen";
 
     // --- SEED DATA ---
     const seedInventory = [
@@ -675,6 +718,23 @@
     let posCart = [];
     let lastExtractedRxItems = [];
     let rxBase64Image = null;
+    let autocompleteTimer = null;
+    let lastDdiReport = null;
+
+    function escapeHtml(str) {
+      return String(str ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function getGenAIClient() {
+      const key = (state.config.geminiKey || "").trim();
+      if (!key) return null;
+      return new GoogleGenAI({ apiKey: key });
+    }
 
     function persist() {
       localStorage.setItem("rp4_config", JSON.stringify(state.config));
@@ -691,7 +751,8 @@
 
     function switchTab(tab) {
       document.querySelectorAll(".tab-content").forEach(el => el.classList.add("hidden"));
-      document.getElementById("tab-" + tab).classList.remove("hidden");
+      const targetTab = document.getElementById("tab-" + tab);
+      if (targetTab) targetTab.classList.remove("hidden");
       document.querySelectorAll(".nav-btn").forEach(b => {
         b.classList.remove("bg-emerald-600", "text-white");
         b.classList.add("text-slate-300");
@@ -704,46 +765,356 @@
       renderAll();
     }
 
-    // --- GEMINI 4 ARGON API ENGINE ---
-    async function callGemini4Argon(promptText, base64Image = null) {
-      const apiKey = state.config.geminiKey;
-      const selectedModel = document.getElementById("gemini-model-select")?.value || "gemini-4-argon";
-      const modelsToTry = [...new Set([selectedModel, "gemini-4-argon", "gemini-3.8-flash", "gemini-3.5-flash", "gemini-2.5-flash"])];
+    // --- STRICT SCHEMAS FOR GEMINI 4 NEON (@google/genai) ---
+    const MEDICINE_ENRICHMENT_SCHEMA = {
+      type: Type.OBJECT,
+      properties: {
+        canonicalName: { type: Type.STRING, description: "Official Indian medicine brand name with strength, e.g. Telma-H 40/12.5" },
+        activeSalts: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              name: { type: Type.STRING },
+              strength: { type: Type.STRING }
+            },
+            required: ["name", "strength"]
+          }
+        },
+        saltComposition: { type: Type.STRING, description: "Combined active generic salts with strengths, e.g. Telmisartan 40mg + Hydrochlorothiazide 12.5mg" },
+        dosageForm: { type: Type.STRING, description: "Tablet, Capsule, Syrup, Injection, Cream, Drops, Inhaler, or Gel" },
+        therapeuticClass: { type: Type.STRING },
+        manufacturer: { type: Type.STRING },
+        hsnCode: { type: Type.STRING },
+        gstPercent: { type: Type.NUMBER, description: "Indian GST slab: 0, 5, 12, or 18" },
+        cdscoSchedule: { type: Type.STRING, description: "One of OTC, H, H1, X" },
+        estimatedMrp: { type: Type.NUMBER },
+        estimatedPtr: { type: Type.NUMBER }
+      },
+      required: ["canonicalName", "activeSalts", "saltComposition", "dosageForm", "manufacturer", "gstPercent", "cdscoSchedule", "estimatedMrp", "estimatedPtr"]
+    };
 
-      if (!apiKey) {
-        return null; // Caller will use local deterministic clinical engine if no API key configured
+    const DDI_RESPONSE_SCHEMA = {
+      type: Type.OBJECT,
+      properties: {
+        overallSeverity: {
+          type: Type.STRING,
+          description: "Highest severity: Contraindicated, Major, Moderate, Minor, or None"
+        },
+        clinicalSummary: { type: Type.STRING },
+        interactions: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              saltPair: { type: Type.STRING },
+              severity: { type: Type.STRING, description: "Contraindicated, Major, Moderate, Minor, or None" },
+              mechanism: { type: Type.STRING },
+              pharmacistGuidance: { type: Type.STRING }
+            },
+            required: ["saltPair", "severity", "mechanism", "pharmacistGuidance"]
+          }
+        }
+      },
+      required: ["overallSeverity", "clinicalSummary", "interactions"]
+    };
+
+    const RX_EXTRACTION_SCHEMA = {
+      type: Type.OBJECT,
+      properties: {
+        clinicalSummary: { type: Type.STRING },
+        prescribedItems: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              brandOrDrugName: { type: Type.STRING },
+              genericSalts: { type: Type.STRING },
+              dosageSchedule: { type: Type.STRING },
+              qtyPacks: { type: Type.NUMBER }
+            },
+            required: ["brandOrDrugName", "genericSalts", "dosageSchedule", "qtyPacks"]
+          }
+        }
+      },
+      required: ["clinicalSummary", "prescribedItems"]
+    };
+
+    const AUTOCOMPLETE_SCHEMA = {
+      type: Type.OBJECT,
+      properties: {
+        suggestions: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING }
+        }
+      },
+      required: ["suggestions"]
+    };
+
+    function findLocalMedicineMatch(query) {
+      const q = (query || "").trim().toLowerCase();
+      if (!q) return null;
+      return state.inventory.find(i =>
+        i.name.toLowerCase() === q ||
+        i.name.toLowerCase().includes(q) ||
+        q.includes(i.name.toLowerCase()) ||
+        (i.salt && i.salt.toLowerCase() === q)
+      ) || null;
+    }
+
+    function normalizeSchedule(raw) {
+      const up = (raw || "").toUpperCase().trim();
+      if (up.includes("H1")) return "H1";
+      if (up === "X" || up.includes("SCHEDULE X")) return "X";
+      if (up === "H" || up.includes("SCHEDULE H")) return "H";
+      return "OTC";
+    }
+
+    // --- 2. SELF-POPULATING CACHE-THROUGH AI ENRICHMENT ENGINE ---
+    async function resolveMedicineWithGemini4(brandQuery, autoSaveToInventory = true) {
+      const clean = (brandQuery || "").trim();
+      if (!clean) throw new Error("Enter a medicine brand or salt name.");
+
+      const existing = findLocalMedicineMatch(clean);
+      if (existing) return { item: existing, source: "local_cache" };
+
+      const ai = getGenAIClient();
+      if (!ai) {
+        throw new Error("Configure your Google AI Studio API Key in Settings to resolve uncached Indian brands with Gemini 4 Neon.");
       }
 
+      const prompt = `You are a Principal Indian Clinical Pharmacologist. Resolve exact Indian retail pharmacy metadata for "${clean}". Provide canonical brand name, exact active generic salts and strengths, manufacturer, dosage form, therapeutic class, HSN code, Indian GST slab (0, 5, 12, or 18), CDSCO schedule (OTC, H, H1, or X), and realistic Indian INR MRP & PTR per strip/unit.`;
+
+      let response;
+      try {
+        response = await ai.models.generateContent({
+          model: MODEL_NEON,
+          contents: prompt,
+          config: {
+            tools: [{ googleSearch: {} }],
+            responseMimeType: "application/json",
+            responseSchema: MEDICINE_ENRICHMENT_SCHEMA,
+            temperature: 0.1
+          }
+        });
+      } catch (_toolErr) {
+        response = await ai.models.generateContent({
+          model: MODEL_NEON,
+          contents: prompt,
+          config: {
+            responseMimeType: "application/json",
+            responseSchema: MEDICINE_ENRICHMENT_SCHEMA,
+            temperature: 0.1
+          }
+        });
+      }
+
+      const parsed = JSON.parse(response.text);
+      const mrp = Number(parsed.estimatedMrp) > 0 ? Number(parsed.estimatedMrp) : 95.0;
+      const ptr = Number(parsed.estimatedPtr) > 0 ? Number(parsed.estimatedPtr) : Number((mrp * 0.76).toFixed(2));
+      const validGst = [0, 5, 12, 18].includes(Number(parsed.gstPercent)) ? Number(parsed.gstPercent) : 12;
+
+      const enrichedItem = {
+        id: Date.now() + Math.floor(Math.random() * 1000),
+        name: (parsed.canonicalName || clean).trim(),
+        salt: (parsed.saltComposition || "").trim(),
+        dosageForm: parsed.dosageForm || "Tablet",
+        manufacturer: parsed.manufacturer || "Indian Pharma",
+        therapeuticClass: parsed.therapeuticClass || "",
+        hsnCode: parsed.hsnCode || "3004",
+        batch: "AI-" + Math.floor(1000 + Math.random() * 9000),
+        expiry: "2027-12",
+        rack: "R-AI",
+        schedule: normalizeSchedule(parsed.cdscoSchedule),
+        qty: 10,
+        reorder: 10,
+        ptr,
+        mrp,
+        gst: validGst
+      };
+
+      if (autoSaveToInventory) {
+        const dupe = findLocalMedicineMatch(enrichedItem.name);
+        if (dupe) return { item: dupe, source: "local_cache" };
+        state.inventory.push(enrichedItem);
+        persist();
+      }
+      return { item: enrichedItem, source: "gemini_4_neon" };
+    }
+
+    async function handlePosBrandAutocomplete(val) {
+      const box = document.getElementById("pos-hydrogen-suggestions");
+      if (!val || val.trim().length < 2) {
+        box.classList.add("hidden");
+        box.innerHTML = "";
+        return;
+      }
+      const q = val.trim().toLowerCase();
+      const localMatches = state.inventory
+        .filter(i => i.name.toLowerCase().includes(q) || (i.salt || "").toLowerCase().includes(q))
+        .slice(0, 4)
+        .map(i => ({ label: `${i.name} (${i.salt})`, brand: i.name, local: true }));
+
+      renderAutocompleteChips(localMatches);
+
+      clearTimeout(autocompleteTimer);
+      const ai = getGenAIClient();
+      if (!ai || val.trim().length < 3) return;
+
+      autocompleteTimer = setTimeout(async () => {
+        try {
+          const res = await ai.models.generateContent({
+            model: MODEL_HYDROGEN,
+            contents: `Suggest up to 4 exact popular Indian pharmacy brand names matching prefix "${val.trim()}". Include strength if standard (e.g. Dolo 650, Telma-H, Augmentin 625 Duo, Pan-D).`,
+            config: {
+              responseMimeType: "application/json",
+              responseSchema: AUTOCOMPLETE_SCHEMA,
+              temperature: 0.1
+            }
+          });
+          const data = JSON.parse(res.text);
+          const aiChips = (data.suggestions || []).slice(0, 4).map(s => ({
+            label: s,
+            brand: s,
+            local: false
+          }));
+          const combined = [...localMatches];
+          aiChips.forEach(c => {
+            if (!combined.some(x => x.brand.toLowerCase() === c.brand.toLowerCase())) {
+              combined.push(c);
+            }
+          });
+          renderAutocompleteChips(combined.slice(0, 5));
+        } catch (err) {
+          console.warn("Hydrogen autocomplete skipped:", err);
+        }
+      }, 320);
+    }
+
+    function renderAutocompleteChips(chips) {
+      const box = document.getElementById("pos-hydrogen-suggestions");
+      if (!chips || chips.length === 0) {
+        box.classList.add("hidden");
+        box.innerHTML = "";
+        return;
+      }
+      box.classList.remove("hidden");
+      box.innerHTML = chips.map(c => `
+        <button onclick="useAutocompleteSuggestion('${escapeHtml(c.brand)}')" class="px-2.5 py-1 rounded-full text-[11px] font-semibold border ${c.local ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-purple-50 border-purple-200 text-purple-800'} hover:opacity-80">
+          ${c.local ? '<i class="fa-solid fa-database mr-1"></i>' : '<i class="fa-solid fa-bolt mr-1"></i>'}${escapeHtml(c.label)}
+        </button>
+      `).join("");
+    }
+
+    async function useAutocompleteSuggestion(brandName) {
+      document.getElementById("pos-brand-ai-input").value = brandName;
+      document.getElementById("pos-hydrogen-suggestions").classList.add("hidden");
+      await aiLookupAndAddPos();
+    }
+
+    async function aiLookupAndAddPos() {
+      const input = document.getElementById("pos-brand-ai-input");
+      const status = document.getElementById("pos-ai-lookup-status");
+      const btn = document.getElementById("btn-pos-ai-add");
+      const query = input.value.trim();
+      if (!query) return alert("Enter a medicine brand name first.");
+
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Resolving...`;
+      status.innerHTML = `<span class="text-purple-700 font-semibold">Checking local DB → Gemini 4 Neon...</span>`;
+
+      try {
+        const { item, source } = await resolveMedicineWithGemini4(query, true);
+        if (item.qty <= 0) item.qty = 10;
+        const existing = posCart.find(c => c.id === item.id);
+        if (existing) existing.qty += 1;
+        else posCart.push({ ...item, qty: 1 });
+        input.value = "";
+        document.getElementById("pos-hydrogen-suggestions").classList.add("hidden");
+        status.innerHTML = source === "local_cache"
+          ? `<span class="text-emerald-700 font-semibold">✓ Cached match: ${escapeHtml(item.name)}</span>`
+          : `<span class="text-purple-700 font-semibold">✓ Saved & added via Neon: ${escapeHtml(item.name)} (${escapeHtml(item.salt)})</span>`;
+        persist();
+        renderPosCart();
+      } catch (err) {
+        status.innerHTML = `<span class="text-rose-600 font-semibold">${escapeHtml(err.message || "AI lookup failed")}</span>`;
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-sparkles"></i> AI Resolve & Add`;
+      }
+    }
+
+    async function autoFillInventoryFormWithAI() {
+      const nameInput = document.getElementById("inv-name");
+      const btn = document.getElementById("btn-inv-ai-autofill");
+      const feedback = document.getElementById("inv-ai-feedback");
+      const query = nameInput.value.trim();
+      if (!query) return alert("Enter a Brand Name first (e.g. Telma-H, Augmentin 625 Duo)!");
+
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Resolving with Neon...`;
+      feedback.className = "text-xs p-2.5 rounded-lg bg-purple-50 text-purple-800 border border-purple-200";
+      feedback.classList.remove("hidden");
+      feedback.innerText = `Checking local catalog & resolving "${query}" via Gemini 4 Neon...`;
+
+      try {
+        const { item, source } = await resolveMedicineWithGemini4(query, false);
+        document.getElementById("inv-name").value = item.name;
+        document.getElementById("inv-salt").value = item.salt;
+        document.getElementById("inv-schedule").value = item.schedule;
+        document.getElementById("inv-gst").value = String(item.gst);
+        document.getElementById("inv-ptr").value = item.ptr;
+        document.getElementById("inv-mrp").value = item.mrp;
+        if (!document.getElementById("inv-batch").value) document.getElementById("inv-batch").value = item.batch;
+        if (!document.getElementById("inv-rack").value) document.getElementById("inv-rack").value = "R-A1";
+        if (!document.getElementById("inv-qty").value) document.getElementById("inv-qty").value = "10";
+        feedback.className = "text-xs p-2.5 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200";
+        feedback.innerHTML = `<strong>${source === "local_cache" ? "Matched Cache" : "Gemini 4 Neon Resolved"}:</strong> ${escapeHtml(item.name)} → Salts: <em>${escapeHtml(item.salt)}</em> • Sch ${escapeHtml(item.schedule)} • GST ${item.gst}%`;
+      } catch (err) {
+        feedback.className = "text-xs p-2.5 rounded-lg bg-rose-50 text-rose-700 border border-rose-200";
+        feedback.innerText = err.message || "Failed to resolve brand metadata.";
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> AI Auto-Fill Salts, GST & Schedule`;
+      }
+    }
+
+    async function callGemini4NeonText(promptText, base64Image = null, useThinking = false) {
+      const ai = getGenAIClient();
+      if (!ai) return null;
+
+      const selectedModel = document.getElementById("gemini-model-select")?.value || MODEL_NEON;
       const parts = [{ text: promptText }];
       if (base64Image) {
+        const mimeMatch = base64Image.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,/);
+        const mimeType = mimeMatch ? mimeMatch[1] : "image/jpeg";
         parts.push({
-          inline_data: {
-            mime_type: "image/jpeg",
+          inlineData: {
+            mimeType,
             data: base64Image.split(",")[1] || base64Image
           }
         });
       }
 
-      for (const model of modelsToTry) {
-        try {
-          const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ contents: [{ parts }] })
-          });
-          if (res.ok) {
-            const data = await res.json();
-            const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (reply) return { model, text: reply };
-          }
-        } catch (err) {
-          console.warn(`Fallback from ${model}:`, err);
+      const config = useThinking ? { thinkingConfig: { thinkingLevel: "HIGH" } } : undefined;
+      try {
+        const res = await ai.models.generateContent({
+          model: selectedModel,
+          contents: parts,
+          config
+        });
+        if (res.text) return { model: selectedModel, text: res.text };
+      } catch (err) {
+        if (selectedModel !== MODEL_NEON) {
+          const fallback = await ai.models.generateContent({ model: MODEL_NEON, contents: parts });
+          if (fallback.text) return { model: MODEL_NEON, text: fallback.text };
         }
+        throw err;
       }
       return null;
     }
 
-    // --- TAB 3: PRESCRIPTION OCR & AUTO-MATCH ---
+    // --- TAB 3: PRESCRIPTION OCR & AUTO-MATCH (NO FAKE FALLBACK ITEM) ---
     function previewRxImage(e) {
       const file = e.target.files[0];
       if (!file) return;
@@ -760,64 +1131,264 @@
     async function analyzePrescriptionWithGemini4() {
       const rawText = document.getElementById("rx-text-input").value.trim();
       const outBox = document.getElementById("rx-ai-output");
-      outBox.innerHTML = `<div class="text-purple-700 font-semibold"><i class="fa-solid fa-spinner fa-spin mr-1"></i> Gemini 4 Argon analyzing prescription & FEFO batches...</div>`;
+      if (!rawText && !rxBase64Image) {
+        return alert("Upload a prescription image or enter prescription text first!");
+      }
 
-      const catalogSummary = state.inventory.map(i =>
-        `ID:${i.id} | Brand:${i.name} | Salt:${i.salt} | Batch:${i.batch} | Stock:${i.qty} | MRP:₹${i.mrp}`
-      ).join("\n");
+      outBox.innerHTML = `<div class="text-purple-700 font-semibold"><i class="fa-solid fa-spinner fa-spin mr-1"></i> Gemini 4 Neon extracting medicines & resolving active generic salts...</div>`;
 
-      const prompt = `You are Gemini 4 Argon Clinical Pharmacist Assistant.
-Prescription Input: "${rawText || 'Analyze attached prescription image'}"
-Live Inventory:
-${catalogSummary}
-
-Identify prescribed medicines, dosage schedule, and match to our Live Inventory IDs (or suggest an identical salt substitute from our inventory). Return a concise clinical summary.`;
-
-      const aiRes = await callGemini4Argon(prompt, rxBase64Image);
-
-      // Local deterministic matching so items can be pushed to POS immediately
       lastExtractedRxItems = [];
-      const searchCorpus = (rawText + " " + (aiRes?.text || "")).toLowerCase();
-      state.inventory.forEach(item => {
-        const firstWord = item.name.toLowerCase().split(" ")[0];
-        if (searchCorpus.includes(firstWord) && item.qty > 0) {
-          lastExtractedRxItems.push({ ...item, qty: 1 });
+      const unmatchedEntries = [];
+      let clinicalSummary = "";
+      let engineLabel = MODEL_NEON;
+
+      const ai = getGenAIClient();
+      if (ai) {
+        try {
+          const parts = [{
+            text: `Extract every prescribed medicine from this Indian prescription (${rawText || "attached prescription image"}). Normalize brand names, identify active generic salts, dosage instructions, and pack quantity.`
+          }];
+          if (rxBase64Image) {
+            const mimeMatch = rxBase64Image.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,/);
+            parts.push({
+              inlineData: {
+                mimeType: mimeMatch ? mimeMatch[1] : "image/jpeg",
+                data: rxBase64Image.split(",")[1] || rxBase64Image
+              }
+            });
+          }
+
+          const aiRes = await ai.models.generateContent({
+            model: MODEL_NEON,
+            contents: parts,
+            config: {
+              responseMimeType: "application/json",
+              responseSchema: RX_EXTRACTION_SCHEMA,
+              temperature: 0.1
+            }
+          });
+
+          const parsed = JSON.parse(aiRes.text);
+          clinicalSummary = parsed.clinicalSummary || "Extracted prescription lines with Gemini 4 Neon.";
+          const rxLines = parsed.prescribedItems || [];
+
+          for (const line of rxLines) {
+            const nameQ = (line.brandOrDrugName || "").trim();
+            if (!nameQ) continue;
+            let matched = findLocalMedicineMatch(nameQ);
+            if (!matched) {
+              try {
+                const resolved = await resolveMedicineWithGemini4(nameQ, true);
+                matched = resolved.item;
+              } catch (_e) {
+                unmatchedEntries.push(line);
+                continue;
+              }
+            }
+            if (matched) {
+              const qty = Math.max(1, Math.round(Number(line.qtyPacks) || 1));
+              lastExtractedRxItems.push({ ...matched, qty, dosageSchedule: line.dosageSchedule || "" });
+            }
+          }
+        } catch (err) {
+          engineLabel = `Error fallback (${err.message || "AI failed"})`;
         }
-      });
-      if (lastExtractedRxItems.length === 0 && state.inventory.length > 0) {
-        lastExtractedRxItems.push({ ...state.inventory[0], qty: 1 });
+      } else {
+        engineLabel = "Local Salt/Brand Matcher (Add Gemini API Key in Settings for Neon Vision)";
+        const corpus = rawText.toLowerCase();
+        state.inventory.forEach(item => {
+          const brandToken = item.name.toLowerCase().split(" ")[0];
+          if (brandToken.length >= 3 && corpus.includes(brandToken) && item.qty > 0) {
+            lastExtractedRxItems.push({ ...item, qty: 1, dosageSchedule: "" });
+          }
+        });
+        clinicalSummary = lastExtractedRxItems.length > 0
+          ? "Matched typed brand keywords against local FEFO inventory."
+          : "No local inventory match found. Add your Gemini API key in Settings to extract uncached brands & handwritten Rx images.";
       }
 
       outBox.innerHTML = `
         <div class="p-2.5 bg-purple-50 border border-purple-200 rounded-lg">
-          <div class="font-bold text-purple-900">Engine: ${aiRes ? aiRes.model : 'Local Clinical NLP Fallback (Add API Key in Settings for Live Gemini 4 Argon)'}</div>
-          <div class="mt-1 whitespace-pre-line">${aiRes ? aiRes.text : 'Matched prescription tokens against active FEFO inventory.'}</div>
+          <div class="font-bold text-purple-900">Engine: ${escapeHtml(engineLabel)}</div>
+          <div class="mt-1 whitespace-pre-line">${escapeHtml(clinicalSummary)}</div>
         </div>
-        <div class="font-bold text-slate-700 pt-2">Auto-Matched FEFO Batches:</div>
-        ${lastExtractedRxItems.map(i => `
-          <div class="flex justify-between items-center bg-white p-2 rounded border">
-            <span><strong>${i.name}</strong> (${i.salt}) — Batch:${i.batch}</span>
-            <span class="font-bold text-emerald-700">₹${i.mrp}</span>
-          </div>
-        `).join("")}
+        <div class="font-bold text-slate-700 pt-2">Matched & AI-Enriched FEFO Batches (${lastExtractedRxItems.length}):</div>
+        ${lastExtractedRxItems.length > 0
+          ? lastExtractedRxItems.map(i => `
+            <div class="flex justify-between items-center bg-white p-2 rounded border">
+              <div>
+                <strong>${escapeHtml(i.name)}</strong> (${escapeHtml(i.salt)}) — Batch: ${escapeHtml(i.batch)}
+                ${i.dosageSchedule ? `<div class="text-[10px] text-purple-700">${escapeHtml(i.dosageSchedule)}</div>` : ""}
+              </div>
+              <span class="font-bold text-emerald-700">x${i.qty} • ₹${Number(i.mrp).toFixed(2)}</span>
+            </div>
+          `).join("")
+          : `<div class="p-2 bg-amber-50 border border-amber-200 rounded text-amber-800">No items matched or resolved yet.</div>`}
+        ${unmatchedEntries.length > 0
+          ? `<div class="font-bold text-rose-700 pt-1">Unresolved Items:</div>` + unmatchedEntries.map(u => `<div class="p-1.5 bg-rose-50 border border-rose-200 rounded text-rose-800">${escapeHtml(u.brandOrDrugName)} (${escapeHtml(u.genericSalts)})</div>`).join("")
+          : ""}
       `;
-      document.getElementById("btn-push-rx-to-pos").classList.remove("hidden");
+      const pushBtn = document.getElementById("btn-push-rx-to-pos");
+      if (lastExtractedRxItems.length > 0) pushBtn.classList.remove("hidden");
+      else pushBtn.classList.add("hidden");
     }
 
     function pushExtractedRxToPos() {
+      if (lastExtractedRxItems.length === 0) return;
       lastExtractedRxItems.forEach(item => {
         const existing = posCart.find(c => c.id === item.id);
-        if (existing) existing.qty += 1;
-        else posCart.push({ ...item, qty: 1 });
+        if (existing) existing.qty += item.qty || 1;
+        else posCart.push({ ...item, qty: item.qty || 1 });
       });
       switchTab("pos");
       renderPosCart();
     }
 
+    // --- SALT EXTRACTION & SALT-LEVEL DDI ENGINE ---
+    function extractDeduplicatedSaltsFromCart(items) {
+      const saltSet = new Set();
+      items.forEach(item => {
+        const raw = (item.salt || item.name || "").trim();
+        raw.split(/\+|,|\/|\band\b/i).forEach(part => {
+          const clean = part.replace(/\b\d+(\.\d+)?\s*(mg|mcg|gm|g|ml|iu|%)\b/gi, "").trim();
+          if (clean.length >= 2) saltSet.add(clean);
+        });
+      });
+      return Array.from(saltSet);
+    }
+
+    function evaluateLocalDeterministicDdi(saltsLower) {
+      const warnings = [];
+      const joined = saltsLower.join(" | ");
+      if (joined.includes("warfarin") && (joined.includes("aspirin") || joined.includes("ibuprofen") || joined.includes("diclofenac"))) {
+        warnings.push({
+          saltPair: "Warfarin + Aspirin/NSAID",
+          severity: "Contraindicated",
+          mechanism: "Synergistic antiplatelet & anticoagulant COX-1 inhibition increases GI hemorrhage risk.",
+          pharmacistGuidance: "Hold dispensing and consult prescriber; Paracetamol is preferred for analgesia."
+        });
+      }
+      if (joined.includes("azithromycin") && joined.includes("domperidone")) {
+        warnings.push({
+          saltPair: "Azithromycin + Domperidone",
+          severity: "Major",
+          mechanism: "Additive QTc interval prolongation risk (Torsades de Pointes).",
+          pharmacistGuidance: "Flag to physician; check ECG/electrolytes or consider Ondansetron."
+        });
+      }
+      if (joined.includes("clopidogrel") && joined.includes("omeprazole")) {
+        warnings.push({
+          saltPair: "Clopidogrel + Omeprazole",
+          severity: "Moderate",
+          mechanism: "CYP2C19 inhibition reduces bioactivation of Clopidogrel.",
+          pharmacistGuidance: "Substitute Omeprazole with Pantoprazole 40mg per cardiologist protocol."
+        });
+      }
+      return warnings;
+    }
+
+    async function runSaltDdiCheck() {
+      if (posCart.length < 2) {
+        return alert("Add at least 2 medicines to the POS cart to run Salt-Level DDI checking.");
+      }
+
+      const alertBox = document.getElementById("pos-ddi-alert");
+      const alertText = document.getElementById("pos-ddi-text");
+      const structuredBox = document.getElementById("pos-ddi-structured");
+      const btn = document.getElementById("btn-pos-ddi-check");
+
+      alertBox.classList.remove("hidden");
+      alertText.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i> Extracting generic salts & analyzing interactions with Gemini 4 Neon (High Thinking)...`;
+      structuredBox.innerHTML = "";
+      btn.disabled = true;
+
+      try {
+        // Resolve salts for any cart item missing composition first
+        const ai = getGenAIClient();
+        for (const c of posCart) {
+          if (!c.salt || c.salt.trim().length < 2) {
+            if (ai) {
+              try {
+                const resolved = await resolveMedicineWithGemini4(c.name, true);
+                c.salt = resolved.item.salt;
+              } catch (_e) {}
+            }
+          }
+        }
+
+        const uniqueSalts = extractDeduplicatedSaltsFromCart(posCart);
+        const localWarnings = evaluateLocalDeterministicDdi(uniqueSalts.map(s => s.toLowerCase()));
+
+        if (!ai) {
+          lastDdiReport = {
+            overallSeverity: localWarnings.length ? localWarnings[0].severity : "None",
+            clinicalSummary: localWarnings.length
+              ? `Offline Salt Screen flagged ${localWarnings.length} potential interaction(s). Add API Key in Settings for full Gemini 4 Neon High-Thinking DDI analysis.`
+              : `No offline contraindication found among salts (${uniqueSalts.join(", ")}). Add Gemini API Key in Settings for deep Neon High-Thinking audit.`,
+            interactions: localWarnings
+          };
+          renderDdiStructuredReport(uniqueSalts, lastDdiReport);
+          return;
+        }
+
+        const prompt = `Analyze drug-drug interactions strictly at the active generic salt level across these deduplicated salts: ${JSON.stringify(uniqueSalts)}.
+Cart context (brand -> salts): ${posCart.map(i => `${i.name} [${i.salt}]`).join("; ")}.
+Identify every clinically significant interaction among these salts, severity (Contraindicated, Major, Moderate, Minor, or None), interacting salt pairs, pharmacological mechanism, and actionable Indian retail pharmacist guidance.`;
+
+        const res = await ai.models.generateContent({
+          model: MODEL_NEON,
+          contents: prompt,
+          config: {
+            thinkingConfig: { thinkingLevel: "HIGH" },
+            responseMimeType: "application/json",
+            responseSchema: DDI_RESPONSE_SCHEMA
+          }
+        });
+
+        lastDdiReport = JSON.parse(res.text);
+        renderDdiStructuredReport(uniqueSalts, lastDdiReport);
+      } catch (err) {
+        alertText.innerHTML = `<span class="text-rose-700 font-bold">Salt-Level DDI failed: ${escapeHtml(err.message || "Check Gemini API key & network")}</span>`;
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function renderDdiStructuredReport(uniqueSalts, report) {
+      const alertBox = document.getElementById("pos-ddi-alert");
+      const alertText = document.getElementById("pos-ddi-text");
+      const structuredBox = document.getElementById("pos-ddi-structured");
+
+      const sev = (report.overallSeverity || "None").toLowerCase();
+      const isDanger = sev.includes("contra") || sev.includes("major");
+      const isWarn = sev.includes("mod") || sev.includes("minor");
+      alertBox.className = `p-4 rounded-xl text-xs space-y-2 border ${
+        isDanger ? "bg-rose-50 border-rose-300 text-rose-900"
+          : isWarn ? "bg-amber-50 border-amber-300 text-amber-900"
+          : "bg-emerald-50 border-emerald-300 text-emerald-900"
+      }`;
+
+      alertText.innerHTML = `
+        <div><strong>Overall Severity: ${escapeHtml(report.overallSeverity)}</strong> — ${escapeHtml(report.clinicalSummary)}</div>
+        <div class="mt-1 flex flex-wrap gap-1">${uniqueSalts.map(s => `<span class="px-2 py-0.5 rounded-full bg-white border text-[10px] font-semibold">${escapeHtml(s)}</span>`).join("")}</div>
+      `;
+
+      structuredBox.innerHTML = (report.interactions || []).map(inter => `
+        <div class="p-2.5 bg-white rounded-lg border space-y-1">
+          <div class="flex justify-between items-center">
+            <span class="font-bold text-slate-900">${escapeHtml(inter.saltPair)}</span>
+            <span class="px-2 py-0.5 rounded font-bold text-[10px] bg-slate-100">${escapeHtml(inter.severity)}</span>
+          </div>
+          <div class="text-slate-600"><strong>Mechanism:</strong> ${escapeHtml(inter.mechanism)}</div>
+          <div class="text-slate-800"><strong>Guidance:</strong> ${escapeHtml(inter.pharmacistGuidance)}</div>
+        </div>
+      `).join("");
+    }
+
     // --- POS FUNCTIONS ---
     function addPosItem() {
-      const id = parseInt(document.getElementById("pos-med-select").value);
-      const qty = parseInt(document.getElementById("pos-qty").value) || 1;
+      const id = parseInt(document.getElementById("pos-med-select").value, 10);
+      const qty = parseInt(document.getElementById("pos-qty").value, 10) || 1;
       const med = state.inventory.find(i => i.id === id);
       if (!med || med.qty < qty) return alert("Insufficient stock in selected batch!");
       const existing = posCart.find(c => c.id === id);
@@ -830,33 +1401,52 @@ Identify prescribed medicines, dosage schedule, and match to our Live Inventory 
       renderPosCart();
     }
 
+    function updatePosCartQty(idx, rawVal) {
+      if (!posCart[idx]) return;
+      posCart[idx].qty = Math.max(1, parseInt(rawVal, 10) || 1);
+      renderPosCart();
+    }
+
+    function removePosCartItem(idx) {
+      posCart.splice(idx, 1);
+      renderPosCart();
+    }
+
+    function clearPosCart() {
+      posCart = [];
+      lastDdiReport = null;
+      renderPosCart();
+    }
+
     function renderPosCart() {
       const tbody = document.getElementById("pos-cart-tbody");
-      let gross = 0, gstTotal = 0;
+      let gross = 0, rawGstTotal = 0;
 
       tbody.innerHTML = posCart.map((item, idx) => {
         const line = item.mrp * item.qty;
-        const gstAmt = line - (line / (1 + item.gst / 100));
+        const gstRate = Number(item.gst ?? 12);
+        const gstAmt = line - (line / (1 + gstRate / 100));
         gross += line;
-        gstTotal += gstAmt;
+        rawGstTotal += gstAmt;
         return `
           <tr>
-            <td class="p-2.5"><div class="font-bold">${item.name}</div><div class="text-[10px] text-slate-400">${item.salt}</div></td>
-            <td class="p-2.5 font-mono">${item.batch} <span class="bg-slate-100 px-1 rounded">${item.rack}</span></td>
-            <td class="p-2.5">${item.expiry}</td>
-            <td class="p-2.5 text-right">₹${item.mrp.toFixed(2)}</td>
+            <td class="p-2.5"><div class="font-bold">${escapeHtml(item.name)}</div><div class="text-[10px] text-slate-400">${escapeHtml(item.salt)}</div></td>
+            <td class="p-2.5 font-mono">${escapeHtml(item.batch)} <span class="bg-slate-100 px-1 rounded">${escapeHtml(item.rack)}</span></td>
+            <td class="p-2.5">${escapeHtml(item.expiry)}</td>
+            <td class="p-2.5 text-right">₹${Number(item.mrp).toFixed(2)}</td>
             <td class="p-2.5 text-center">
-              <input type="number" min="1" max="${item.qty + 50}" value="${item.qty}" onchange="posCart[${idx}].qty=parseInt(this.value)||1;renderPosCart()" class="w-12 border rounded text-center py-0.5" />
+              <input type="number" min="1" max="${item.qty + 50}" value="${item.qty}" onchange="updatePosCartQty(${idx}, this.value)" class="w-12 border rounded text-center py-0.5" />
             </td>
-            <td class="p-2.5 text-right">${item.gst}%</td>
+            <td class="p-2.5 text-right">${gstRate}%</td>
             <td class="p-2.5 text-right font-bold">₹${line.toFixed(2)}</td>
-            <td class="p-2.5 text-center"><button onclick="posCart.splice(${idx},1);renderPosCart()" class="text-rose-500"><i class="fa-solid fa-xmark"></i></button></td>
+            <td class="p-2.5 text-center"><button onclick="removePosCartItem(${idx})" class="text-rose-500"><i class="fa-solid fa-xmark"></i></button></td>
           </tr>
         `;
-      }).join("") || `<tr><td colspan="8" class="p-6 text-center text-slate-400">POS cart is empty. Select a medicine above.</td></tr>`;
+      }).join("") || `<tr><td colspan="8" class="p-6 text-center text-slate-400">POS cart is empty. Select a medicine or use AI Resolve above.</td></tr>`;
 
-      const discPct = parseFloat(document.getElementById("pos-disc").value) || 0;
+      const discPct = Math.min(100, Math.max(0, parseFloat(document.getElementById("pos-disc").value) || 0));
       const discVal = gross * (discPct / 100);
+      const gstTotal = rawGstTotal * (1 - discPct / 100);
       const net = gross - discVal;
 
       document.getElementById("pos-gross").innerText = `₹${gross.toFixed(2)}`;
@@ -864,18 +1454,20 @@ Identify prescribed medicines, dosage schedule, and match to our Live Inventory 
       document.getElementById("pos-disc-val").innerText = `-₹${discVal.toFixed(2)}`;
       document.getElementById("pos-net").innerText = `₹${net.toFixed(2)}`;
 
-      // Check Drug Interactions
-      const salts = posCart.map(i => i.salt.toLowerCase()).join(" ");
+      // Live offline Salt-Level DDI Pre-Screen
+      const uniqueSaltsLower = extractDeduplicatedSaltsFromCart(posCart).map(s => s.toLowerCase());
+      const offlineWarnings = evaluateLocalDeterministicDdi(uniqueSaltsLower);
       const alertBox = document.getElementById("pos-ddi-alert");
       const alertText = document.getElementById("pos-ddi-text");
-      let warnings = [];
-      if (salts.includes("warfarin") && salts.includes("aspirin")) warnings.push("HIGH RISK: Warfarin + Aspirin co-administration increases major bleeding risk.");
-      if (salts.includes("azithromycin") && salts.includes("domperidone")) warnings.push("MODERATE: Azithromycin + Domperidone may cause QT prolongation.");
-      if (warnings.length > 0) {
+      const structuredBox = document.getElementById("pos-ddi-structured");
+      if (offlineWarnings.length > 0) {
+        alertBox.className = "bg-rose-50 border border-rose-300 text-rose-900 p-4 rounded-xl text-xs space-y-2";
         alertBox.classList.remove("hidden");
-        alertText.innerText = warnings.join(" | ");
-      } else {
+        alertText.innerText = offlineWarnings.map(w => `${w.severity.toUpperCase()} (${w.saltPair}): ${w.pharmacistGuidance}`).join(" | ");
+        structuredBox.innerHTML = "";
+      } else if (!lastDdiReport || posCart.length < 2) {
         alertBox.classList.add("hidden");
+        structuredBox.innerHTML = "";
       }
 
       // Dynamic UPI QR
@@ -893,20 +1485,14 @@ Identify prescribed medicines, dosage schedule, and match to our Live Inventory 
       }
     }
 
-    async function auditCartWithGemini4() {
-      const itemsDesc = posCart.map(i => `${i.name} (${i.salt})`).join(", ");
-      switchTab("clinical");
-      document.getElementById("clinical-chat-input").value = `Perform a clinical drug-drug interaction and contraindication audit for this cart: ${itemsDesc}`;
-      await sendClinicalChat();
-    }
-
     function checkoutSale(print = false) {
       if (posCart.length === 0) return alert("Add items to cart first!");
       const patient = document.getElementById("pos-patient").value || "Walk-in Customer";
       const phone = document.getElementById("pos-phone").value || "";
       const doctor = document.getElementById("pos-doctor").value || "Self / OTC";
       const mode = document.getElementById("pos-mode").value;
-      const net = parseFloat(document.getElementById("pos-net").innerText.replace("₹", ""));
+      const net = parseFloat(document.getElementById("pos-net").innerText.replace("₹", "")) || 0;
+      const gstTotal = parseFloat(document.getElementById("pos-gst").innerText.replace("₹", "")) || 0;
       let costPtr = 0;
 
       posCart.forEach(c => {
@@ -926,7 +1512,7 @@ Identify prescribed medicines, dosage schedule, and match to our Live Inventory 
       const invObj = {
         id: "INV-" + Math.floor(100000 + Math.random() * 900000),
         date: new Date().toLocaleString(),
-        patient, phone, doctor, mode, net,
+        patient, phone, doctor, mode, net, gstTotal,
         profit: net - costPtr,
         items: [...posCart]
       };
@@ -935,6 +1521,7 @@ Identify prescribed medicines, dosage schedule, and match to our Live Inventory 
       if (print) printThermalInvoice(invObj);
 
       posCart = [];
+      lastDdiReport = null;
       persist();
       renderPosCart();
     }
@@ -949,14 +1536,14 @@ Identify prescribed medicines, dosage schedule, and match to our Live Inventory 
       document.getElementById("pr-store-dl").innerText = "DL: " + state.config.dl;
       document.getElementById("pr-store-gst").innerText = "GSTIN: " + state.config.gstin;
       document.getElementById("pr-meta").innerHTML = `
-        <div>Inv: ${inv.id} | ${inv.date}</div>
-        <div>Patient: ${inv.patient} | Dr: ${inv.doctor}</div>
+        <div>Inv: ${escapeHtml(inv.id)} | ${escapeHtml(inv.date)}</div>
+        <div>Patient: ${escapeHtml(inv.patient)} | Dr: ${escapeHtml(inv.doctor)}</div>
       `;
       document.getElementById("pr-items").innerHTML = inv.items.map(i => `
-        <tr><td>${i.name}</td><td>${i.batch}</td><td>${i.qty}</td><td style="text-align:right;">₹${(i.mrp*i.qty).toFixed(2)}</td></tr>
+        <tr><td>${escapeHtml(i.name)}</td><td>${escapeHtml(i.batch)}</td><td>${i.qty}</td><td style="text-align:right;">₹${(i.mrp * i.qty).toFixed(2)}</td></tr>
       `).join("");
       document.getElementById("pr-totals").innerHTML = `
-        <div style="display:flex;justify-content:space-between;"><span>NET TOTAL (${inv.mode}):</span><span>₹${inv.net.toFixed(2)}</span></div>
+        <div style="display:flex;justify-content:space-between;"><span>NET TOTAL (${escapeHtml(inv.mode)}):</span><span>₹${inv.net.toFixed(2)}</span></div>
       `;
       window.print();
     }
@@ -979,7 +1566,7 @@ Identify prescribed medicines, dosage schedule, and match to our Live Inventory 
       if (posCart.length === 0) return alert("Cart is empty!");
       const phone = document.getElementById("pos-phone").value;
       const net = document.getElementById("pos-net").innerText;
-      const lines = posCart.map(i => `• ${i.name} x${i.qty} = ₹${(i.mrp*i.qty).toFixed(2)}`).join("%0A");
+      const lines = posCart.map(i => `• ${i.name} x${i.qty} = ₹${(i.mrp * i.qty).toFixed(2)}`).join("%0A");
       window.open(`https://wa.me/91${phone}?text=*${encodeURIComponent(state.config.name)}*%0A${lines}%0A*Total: ${net}*`, "_blank");
     }
 
@@ -992,24 +1579,28 @@ Identify prescribed medicines, dosage schedule, and match to our Live Inventory 
       const expiry = document.getElementById("inv-expiry").value || "2027-12";
       const rack = document.getElementById("inv-rack").value.trim() || "R-A1";
       const schedule = document.getElementById("inv-schedule").value;
-      const qty = parseInt(document.getElementById("inv-qty").value) || 0;
-      const reorder = parseInt(document.getElementById("inv-reorder").value) || 15;
+      const qty = parseInt(document.getElementById("inv-qty").value, 10) || 0;
+      const reorder = parseInt(document.getElementById("inv-reorder").value, 10) || 15;
       const ptr = parseFloat(document.getElementById("inv-ptr").value) || 0;
       const mrp = parseFloat(document.getElementById("inv-mrp").value) || 0;
-      const gst = parseInt(document.getElementById("inv-gst").value) || 12;
+      const gst = parseInt(document.getElementById("inv-gst").value, 10);
+      const finalGst = Number.isNaN(gst) ? 12 : gst;
 
       if (!name || !batch || !mrp) return alert("Brand Name, Batch, and MRP are required!");
 
       if (editId) {
         const idx = state.inventory.findIndex(i => i.id == editId);
-        if (idx > -1) state.inventory[idx] = { id: Number(editId), name, salt, batch, expiry, rack, schedule, qty, reorder, ptr, mrp, gst };
+        if (idx > -1) state.inventory[idx] = { id: Number(editId), name, salt, batch, expiry, rack, schedule, qty, reorder, ptr, mrp, gst: finalGst };
       } else {
-        state.inventory.push({ id: Date.now(), name, salt, batch, expiry, rack, schedule, qty, reorder, ptr, mrp, gst });
+        state.inventory.push({ id: Date.now(), name, salt, batch, expiry, rack, schedule, qty, reorder, ptr, mrp, gst: finalGst });
       }
 
       document.getElementById("inv-edit-id").value = "";
-      document.getElementById("inv-form-title").innerText = "Add / Update Medicine Batch";
-      ["inv-name","inv-salt","inv-batch","inv-rack","inv-qty","inv-ptr","inv-mrp"].forEach(id => document.getElementById(id).value = "");
+      document.getElementById("inv-form-title").innerText = "Add / Update Medicine Batch (Cache-Through AI Ready)";
+      ["inv-name", "inv-salt", "inv-batch", "inv-rack", "inv-qty", "inv-ptr", "inv-mrp"].forEach(id => {
+        document.getElementById(id).value = "";
+      });
+      document.getElementById("inv-ai-feedback").classList.add("hidden");
       persist();
     }
 
@@ -1038,10 +1629,26 @@ Identify prescribed medicines, dosage schedule, and match to our Live Inventory 
       persist();
     }
 
+    async function enrichAndSaveMissingSearch(query) {
+      const btn = document.getElementById("btn-empty-search-ai");
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i> Resolving "${escapeHtml(query)}"...`;
+      }
+      try {
+        const { item } = await resolveMedicineWithGemini4(query, true);
+        document.getElementById("global-search").value = item.name;
+        renderInventoryTable(item.name);
+      } catch (err) {
+        alert(err.message || "AI enrichment failed.");
+        renderInventoryTable(query);
+      }
+    }
+
     function exportInventoryCsv() {
       let csv = "Name,Salt,Batch,Expiry,Rack,Schedule,Qty,PTR,MRP,GST\n";
       state.inventory.forEach(i => {
-        csv += `"${i.name}","${i.salt}","${i.batch}",${i.expiry},${i.rack},${i.schedule||"OTC"},${i.qty},${i.ptr},${i.mrp},${i.gst}\n`;
+        csv += `"${i.name}","${i.salt}","${i.batch}",${i.expiry},${i.rack},${i.schedule || "OTC"},${i.qty},${i.ptr},${i.mrp},${i.gst}\n`;
       });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
@@ -1058,19 +1665,20 @@ Identify prescribed medicines, dosage schedule, and match to our Live Inventory 
         lines.forEach(line => {
           const cols = line.split(",");
           if (cols.length >= 9) {
+            const parsedGst = parseInt(cols[9], 10);
             state.inventory.push({
-              id: Date.now() + Math.floor(Math.random()*1000),
+              id: Date.now() + Math.floor(Math.random() * 1000),
               name: cols[0].replace(/"/g, ""),
               salt: cols[1].replace(/"/g, ""),
               batch: cols[2].replace(/"/g, ""),
               expiry: cols[3],
               rack: cols[4],
               schedule: cols[5] || "OTC",
-              qty: parseInt(cols[6]) || 10,
+              qty: parseInt(cols[6], 10) || 10,
               reorder: 15,
               ptr: parseFloat(cols[7]) || 50,
               mrp: parseFloat(cols[8]) || 70,
-              gst: parseInt(cols[9]) || 12
+              gst: Number.isNaN(parsedGst) ? 12 : parsedGst
             });
           }
         });
@@ -1084,33 +1692,26 @@ Identify prescribed medicines, dosage schedule, and match to our Live Inventory 
       const lower = q.toLowerCase().trim();
       const matchedMeds = state.inventory.filter(i =>
         lower.includes(i.name.toLowerCase().split(" ")[0]) ||
-        lower.includes(i.salt.toLowerCase().split(" ")[0]) ||
+        lower.includes((i.salt || "").toLowerCase().split(" ")[0]) ||
         i.name.toLowerCase().includes(lower) ||
-        i.salt.toLowerCase().includes(lower)
+        (i.salt || "").toLowerCase().includes(lower)
       );
-      if (lower.includes("what are you doing") || lower.includes("status") || lower.includes("who are you")) {
-        const lowCount = state.inventory.filter(i => i.qty <= i.reorder).length;
-        return `<strong>Royal Pharmacy Clinical AI:</strong> I am actively monitoring your pharmacy operations:<br>• <strong>${state.inventory.length}</strong> medicines in live catalog (${lowCount} low-stock alerts)<br>• <strong>${state.invoices.length}</strong> sales invoices &amp; <strong>${state.khata.length}</strong> Udhar Khata accounts<br>Ask me about any drug dosage, interaction, disease protocol, or stock item!`;
-      }
       if (lower.includes("low stock") || lower.includes("shortage") || lower.includes("reorder")) {
         const low = state.inventory.filter(i => i.qty <= i.reorder);
-        return `<strong>Live Low-Stock Report:</strong><br>` + (low.length ? low.map(i => `• <strong>${i.name}</strong> (${i.salt}) — Qty: ${i.qty} packs | Reorder Level: ${i.reorder}`).join("<br>") : "✅ All inventory items are above reorder thresholds.");
+        return `<strong>Live Low-Stock Report:</strong><br>` + (low.length ? low.map(i => `• <strong>${escapeHtml(i.name)}</strong> (${escapeHtml(i.salt)}) — Qty: ${i.qty} packs | Reorder Level: ${i.reorder}`).join("<br>") : "✅ All inventory items are above reorder thresholds.");
       }
       if (lower.includes("expir")) {
-        const exp = state.inventory.filter(i => i.exp.includes("2025") || i.exp.includes("2026-0") || i.exp.includes("26"));
-        return `<strong>Batch Expiry Radar:</strong><br>` + (exp.length ? exp.map(i => `• <strong>${i.name}</strong> [Batch: ${i.batch}] — Exp: ${i.exp} (Rack ${i.rack})`).join("<br>") : "✅ No near-expiry batches flagged.");
-      }
-      if (lower.includes("interaction")) {
-        return `<strong>Drug-Drug Interaction Guidance:</strong><br>• <strong>Azithromycin + Cetirizine / Levocetirizine:</strong> Safe co-administration; monitor mild sedation.<br>• <strong>Metformin + Glimepiride:</strong> Synergistic glycemic control; counsel patient on hypoglycemia signs.<br>• <strong>Telmisartan + NSAIDs (Aceclofenac/Diclofenac):</strong> Monitor BP and renal function; NSAIDs may attenuate antihypertensive effect.`;
+        const exp = state.inventory.filter(i => (i.expiry || "").includes("2025") || (i.expiry || "").includes("2026-0") || (i.expiry || "").includes("26"));
+        return `<strong>Batch Expiry Radar:</strong><br>` + (exp.length ? exp.map(i => `• <strong>${escapeHtml(i.name)}</strong> [Batch: ${escapeHtml(i.batch)}] — Exp: ${escapeHtml(i.expiry)} (Rack ${escapeHtml(i.rack)})`).join("<br>") : "✅ No near-expiry batches flagged.");
       }
       if (matchedMeds.length > 0) {
-        const targetSalt = matchedMeds[0].salt;
-        const subs = state.inventory.filter(i => i.salt.toLowerCase() === targetSalt.toLowerCase());
+        const targetSalt = (matchedMeds[0].salt || "").toLowerCase();
+        const subs = state.inventory.filter(i => (i.salt || "").toLowerCase() === targetSalt);
         return `<strong>Live Inventory &amp; Clinical Match:</strong><br>` +
-          matchedMeds.map(m => `• <strong>${m.name}</strong> (${m.salt}) — Stock: <strong>${m.qty} packs</strong> | MRP: ₹${m.mrp} | PTR: ₹${m.ptr} | Rack: ${m.rack} | Sch: ${m.sch}`).join("<br>") +
-          (subs.length > 1 ? `<br><strong>Available Same-Salt Substitutes:</strong> ${subs.map(s => `${s.name} (₹${s.mrp})`).join(", ")}` : "");
+          matchedMeds.map(m => `• <strong>${escapeHtml(m.name)}</strong> (${escapeHtml(m.salt)}) — Stock: <strong>${m.qty} packs</strong> | MRP: ₹${m.mrp} | PTR: ₹${m.ptr} | Rack: ${escapeHtml(m.rack)} | Sch: ${escapeHtml(m.schedule || "OTC")}`).join("<br>") +
+          (subs.length > 1 ? `<br><strong>Available Same-Salt Substitutes:</strong> ${subs.map(s => `${escapeHtml(s.name)} (₹${s.mrp})`).join(", ")}` : "");
       }
-      return `<strong>Clinical &amp; Inventory Summary:</strong><br>For <em>"${q}"</em>:<br>• Verify Schedule H/H1 compliance and hepatic/renal dosing.<br>• Top in-stock formulations ready to dispense: ${state.inventory.slice(0, 4).map(i => `<strong>${i.name}</strong> (${i.salt}, ₹${i.mrp}, Qty: ${i.qty})`).join(", ")}.`;
+      return `<strong>API Key Required for Live Gemini 4 Neon Clinical Reasoning:</strong><br>Add your Google AI Studio API key under <em>Store & Gemini 4 Config</em> to unlock cloud clinical Q&A and automatic brand lookup for <em>"${escapeHtml(q)}"</em>.`;
     }
 
     async function sendClinicalChat() {
@@ -1118,38 +1719,47 @@ Identify prescribed medicines, dosage schedule, and match to our Live Inventory 
       const q = input.value.trim();
       if (!q) return;
       const chatBox = document.getElementById("clinical-chat-box");
-      chatBox.innerHTML += `<div class="bg-emerald-600 text-white p-2.5 rounded-lg ml-12 text-right"><strong>You:</strong> ${q}</div>`;
+      const sendBtn = document.getElementById("btn-clinical-send");
+      chatBox.innerHTML += `<div class="bg-emerald-600 text-white p-2.5 rounded-lg ml-12 text-right"><strong>You:</strong> ${escapeHtml(q)}</div>`;
       input.value = "";
 
       const stockContext = state.inventory.map(i => `${i.name} (${i.salt}, Qty:${i.qty}, MRP:₹${i.mrp})`).join("; ");
-      const prompt = `You are Gemini 4 Argon Clinical Pharmacist AI at Royal Pharmacy.
+      const prompt = `You are Gemini 4 Neon Clinical Pharmacist AI at Royal Pharmacy.
 Live Store Inventory: ${stockContext}
 User Question: ${q}
-Provide an accurate, clinically verified answer with dosage, interactions, and matching stock substitutes.`;
+Provide an accurate, clinically verified answer with salt-level pharmacology, interactions, CDSCO schedule notes, and matching stock substitutes.`;
 
-      const aiRes = await callGemini4Argon(prompt);
-      const replyText = aiRes
-        ? `<strong>${aiRes.model}:</strong> <span class="whitespace-pre-line">${aiRes.text}</span>`
-        : generateWebClinicalFallback(q);
-
-      chatBox.innerHTML += `<div class="bg-white p-3 rounded-lg border shadow-sm mr-12">${replyText}</div>`;
-      chatBox.scrollTop = chatBox.scrollHeight;
+      sendBtn.disabled = true;
+      sendBtn.innerText = "Thinking...";
+      try {
+        const aiRes = await callGemini4NeonText(prompt);
+        const replyText = aiRes
+          ? `<strong>${escapeHtml(aiRes.model)}:</strong> <span class="whitespace-pre-line">${escapeHtml(aiRes.text)}</span>`
+          : generateWebClinicalFallback(q);
+        chatBox.innerHTML += `<div class="bg-white p-3 rounded-lg border shadow-sm mr-12">${replyText}</div>`;
+      } catch (err) {
+        chatBox.innerHTML += `<div class="bg-rose-50 text-rose-800 p-3 rounded-lg border border-rose-200 mr-12"><strong>Cloud AI Error:</strong> ${escapeHtml(err.message || "Request failed")}</div>`;
+      } finally {
+        sendBtn.disabled = false;
+        sendBtn.innerText = "Ask Gemini 4";
+        chatBox.scrollTop = chatBox.scrollHeight;
+      }
     }
 
     function searchSaltSubstitutes(q) {
       const box = document.getElementById("salt-sub-results");
       if (!q.trim()) { box.innerHTML = ""; return; }
       const lower = q.toLowerCase();
-      const matched = state.inventory.filter(i => i.name.toLowerCase().includes(lower) || i.salt.toLowerCase().includes(lower));
+      const matched = state.inventory.filter(i => i.name.toLowerCase().includes(lower) || (i.salt || "").toLowerCase().includes(lower));
       if (matched.length === 0) {
-        box.innerHTML = `<div class="text-slate-400">No matching salt found.</div>`;
+        box.innerHTML = `<div class="text-slate-500">No cached substitute found locally. Use AI Resolve in Inventory or POS to fetch generic salts.</div>`;
         return;
       }
-      const targetSalt = matched[0].salt.toLowerCase();
-      const subs = state.inventory.filter(i => i.salt.toLowerCase() === targetSalt);
+      const targetSalt = (matched[0].salt || "").toLowerCase();
+      const subs = state.inventory.filter(i => (i.salt || "").toLowerCase() === targetSalt);
       box.innerHTML = subs.map(s => `
         <div class="p-2 bg-slate-50 rounded border flex justify-between items-center">
-          <div><div class="font-bold">${s.name}</div><div class="text-[10px] text-slate-500">${s.salt} | Rack: ${s.rack}</div></div>
+          <div><div class="font-bold">${escapeHtml(s.name)}</div><div class="text-[10px] text-slate-500">${escapeHtml(s.salt)} | Rack: ${escapeHtml(s.rack)}</div></div>
           <div class="text-right"><div class="font-bold text-emerald-700">₹${s.mrp}</div><div class="text-[10px]">Stock: ${s.qty}</div></div>
         </div>
       `).join("");
@@ -1197,6 +1807,12 @@ Provide an accurate, clinically verified answer with dosage, interactions, and m
       persist();
     }
 
+    function settleKhata(idx) {
+      if (!state.khata[idx]) return;
+      state.khata[idx].balance = 0;
+      persist();
+    }
+
     function addCashLedgerEntry() {
       const desc = document.getElementById("exp-desc").value.trim();
       const type = document.getElementById("exp-type").value;
@@ -1238,13 +1854,13 @@ Provide an accurate, clinically verified answer with dosage, interactions, and m
       state.config.upi = document.getElementById("cfg-upi").value.trim();
       state.config.geminiKey = document.getElementById("cfg-gemini-key").value.trim();
       persist();
-      alert("Configuration & Gemini 4 Argon settings saved!");
+      alert("Configuration & Gemini 4 Neon settings saved!");
     }
 
     function exportFullBackup() {
       const a = document.createElement("a");
       a.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
-      a.download = `royal_pharmacy_v4_backup_${new Date().toISOString().slice(0,10)}.json`;
+      a.download = `royal_pharmacy_v4_backup_${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
     }
 
@@ -1261,8 +1877,10 @@ Provide an accurate, clinically verified answer with dosage, interactions, and m
     }
 
     function exportGstCsv() {
-      let csv = "InvoiceID,Date,Patient,Doctor,Mode,NetAmount\n";
-      state.invoices.forEach(i => { csv += `${i.id},"${i.date}","${i.patient}","${i.doctor}",${i.mode},${i.net}\n`; });
+      let csv = "InvoiceID,Date,Patient,Doctor,Mode,GSTAmount,NetAmount\n";
+      state.invoices.forEach(i => {
+        csv += `${i.id},"${i.date}","${i.patient}","${i.doctor}",${i.mode},${(i.gstTotal || 0).toFixed(2)},${i.net}\n`;
+      });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
       a.download = "GSTR1_RoyalPharmacy.csv";
@@ -1275,24 +1893,45 @@ Provide an accurate, clinically verified answer with dosage, interactions, and m
     }
 
     function renderInventoryTable(filter = "") {
-      const f = filter.toLowerCase();
-      document.getElementById("inventory-tbody").innerHTML = state.inventory
-        .filter(i => !f || i.name.toLowerCase().includes(f) || i.salt.toLowerCase().includes(f) || i.batch.toLowerCase().includes(f))
-        .map(i => {
-          const isCritical = Number(i.qty) <= Number(i.reorder);
-          const isOutOfStock = Number(i.qty) === 0;
-          return `
+      const rawFilter = filter.trim();
+      const f = rawFilter.toLowerCase();
+      const matches = state.inventory.filter(i =>
+        !f ||
+        i.name.toLowerCase().includes(f) ||
+        (i.salt || "").toLowerCase().includes(f) ||
+        (i.batch || "").toLowerCase().includes(f) ||
+        (i.rack || "").toLowerCase().includes(f)
+      );
+
+      if (matches.length === 0 && rawFilter) {
+        document.getElementById("inventory-tbody").innerHTML = `
+          <tr>
+            <td colspan="8" class="p-6 text-center bg-purple-50/70">
+              <div class="font-bold text-slate-800 mb-1">"${escapeHtml(rawFilter)}" not found in local stock catalog</div>
+              <div class="text-slate-500 mb-3">Resolve active generic salts, GST slab & CDSCO schedule via Gemini 4 Neon and save to local DB automatically.</div>
+              <button id="btn-empty-search-ai" onclick="enrichAndSaveMissingSearch('${escapeHtml(rawFilter)}')" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-bold shadow-sm">
+                <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> AI Resolve & Save "${escapeHtml(rawFilter)}" to DB
+              </button>
+            </td>
+          </tr>`;
+        return;
+      }
+
+      document.getElementById("inventory-tbody").innerHTML = matches.map(i => {
+        const isCritical = Number(i.qty) <= Number(i.reorder);
+        const isOutOfStock = Number(i.qty) === 0;
+        return `
           <tr class="${isCritical ? 'critical-stock-row border-l-4 border-rose-500' : 'hover:bg-slate-50 transition-colors'}">
             <td class="p-3 font-bold">
               <div class="flex items-center gap-1.5 flex-wrap">
-                <span>${i.name}</span>
-                <span class="px-1.5 py-0.5 bg-slate-100 rounded text-[10px] text-slate-600 font-medium">${i.schedule||"OTC"}</span>
+                <span>${escapeHtml(i.name)}</span>
+                <span class="px-1.5 py-0.5 bg-slate-100 rounded text-[10px] text-slate-600 font-medium">${escapeHtml(i.schedule || "OTC")}</span>
                 ${isCritical ? `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700 border border-rose-300 shadow-xs"><i class="fa-solid fa-triangle-exclamation text-rose-600"></i> ${isOutOfStock ? 'Out of Stock' : 'Critical (≤ Reorder)'}</span>` : ''}
               </div>
             </td>
-            <td class="p-3 text-slate-500">${i.salt}</td>
-            <td class="p-3 font-mono">${i.batch} | <strong>${i.rack}</strong></td>
-            <td class="p-3">${i.expiry}</td>
+            <td class="p-3 text-slate-500">${escapeHtml(i.salt)}</td>
+            <td class="p-3 font-mono">${escapeHtml(i.batch)} | <strong>${escapeHtml(i.rack)}</strong></td>
+            <td class="p-3">${escapeHtml(i.expiry)}</td>
             <td class="p-3 text-right">₹${Number(i.ptr).toFixed(2)}</td>
             <td class="p-3 text-right font-bold">₹${Number(i.mrp).toFixed(2)}</td>
             <td class="p-3 text-center">
@@ -1308,7 +1947,7 @@ Provide an accurate, clinically verified answer with dosage, interactions, and m
             </td>
           </tr>
         `;
-        }).join("");
+      }).join("");
     }
 
     function renderInvoicesTable(filter = "") {
@@ -1317,15 +1956,15 @@ Provide an accurate, clinically verified answer with dosage, interactions, and m
         .filter(i => !f || i.id.toLowerCase().includes(f) || i.patient.toLowerCase().includes(f))
         .map(inv => `
           <tr>
-            <td class="p-3 font-mono font-bold">${inv.id}</td>
-            <td class="p-3 text-slate-500">${inv.date}</td>
-            <td class="p-3 font-semibold">${inv.patient}</td>
-            <td class="p-3">${inv.doctor}</td>
-            <td class="p-3"><span class="px-2 py-0.5 bg-slate-100 rounded font-semibold">${inv.mode}</span></td>
-            <td class="p-3 text-right font-bold text-emerald-700">₹${inv.net.toFixed(2)}</td>
+            <td class="p-3 font-mono font-bold">${escapeHtml(inv.id)}</td>
+            <td class="p-3 text-slate-500">${escapeHtml(inv.date)}</td>
+            <td class="p-3 font-semibold">${escapeHtml(inv.patient)}</td>
+            <td class="p-3">${escapeHtml(inv.doctor)}</td>
+            <td class="p-3"><span class="px-2 py-0.5 bg-slate-100 rounded font-semibold">${escapeHtml(inv.mode)}</span></td>
+            <td class="p-3 text-right font-bold text-emerald-700">₹${Number(inv.net).toFixed(2)}</td>
             <td class="p-3 text-center space-x-2">
-              <button onclick="printThermalInvoiceById('${inv.id}')" class="text-slate-600 hover:text-black"><i class="fa-solid fa-print"></i></button>
-              <button onclick="refundInvoice('${inv.id}')" class="text-rose-600 hover:underline">Return</button>
+              <button onclick="printThermalInvoiceById('${escapeHtml(inv.id)}')" class="text-slate-600 hover:text-black"><i class="fa-solid fa-print"></i></button>
+              <button onclick="refundInvoice('${escapeHtml(inv.id)}')" class="text-rose-600 hover:underline">Return</button>
             </td>
           </tr>
         `).join("") || `<tr><td colspan="7" class="p-6 text-center text-slate-400">No sales invoices recorded yet.</td></tr>`;
@@ -1340,12 +1979,19 @@ Provide an accurate, clinically verified answer with dosage, interactions, and m
       document.getElementById("cfg-upi").value = state.config.upi;
       document.getElementById("cfg-gemini-key").value = state.config.geminiKey;
 
+      const aiBadge = document.getElementById("ai-status-badge");
+      if (aiBadge) {
+        aiBadge.innerHTML = (state.config.geminiKey || "").trim()
+          ? `<i class="fa-solid fa-bolt text-emerald-400 mr-1"></i> Gemini 4 Neon Active`
+          : `<i class="fa-solid fa-key text-amber-400 mr-1"></i> Set API Key in Config`;
+      }
+
       // Dashboard KPIs
-      const totalRev = state.invoices.reduce((s, i) => s + i.net, 0);
-      const totalProfit = state.invoices.reduce((s, i) => s + (i.profit || i.net * 0.22), 0);
-      const stockVal = state.inventory.reduce((s, i) => s + (i.ptr * i.qty), 0);
-      const totalUdhar = state.khata.reduce((s, k) => s + k.balance, 0);
-      const alertsCount = state.inventory.filter(i => i.qty <= i.reorder || i.expiry <= "2026-12").length;
+      const totalRev = state.invoices.reduce((s, i) => s + Number(i.net || 0), 0);
+      const totalProfit = state.invoices.reduce((s, i) => s + Number(i.profit ?? (i.net * 0.22)), 0);
+      const stockVal = state.inventory.reduce((s, i) => s + (Number(i.ptr || 0) * Number(i.qty || 0)), 0);
+      const totalUdhar = state.khata.reduce((s, k) => s + Number(k.balance || 0), 0);
+      const alertsCount = state.inventory.filter(i => i.qty <= i.reorder || (i.expiry || "") <= "2026-12").length;
 
       document.getElementById("stat-sales").innerText = `₹${totalRev.toFixed(2)}`;
       document.getElementById("stat-profit").innerText = `Net Margin: ₹${totalProfit.toFixed(2)}`;
@@ -1355,79 +2001,135 @@ Provide an accurate, clinically verified answer with dosage, interactions, and m
       document.getElementById("stat-udhar-val").innerText = `₹${totalUdhar.toFixed(2)}`;
 
       // POS Dropdown (FEFO sorted)
-      const fefo = [...state.inventory].filter(i => i.qty > 0).sort((a, b) => a.expiry.localeCompare(b.expiry));
+      const fefo = [...state.inventory].filter(i => i.qty > 0).sort((a, b) => (a.expiry || "").localeCompare(b.expiry || ""));
       document.getElementById("pos-med-select").innerHTML = fefo.map(i =>
-        `<option value="${i.id}">${i.name} [Batch:${i.batch} | Exp:${i.expiry} | Rack:${i.rack}] — ₹${i.mrp} (${i.qty} left)</option>`
+        `<option value="${i.id}">${escapeHtml(i.name)} [Batch:${escapeHtml(i.batch)} | Exp:${escapeHtml(i.expiry)} | Rack:${escapeHtml(i.rack)}] — ₹${i.mrp} (${i.qty} left)</option>`
       ).join("");
 
-      document.getElementById("patients-datalist").innerHTML = state.patients.map(p => `<option value="${p.name}">`).join("");
+      document.getElementById("patients-datalist").innerHTML = state.patients.map(p => `<option value="${escapeHtml(p.name)}">`).join("");
 
       renderInvoicesTable();
-      renderInventoryTable();
+      renderInventoryTable(document.getElementById("global-search")?.value || "");
 
       // Expiry & Shortbook
       document.getElementById("expiry-items-container").innerHTML = state.inventory
-        .filter(i => i.expiry <= "2026-12")
-        .map(i => `<div class="p-2.5 bg-rose-50 rounded border border-rose-200 flex justify-between"><span><strong>${i.name}</strong> (${i.batch})</span><span class="font-bold text-rose-700">Exp: ${i.expiry}</span></div>`)
+        .filter(i => (i.expiry || "") <= "2026-12")
+        .map(i => `<div class="p-2.5 bg-rose-50 rounded border border-rose-200 flex justify-between"><span><strong>${escapeHtml(i.name)}</strong> (${escapeHtml(i.batch)})</span><span class="font-bold text-rose-700">Exp: ${escapeHtml(i.expiry)}</span></div>`)
         .join("") || `<div class="text-slate-400">No batches expiring within 90 days.</div>`;
 
       document.getElementById("shortbook-items-container").innerHTML = state.inventory
         .filter(i => i.qty <= i.reorder)
-        .map(i => `<div class="p-2.5 bg-amber-50 rounded border border-amber-200 flex justify-between"><span><strong>${i.name}</strong> (Stock: ${i.qty})</span><span class="font-bold text-amber-800">Reorder: ${i.reorder * 3}</span></div>`)
+        .map(i => `<div class="p-2.5 bg-amber-50 rounded border border-amber-200 flex justify-between"><span><strong>${escapeHtml(i.name)}</strong> (Stock: ${i.qty})</span><span class="font-bold text-amber-800">Reorder: ${i.reorder * 3}</span></div>`)
         .join("") || `<div class="text-slate-400">All batches above reorder threshold.</div>`;
 
       // Patients & Doctors
       document.getElementById("patients-list").innerHTML = state.patients.map(p =>
-        `<div class="py-2 flex justify-between"><span><strong>${p.name}</strong> (${p.condition})</span><span class="text-slate-500">${p.phone}</span></div>`
+        `<div class="py-2 flex justify-between"><span><strong>${escapeHtml(p.name)}</strong> (${escapeHtml(p.condition)})</span><span class="text-slate-500">${escapeHtml(p.phone)}</span></div>`
       ).join("");
       document.getElementById("doctors-list").innerHTML = state.doctors.map(d =>
-        `<div class="py-2 flex justify-between"><span><strong>${d.name}</strong> (${d.spec})</span><span class="font-mono text-slate-500">${d.reg}</span></div>`
+        `<div class="py-2 flex justify-between"><span><strong>${escapeHtml(d.name)}</strong> (${escapeHtml(d.spec)})</span><span class="font-mono text-slate-500">${escapeHtml(d.reg)}</span></div>`
       ).join("");
 
       // Khata & Cash Ledger
       document.getElementById("khata-tbody").innerHTML = state.khata.map((k, idx) => `
         <tr>
-          <td class="p-2 font-bold">${k.name}</td>
-          <td class="p-2">${k.phone}</td>
-          <td class="p-2 text-right font-bold text-rose-600">₹${k.balance.toFixed(2)}</td>
+          <td class="p-2 font-bold">${escapeHtml(k.name)}</td>
+          <td class="p-2">${escapeHtml(k.phone)}</td>
+          <td class="p-2 text-right font-bold text-rose-600">₹${Number(k.balance).toFixed(2)}</td>
           <td class="p-2 text-center space-x-1">
-            <button onclick="state.khata[${idx}].balance=0;persist();" class="bg-emerald-600 text-white px-2 py-0.5 rounded">Settle</button>
-            <a href="https://wa.me/91${k.phone}?text=Reminder:%20Your%20pending%20balance%20at%20${encodeURIComponent(state.config.name)}%20is%20Rs.${k.balance.toFixed(2)}" target="_blank" class="bg-green-100 text-green-800 px-2 py-0.5 rounded">WhatsApp</a>
+            <button onclick="settleKhata(${idx})" class="bg-emerald-600 text-white px-2 py-0.5 rounded">Settle</button>
+            <a href="https://wa.me/91${escapeHtml(k.phone)}?text=Reminder:%20Your%20pending%20balance%20at%20${encodeURIComponent(state.config.name)}%20is%20Rs.${Number(k.balance).toFixed(2)}" target="_blank" class="bg-green-100 text-green-800 px-2 py-0.5 rounded">WhatsApp</a>
           </td>
         </tr>
       `).join("");
 
       document.getElementById("cash-ledger-list").innerHTML = state.cashLedger.map(c => `
         <div class="py-2 flex justify-between items-center">
-          <div><div class="font-semibold">${c.desc}</div><div class="text-[10px] text-slate-400">${c.date}</div></div>
-          <span class="font-bold ${c.type==='IN'?'text-emerald-600':'text-rose-600'}">${c.type==='IN'?'+':'-'}₹${c.amt.toFixed(2)}</span>
+          <div><div class="font-semibold">${escapeHtml(c.desc)}</div><div class="text-[10px] text-slate-400">${escapeHtml(c.date)}</div></div>
+          <span class="font-bold ${c.type === 'IN' ? 'text-emerald-600' : 'text-rose-600'}">${c.type === 'IN' ? '+' : '-'}₹${Number(c.amt).toFixed(2)}</span>
         </div>
       `).join("") || `<div class="text-slate-400 py-4 text-center">No cashbook entries yet.</div>`;
 
       // Suppliers & PO
       document.getElementById("suppliers-grid").innerHTML = state.suppliers.map(s => `
         <div class="p-3 border rounded-lg bg-slate-50">
-          <div class="font-bold">${s.name}</div>
-          <div class="text-[10px] text-slate-500">GSTIN: ${s.gst}</div>
-          <a href="https://wa.me/91${s.phone}" target="_blank" class="text-emerald-600 underline text-[11px] mt-1 inline-block">WhatsApp Order →</a>
+          <div class="font-bold">${escapeHtml(s.name)}</div>
+          <div class="text-[10px] text-slate-500">GSTIN: ${escapeHtml(s.gst)}</div>
+          <a href="https://wa.me/91${escapeHtml(s.phone)}" target="_blank" class="text-emerald-600 underline text-[11px] mt-1 inline-block">WhatsApp Order →</a>
         </div>
       `).join("");
 
       document.getElementById("po-list-container").innerHTML = state.purchaseOrders.map(po => `
         <div class="p-3 border rounded-lg flex justify-between items-center">
-          <div><strong>${po.id}</strong> (${po.date}) → <em>${po.supplier}</em><div class="text-slate-500 mt-0.5">${po.items}</div></div>
+          <div><strong>${escapeHtml(po.id)}</strong> (${escapeHtml(po.date)}) → <em>${escapeHtml(po.supplier)}</em><div class="text-slate-500 mt-0.5">${escapeHtml(po.items)}</div></div>
           <span class="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded font-bold">Sent</span>
         </div>
       `).join("") || `<div class="text-slate-400">No POs generated yet. Click 'Generate PO' in Expiry & Shortbook tab.</div>`;
 
-      // GST Breakdown
+      // Weighted GST Breakdown across invoices (respecting 0%, 5%, 12%, 18% slabs)
+      const totalGstLiability = state.invoices.reduce((sum, inv) => {
+        if (typeof inv.gstTotal === "number" && !Number.isNaN(inv.gstTotal)) {
+          return sum + inv.gstTotal;
+        }
+        const itemsGst = (inv.items || []).reduce((itemSum, it) => {
+          const line = (it.mrp || 0) * (it.qty || 1);
+          const rate = Number(it.gst ?? 12);
+          return itemSum + (line - (line / (1 + rate / 100)));
+        }, 0);
+        return sum + itemsGst;
+      }, 0);
+      const taxableTurnover = Math.max(0, totalRev - totalGstLiability);
       document.getElementById("gst-breakdown-cards").innerHTML = `
-        <div class="p-4 bg-slate-50 border rounded-lg"><div class="text-slate-500">Taxable Turnover</div><div class="text-lg font-bold mt-1">₹${(totalRev * 0.88).toFixed(2)}</div></div>
-        <div class="p-4 bg-slate-50 border rounded-lg"><div class="text-slate-500">CGST (6%)</div><div class="text-lg font-bold mt-1">₹${(totalRev * 0.06).toFixed(2)}</div></div>
-        <div class="p-4 bg-slate-50 border rounded-lg"><div class="text-slate-500">SGST (6%)</div><div class="text-lg font-bold mt-1">₹${(totalRev * 0.06).toFixed(2)}</div></div>
-        <div class="p-4 bg-slate-50 border rounded-lg"><div class="text-slate-500">Total GST Liability</div><div class="text-lg font-bold text-emerald-700 mt-1">₹${(totalRev * 0.12).toFixed(2)}</div></div>
+        <div class="p-4 bg-slate-50 border rounded-lg"><div class="text-slate-500">Taxable Turnover</div><div class="text-lg font-bold mt-1">₹${taxableTurnover.toFixed(2)}</div></div>
+        <div class="p-4 bg-slate-50 border rounded-lg"><div class="text-slate-500">CGST (Weighted Split)</div><div class="text-lg font-bold mt-1">₹${(totalGstLiability / 2).toFixed(2)}</div></div>
+        <div class="p-4 bg-slate-50 border rounded-lg"><div class="text-slate-500">SGST (Weighted Split)</div><div class="text-lg font-bold mt-1">₹${(totalGstLiability / 2).toFixed(2)}</div></div>
+        <div class="p-4 bg-slate-50 border rounded-lg"><div class="text-slate-500">Total GST Liability</div><div class="text-lg font-bold text-emerald-700 mt-1">₹${totalGstLiability.toFixed(2)}</div></div>
       `;
     }
+
+    // Bind interactive functions to window so inline HTML event handlers work inside <script type="module">
+    Object.assign(window, {
+      switchTab,
+      globalFilterInventory,
+      renderInvoicesTable,
+      addPosItem,
+      updatePosCartQty,
+      removePosCartItem,
+      clearPosCart,
+      renderPosCart,
+      checkoutSale,
+      sharePosWhatsApp,
+      handlePosBrandAutocomplete,
+      useAutocompleteSuggestion,
+      aiLookupAndAddPos,
+      runSaltDdiCheck,
+      previewRxImage,
+      analyzePrescriptionWithGemini4,
+      pushExtractedRxToPos,
+      autoFillInventoryFormWithAI,
+      saveInventoryBatch,
+      editBatch,
+      deleteBatch,
+      enrichAndSaveMissingSearch,
+      importInventoryCsv,
+      exportInventoryCsv,
+      autoGeneratePoFromShortbook,
+      sendClinicalChat,
+      searchSaltSubstitutes,
+      calcPediatricDose,
+      addPatient,
+      addDoctor,
+      addManualKhata,
+      settleKhata,
+      addCashLedgerEntry,
+      addSupplier,
+      exportGstCsv,
+      exportFullBackup,
+      restoreFullBackup,
+      saveSettings,
+      printThermalInvoiceById,
+      refundInvoice
+    });
 
     renderAll();
   </script>

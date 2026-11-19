@@ -458,9 +458,9 @@ object BackupRestoreManager {
         val profile = BusinessProfile(
           id = 1,
           businessName = profileObj.optString("businessName", "ROYAL PHARMACY"),
-          ownerName = profileObj.optString("ownerName", "Suleman Hoque"),
-          phone = profileObj.optString("phone", "9957905450"),
-          email = profileObj.optString("email", "sulman995790@gmail.com"),
+          ownerName = profileObj.optString("ownerName", "Pharmacy Owner"),
+          phone = profileObj.optString("phone", ""),
+          email = profileObj.optString("email", ""),
           gstin = profileObj.optString("gstin", "18AABCR1234M1Z5"),
           drugLicenseForm20 = profileObj.optString("drugLicenseForm20", "DL-20B-784146-2024"),
           drugLicenseForm21 = profileObj.optString("drugLicenseForm21", "DL-21B-784146-2024"),

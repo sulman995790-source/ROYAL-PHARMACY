@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -20,14 +21,17 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -36,14 +40,17 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 import com.example.ui.components.InAppSearchDialog
 import com.example.ui.theme.CardBorder
 import com.example.ui.theme.GrayBackground
@@ -60,10 +67,13 @@ fun SearchAnythingScreen(
   viewModel: PharmacyViewModel,
   modifier: Modifier = Modifier
 ) {
+  val context = LocalContext.current
+  val scope = rememberCoroutineScope()
   var searchQuery by remember { mutableStateOf("") }
   var inAppSearchQuery by remember { mutableStateOf<String?>(null) }
   val recentSearches by viewModel.recentSearches.collectAsState()
   val medicines by viewModel.allMedicines.collectAsState()
+  val isEnriching by viewModel.isEnrichingMedicine.collectAsState()
 
   val searchResults = if (searchQuery.isNotBlank()) {
     medicines.filter {
@@ -179,13 +189,41 @@ fun SearchAnythingScreen(
                   Text("No local pharmacy stock matching '$searchQuery'", fontSize = 13.sp, color = TextMuted)
                   Spacer(modifier = Modifier.height(10.dp))
                   Button(
-                    onClick = { inAppSearchQuery = "$searchQuery medicine composition dosage India" },
-                    colors = ButtonDefaults.buttonColors(containerColor = RoyalNavy),
-                    shape = RoundedCornerShape(8.dp)
+                    onClick = {
+                      scope.launch {
+                        viewModel.lookupOrEnrichMedicineWithAi(searchQuery, autoSaveToInventory = true)
+                          .onSuccess { med ->
+                            Toast.makeText(context, "AI Resolved & Cached: ${med.name} (${med.composition})", Toast.LENGTH_LONG).show()
+                          }
+                          .onFailure { err ->
+                            Toast.makeText(context, "AI Lookup failed: ${err.localizedMessage}", Toast.LENGTH_SHORT).show()
+                          }
+                      }
+                    },
+                    enabled = !isEnriching,
+                    colors = ButtonDefaults.buttonColors(containerColor = RoyalMagenta),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth().testTag("btn_ai_resolve_search_anything")
                   ) {
-                    Icon(Icons.Default.Search, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                    if (isEnriching) {
+                      CircularProgressIndicator(color = Color.White, modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                      Spacer(modifier = Modifier.width(6.dp))
+                      Text("Resolving Salts & GST with AI...", fontSize = 12.sp, color = Color.White)
+                    } else {
+                      Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                      Spacer(modifier = Modifier.width(6.dp))
+                      Text("AI Resolve & Save Brand to DB", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    }
+                  }
+                  Spacer(modifier = Modifier.height(8.dp))
+                  OutlinedButton(
+                    onClick = { inAppSearchQuery = "$searchQuery medicine composition dosage India" },
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                  ) {
+                    Icon(Icons.Default.Search, contentDescription = null, tint = RoyalNavy, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Search on Google in App", fontSize = 12.sp, color = Color.White)
+                    Text("Search on Google in App", fontSize = 12.sp, color = RoyalNavy)
                   }
                 }
               }

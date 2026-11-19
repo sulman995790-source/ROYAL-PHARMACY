@@ -2,6 +2,7 @@ package com.example.ui.screens
 
 import android.content.Intent
 import android.net.Uri
+import android.util.Log
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
@@ -32,13 +33,27 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialCancellationException
+import androidx.credentials.exceptions.GetCredentialException
+import androidx.credentials.exceptions.NoCredentialException
+import com.example.R
 import com.example.ui.theme.*
 import com.example.service.FreeOtpSenderService
 import com.example.service.OtpChannel
 import com.example.viewmodel.AuthLoginType
 import com.example.viewmodel.PharmacyViewModel
 import com.example.viewmodel.UserRole
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.google.firebase.Firebase
+import com.google.firebase.auth.GoogleAuthProvider
+import com.google.firebase.auth.auth
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,18 +73,69 @@ fun LoginScreen(
   var selectedLoginRole by remember { mutableStateOf(UserRole.OWNER) }
   var ownerPasswordInput by remember { mutableStateOf("") }
 
-  var showGoogleChooser by remember { mutableStateOf(false) }
   var showOtpField by remember { mutableStateOf(false) }
   var generatedOtp by remember { mutableStateOf("123456") }
   var selectedChannel by remember { mutableStateOf(OtpChannel.SMS) }
   var showResetPasswordDialog by remember { mutableStateOf(false) }
   var isAuthenticating by remember { mutableStateOf(false) }
+  var isGoogleSigningIn by remember { mutableStateOf(false) }
+  var googleAuthError by remember { mutableStateOf<String?>(null) }
 
   val ownerSecretPassword by viewModel.ownerSecretPassword.collectAsState()
 
   val bgThemeColor = if (isDarkMode) Color(0xFF0F172A) else Color.White
   val textThemeColor = if (isDarkMode) Color.White else TextDark
   val cardThemeColor = if (isDarkMode) Color(0xFF1E293B) else GrayBackground
+
+  suspend fun performGoogleCredentialSignIn() {
+    isGoogleSigningIn = true
+    googleAuthError = null
+    try {
+      val webClientId = context.getString(R.string.default_web_client_id)
+      val credentialManager = CredentialManager.create(context)
+      val primaryOption = GetSignInWithGoogleOption.Builder(webClientId).build()
+      val result = try {
+        credentialManager.getCredential(
+          context = context,
+          request = GetCredentialRequest.Builder().addCredentialOption(primaryOption).build()
+        )
+      } catch (_: NoCredentialException) {
+        val fallbackOption = GetGoogleIdOption.Builder()
+          .setFilterByAuthorizedAccounts(false)
+          .setServerClientId(webClientId)
+          .build()
+        credentialManager.getCredential(
+          context = context,
+          request = GetCredentialRequest.Builder().addCredentialOption(fallbackOption).build()
+        )
+      }
+      val credential = result.credential
+      if (credential is CustomCredential &&
+        credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+      ) {
+        val googleCred = GoogleIdTokenCredential.createFrom(credential.data)
+        val firebaseCred = GoogleAuthProvider.getCredential(googleCred.idToken, null)
+        val authResult = Firebase.auth.signInWithCredential(firebaseCred).await()
+        val user = authResult.user
+        val email = user?.email ?: googleCred.id
+        val name = user?.displayName ?: googleCred.displayName ?: email.substringBefore("@")
+        viewModel.completeGoogleSignIn(email, name, selectedLoginRole)
+        Toast.makeText(context, "Signed in as $name", Toast.LENGTH_SHORT).show()
+      } else {
+        googleAuthError = "Unsupported credential returned from Google Sign-In."
+      }
+    } catch (_: GetCredentialCancellationException) {
+      googleAuthError = "Google Sign-In was cancelled."
+    } catch (e: GetCredentialException) {
+      Log.w("LoginScreen", "Google Sign-In credential error", e)
+      googleAuthError = "Google Sign-In unavailable: ${e.errorMessage ?: "Check Google account on device"}"
+    } catch (e: Exception) {
+      Log.e("LoginScreen", "Firebase Google Sign-In error", e)
+      googleAuthError = "Sign-In failed: ${e.localizedMessage ?: "Please try again"}"
+    } finally {
+      isGoogleSigningIn = false
+    }
+  }
 
   Box(
     modifier = modifier
@@ -529,7 +595,7 @@ fun LoginScreen(
                     } else if (selectedLoginRole == UserRole.STAFF) {
                       matchedStaff?.name ?: "Staff Chemist (${phoneInput.takeLast(4)})"
                     } else {
-                      "Suleman Hoque"
+                      nameInput.ifBlank { "Pharmacy Owner" }
                     }
 
                     if (matchedStaff != null) {
@@ -588,7 +654,7 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // Google Authentication trigger Card
+        // Google Authentication trigger Card via Jetpack Credential Manager
         Card(
           shape = RoundedCornerShape(12.dp),
           colors = CardDefaults.cardColors(containerColor = if (isDarkMode) Color(0xFF1E293B) else Color.White),
@@ -596,147 +662,66 @@ fun LoginScreen(
           modifier = Modifier
             .fillMaxWidth()
             .height(50.dp)
-            .clickable { showGoogleChooser = true }
+            .clickable(enabled = !isGoogleSigningIn) {
+              scope.launch { performGoogleCredentialSignIn() }
+            }
+            .testTag("btn_google_sign_in")
         ) {
           Row(
             modifier = Modifier.fillMaxSize(),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
           ) {
-            Icon(
-              imageVector = Icons.Default.AccountCircle,
-              contentDescription = "Google Sign In",
-              tint = RoyalMagenta,
-              modifier = Modifier.size(22.dp)
-            )
-            Spacer(modifier = Modifier.width(10.dp))
+            if (isGoogleSigningIn) {
+              CircularProgressIndicator(
+                color = RoyalMagenta,
+                modifier = Modifier.size(18.dp),
+                strokeWidth = 2.dp
+              )
+              Spacer(modifier = Modifier.width(10.dp))
+              Text(
+                text = "Connecting Google Account...",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = textThemeColor
+              )
+            } else {
+              Icon(
+                imageVector = Icons.Default.AccountCircle,
+                contentDescription = "Google Sign In",
+                tint = RoyalMagenta,
+                modifier = Modifier.size(22.dp)
+              )
+              Spacer(modifier = Modifier.width(10.dp))
+              Text(
+                text = "Sign in with Google Account",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = textThemeColor
+              )
+            }
+          }
+        }
+
+        if (!googleAuthError.isNullOrBlank()) {
+          Spacer(modifier = Modifier.height(10.dp))
+          Card(
+            shape = RoundedCornerShape(8.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFFEF2F2)),
+            border = BorderStroke(1.dp, Color(0xFFFCA5A5)),
+            modifier = Modifier.fillMaxWidth()
+          ) {
             Text(
-              text = "Sign in with Google Account",
-              fontSize = 13.sp,
-              fontWeight = FontWeight.Bold,
-              color = textThemeColor
+              text = googleAuthError!!,
+              fontSize = 11.5.sp,
+              color = Color(0xFFB91C1C),
+              modifier = Modifier.padding(10.dp)
             )
           }
         }
 
         Spacer(modifier = Modifier.height(40.dp))
       }
-    }
-
-    // Google Account Chooser bottom-sheet modal dialog (Screenshot 1 & 3 inspired)
-    if (showGoogleChooser) {
-      AlertDialog(
-        onDismissRequest = { showGoogleChooser = false },
-        title = {
-          Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-            Icon(
-              imageVector = Icons.Default.VerifiedUser,
-              contentDescription = null,
-              tint = RoyalMagenta,
-              modifier = Modifier.size(36.dp)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-              text = "Choose a Google Account",
-              fontSize = 17.sp,
-              fontWeight = FontWeight.Bold,
-              color = textThemeColor,
-              textAlign = TextAlign.Center
-            )
-            Text(
-              text = "to continue to Royal Pharmacy Retail Portal",
-              fontSize = 11.sp,
-              color = TextMuted,
-              textAlign = TextAlign.Center
-            )
-          }
-        },
-        text = {
-          Column(
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxWidth()
-          ) {
-            // Account 1: Sk Sk
-            GoogleAccountRow(
-              avatarSeed = "Sk",
-              displayName = "Sk Sk",
-              email = "sk786sk9957@gmail.com",
-              isDarkMode = isDarkMode,
-              onClick = {
-                showGoogleChooser = false
-                viewModel.loginWithGmail("sk786sk9957@gmail.com", "Sk Sk", UserRole.OWNER)
-                Toast.makeText(context, "Logged in as Sk Sk", Toast.LENGTH_SHORT).show()
-              }
-            )
-
-            // Account 2: Slmn Z (Suleman)
-            GoogleAccountRow(
-              avatarSeed = "Slmn",
-              displayName = "Slmn Z",
-              email = "sulman995790@gmail.com",
-              isDarkMode = isDarkMode,
-              onClick = {
-                showGoogleChooser = false
-                viewModel.loginWithGmail("sulman995790@gmail.com", "Suleman Hoque", UserRole.OWNER)
-                Toast.makeText(context, "Logged in as Suleman Hoque", Toast.LENGTH_SHORT).show()
-              }
-            )
-
-            // Account 3: Nur Nime
-            GoogleAccountRow(
-              avatarSeed = "Nime",
-              displayName = "Nur Nime",
-              email = "nimenur931@gmail.com",
-              isDarkMode = isDarkMode,
-              onClick = {
-                showGoogleChooser = false
-                viewModel.loginWithGmail("nimenur931@gmail.com", "Nur Nime", UserRole.STAFF)
-                Toast.makeText(context, "Logged in as Nur Nime (Staff Mode)", Toast.LENGTH_SHORT).show()
-              }
-            )
-
-            // Option 4: Use Google Without Account / Guest Mode
-            Card(
-              shape = RoundedCornerShape(10.dp),
-              border = BorderStroke(0.5.dp, CardBorder),
-              colors = CardDefaults.cardColors(containerColor = if (isDarkMode) Color(0xFF334155) else GrayBackground),
-              modifier = Modifier
-                .fillMaxWidth()
-                .clickable {
-                  showGoogleChooser = false
-                  viewModel.loginWithGmail("guest@royalchemist.com", "Guest Chemist", UserRole.STAFF)
-                  Toast.makeText(context, "Operating in Guest Staff Mode", Toast.LENGTH_SHORT).show()
-                }
-            ) {
-              Row(
-                modifier = Modifier
-                  .fillMaxWidth()
-                  .padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-              ) {
-                Icon(
-                  imageVector = Icons.Default.NoAccounts,
-                  contentDescription = null,
-                  tint = TextMuted,
-                  modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                  text = "Use Google without an account",
-                  fontSize = 12.sp,
-                  fontWeight = FontWeight.Bold,
-                  color = textThemeColor
-                )
-              }
-            }
-          }
-        },
-        confirmButton = {
-          TextButton(onClick = { showGoogleChooser = false }) {
-            Text("Cancel", color = RoyalMagenta, fontWeight = FontWeight.Bold)
-          }
-        }
-      )
     }
 
     if (showResetPasswordDialog) {

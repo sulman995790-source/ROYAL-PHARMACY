@@ -65,7 +65,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.BuildConfig
 import com.example.data.ai.formatClinicalMarkdown
 import com.example.ui.theme.CardBorder
 import com.example.ui.theme.GrayBackground
@@ -85,11 +84,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Locale
 
@@ -210,7 +204,7 @@ fun DiseaseTrackerScreen(
       listOf(
         com.example.data.ai.ChatMessage(
           sender = "gemini",
-          text = "👋 Hello! I am your **Dedicated Gemini 3.5 Flash Clinical Medical Assistant**.\n\n" +
+          text = "👋 Hello! I am your **Dedicated Gemini 3.8 Flash Clinical Medical Assistant**.\n\n" +
             "I automatically adapt to your patient profile (Pediatric weight-based `mg/kg` syrups/drops/sachets vs. Adult protocols), screen for drug interactions, and check live store inventory. Ask me anything or tap a quick topic above!"
         )
       )
@@ -1057,7 +1051,7 @@ fun DiseaseTrackerScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                   Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color(0xFF38BDF8), modifier = Modifier.size(20.dp))
                   Spacer(modifier = Modifier.width(6.dp))
-                  Text("Dedicated Gemini 3.5 Flash", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                  Text("Dedicated Gemini 3.8 Flash", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
                 }
                 Box(
                   modifier = Modifier
@@ -1243,16 +1237,6 @@ fun DiseaseTrackerScreen(
   }
 }
 
-fun isApiKeyValid(key: String): Boolean {
-  val k = key.trim()
-  return k.isNotBlank() &&
-    !k.equals("DEFAULT_GEMINI_API_KEY", ignoreCase = true) &&
-    !k.equals("MY_GEMINI_API_KEY", ignoreCase = true) &&
-    !k.equals("YOUR_API_KEY", ignoreCase = true) &&
-    !k.contains("DEFAULT", ignoreCase = true) &&
-    k.length >= 20
-}
-
 private val trackerFirebaseModel by lazy {
   runCatching {
     Firebase.ai.generativeModel("gemini-3.8-flash")
@@ -1322,34 +1306,6 @@ suspend fun analyzeSymptomsAndTrackDisease(
   } catch (e: CancellationException) {
     throw e
   } catch (_: Exception) {}
-
-  // 2. Try REST API fallback if Firebase AI didn't return
-  if (rawAiJson.isNullOrBlank()) {
-    val apiKey = try { BuildConfig.GEMINI_API_KEY } catch (_: Exception) { "" }
-    if (isApiKeyValid(apiKey)) {
-      try {
-        val client = OkHttpClient()
-        val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=$apiKey"
-        val body = JSONObject().apply {
-          put("contents", JSONArray().apply {
-            put(JSONObject().apply {
-              put("parts", JSONArray().apply {
-                put(JSONObject().apply { put("text", prompt) })
-              })
-            })
-          })
-        }.toString().toRequestBody("application/json".toMediaType())
-
-        val req = Request.Builder().url(url).post(body).build()
-        val resp = client.newCall(req).execute()
-        val raw = resp.body?.string() ?: ""
-        if (resp.isSuccessful) {
-          val root = JSONObject(raw)
-          rawAiJson = root.optJSONArray("candidates")?.optJSONObject(0)?.optJSONObject("content")?.optJSONArray("parts")?.optJSONObject(0)?.optString("text")
-        }
-      } catch (_: Exception) {}
-    }
-  }
 
   if (!rawAiJson.isNullOrBlank()) {
     try {

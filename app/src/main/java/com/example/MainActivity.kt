@@ -428,8 +428,11 @@ fun RoyalPharmacyApp(
             }
           },
           text = {
+            val latestDriveSnap = viewModel.driveSnapshots.collectAsState().value.firstOrNull()
+            val acctLabel = currentUserEmail.ifBlank { "your signed-in Google account" }
+            val recordCount = latestDriveSnap?.totalRecords ?: 0
             androidx.compose.material3.Text(
-              "We detected your local database is currently empty. We found a recent cloud backup for sulman995790@gmail.com with 186 records. Would you like to automatically restore your data from Google Drive?",
+              "We detected your local database is currently empty. A cloud backup for $acctLabel ($recordCount records) is available. Would you like to restore your data from Google Drive?",
               fontSize = 13.sp
             )
           },

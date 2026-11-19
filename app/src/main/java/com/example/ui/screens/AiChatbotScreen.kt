@@ -43,8 +43,11 @@ import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Directions
 import androidx.compose.material.icons.filled.LocalPharmacy
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -160,7 +163,7 @@ fun AiChatbotScreen(
                   .background(Color(0xFFF59E0B))
                   .padding(horizontal = 5.dp, vertical = 1.5.dp)
               ) {
-                Text("Gemini 3.5 Flash", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                Text("Gemini 3.8 Flash", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.Black)
               }
             }
             Text("Google Search & Maps Grounded • Ask Anything", fontSize = 11.sp, color = Color(0xFFE2E8F0))
@@ -256,7 +259,10 @@ fun AiChatbotScreen(
                 putExtra(Intent.EXTRA_SUBJECT, "Royal Pharmacy AI Insight")
               }
               context.startActivity(Intent.createChooser(shareIntent, "Share Clinical Insight"))
-            }
+            },
+            onRetry = if (msg.isError) {
+              { viewModel.retryChatMessage(msg) }
+            } else null
           )
         }
 
@@ -268,7 +274,7 @@ fun AiChatbotScreen(
             ) {
               CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = RoyalMagenta)
               Spacer(modifier = Modifier.width(8.dp))
-              Text("Gemini 3.5 Flash is analyzing clinical data & searching...", fontSize = 11.5.sp, color = TextMuted)
+              Text("Gemini 3.8 Flash is analyzing clinical data & searching...", fontSize = 11.5.sp, color = TextMuted)
             }
           }
         }
@@ -340,9 +346,11 @@ fun ChatBubble(
   onOpenMaps: (String) -> Unit,
   onOpenSearch: (String) -> Unit,
   onCopy: (String) -> Unit,
-  onShare: (String) -> Unit
+  onShare: (String) -> Unit,
+  onRetry: (() -> Unit)? = null
 ) {
   val isUser = message.sender == "user"
+  val isErr = !isUser && message.isError
 
   Row(
     modifier = Modifier.fillMaxWidth(),
@@ -353,10 +361,15 @@ fun ChatBubble(
         modifier = Modifier
           .size(32.dp)
           .clip(CircleShape)
-          .background(Color(0xFFEDE9FE)),
+          .background(if (isErr) Color(0xFFFEE2E2) else Color(0xFFEDE9FE)),
         contentAlignment = Alignment.Center
       ) {
-        Icon(Icons.Default.LocalPharmacy, contentDescription = null, tint = RoyalMagenta, modifier = Modifier.size(16.dp))
+        Icon(
+          Icons.Default.LocalPharmacy,
+          contentDescription = null,
+          tint = if (isErr) Color(0xFFDC2626) else RoyalMagenta,
+          modifier = Modifier.size(16.dp)
+        )
       }
       Spacer(modifier = Modifier.width(8.dp))
     }
@@ -369,10 +382,14 @@ fun ChatBubble(
         bottomEnd = if (isUser) 2.dp else 14.dp
       ),
       colors = CardDefaults.cardColors(
-        containerColor = if (isUser) RoyalNavy else Color.White
+        containerColor = when {
+          isUser -> RoyalNavy
+          isErr -> Color(0xFFFEF2F2)
+          else -> Color.White
+        }
       ),
       border = if (!isUser) CardDefaults.outlinedCardBorder().copy(
-        brush = androidx.compose.ui.graphics.SolidColor(CardBorder)
+        brush = androidx.compose.ui.graphics.SolidColor(if (isErr) Color(0xFFFCA5A5) else CardBorder)
       ) else null,
       modifier = Modifier.widthIn(max = 300.dp)
     ) {
@@ -380,12 +397,31 @@ fun ChatBubble(
         Text(
           text = com.example.data.ai.formatClinicalMarkdown(message.text),
           fontSize = 13.sp,
-          color = if (isUser) Color.White else TextDark,
+          color = when {
+            isUser -> Color.White
+            isErr -> Color(0xFF991B1B)
+            else -> TextDark
+          },
           lineHeight = 18.sp
         )
 
+        if (isErr && onRetry != null) {
+          Spacer(modifier = Modifier.height(8.dp))
+          Button(
+            onClick = onRetry,
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626)),
+            shape = RoundedCornerShape(8.dp),
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+            modifier = Modifier.testTag("btn_retry_ai_chat")
+          ) {
+            Icon(Icons.Default.Refresh, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+            Spacer(modifier = Modifier.width(6.dp))
+            Text("Retry Cloud AI", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+          }
+        }
+
         // Action links for Maps and Search
-        if (!isUser) {
+        if (!isUser && !isErr) {
           val hasLogisticsRoute = (message.text.contains("Logistics Hub") || message.text.contains("Logistics Route")) && message.text.contains("via NH")
           if (hasLogisticsRoute) {
             Spacer(modifier = Modifier.height(8.dp))
