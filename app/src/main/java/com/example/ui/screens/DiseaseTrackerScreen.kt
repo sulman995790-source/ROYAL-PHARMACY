@@ -204,7 +204,7 @@ fun DiseaseTrackerScreen(
       listOf(
         com.example.data.ai.ChatMessage(
           sender = "gemini",
-          text = "👋 Hello! I am your **Dedicated Gemini 3.8 Flash Clinical Medical Assistant**.\n\n" +
+          text = "👋 Hello! I am your **Dedicated Gemini 2.5 Flash Clinical Medical Assistant**.\n\n" +
             "I automatically adapt to your patient profile (Pediatric weight-based `mg/kg` syrups/drops/sachets vs. Adult protocols), screen for drug interactions, and check live store inventory. Ask me anything or tap a quick topic above!"
         )
       )
@@ -1051,7 +1051,7 @@ fun DiseaseTrackerScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                   Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color(0xFF38BDF8), modifier = Modifier.size(20.dp))
                   Spacer(modifier = Modifier.width(6.dp))
-                  Text("Dedicated Gemini 3.8 Flash", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                  Text("Dedicated Gemini 2.5 Flash", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color.White)
                 }
                 Box(
                   modifier = Modifier
@@ -1239,7 +1239,7 @@ fun DiseaseTrackerScreen(
 
 private val trackerFirebaseModel by lazy {
   runCatching {
-    Firebase.ai.generativeModel("gemini-3.8-flash")
+    Firebase.ai.generativeModel("gemini-2.5-flash")
   }.getOrNull()
 }
 

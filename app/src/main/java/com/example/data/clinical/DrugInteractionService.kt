@@ -48,7 +48,7 @@ class DrugInteractionService {
 
   companion object {
     private const val TAG = "DrugInteractionSvc"
-    private const val DDI_MODEL = "gemini-3.8-flash"
+    private const val DDI_MODEL = "gemini-2.5-flash"
   }
 
   private val ddiSchema = Schema.obj(
@@ -578,7 +578,7 @@ class DrugInteractionService {
       throw e
     } catch (e: Exception) {
       Log.e(TAG, "Cloud AI DDI assessment failed", e)
-      null to (e.localizedMessage ?: "Cloud AI DDI service unavailable; displaying curated CDSCO salt rules.")
+      null to com.example.data.ai.mapGeminiFreeTierError(e)
     }
   }
 }

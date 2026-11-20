@@ -72,7 +72,7 @@ data class ExtractedRxItem(
 object GeminiPrescriptionService {
 
   private const val TAG = "GeminiPrescriptionSvc"
-  private const val VISION_MODEL = "gemini-3.8-flash"
+  private const val VISION_MODEL = "gemini-2.5-flash"
 
   private val textRecognizer by lazy {
     TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
@@ -150,7 +150,7 @@ object GeminiPrescriptionService {
   }
 
   private fun Bitmap.scaleForAiVision(): Bitmap {
-    val maxDim = 1200
+    val maxDim = 1024
     if (width <= maxDim && height <= maxDim) return this
     val ratio = width.toFloat() / height.toFloat()
     val newWidth = if (width > height) maxDim else (maxDim * ratio).toInt()
@@ -215,7 +215,7 @@ object GeminiPrescriptionService {
       throw e
     } catch (e: Exception) {
       Log.e(TAG, "scanPrescriptionWithGemini4 failed", e)
-      Result.failure(e)
+      Result.failure(Exception(mapGeminiFreeTierError(e), e))
     }
   }
 
@@ -307,7 +307,7 @@ object GeminiPrescriptionService {
       throw e
     } catch (e: Exception) {
       Log.e(TAG, "Firebase AI Logic Vision analysis failed", e)
-      e.localizedMessage ?: "Cloud Vision service unavailable"
+      mapGeminiFreeTierError(e)
     }
 
     return@withContext buildResultFromOcrText(

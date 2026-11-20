@@ -206,7 +206,7 @@ fun PrescriptionScannerScreen(
                 .background(Color(0xFFF59E0B))
                 .padding(horizontal = 5.dp, vertical = 1.5.dp)
             ) {
-              Text("Gemini 3.8 Flash", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+              Text("Gemini 2.5 Flash", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.Black)
             }
           }
           Text("Multimodal Vision OCR & Google Search Grounding", color = Color(0xFFE2E8F0), fontSize = 11.sp)
@@ -354,7 +354,7 @@ fun PrescriptionScannerScreen(
               CircularProgressIndicator(color = Color(0xFF6B21A8), modifier = Modifier.size(24.dp), strokeWidth = 3.dp)
               Spacer(modifier = Modifier.width(14.dp))
               Column {
-                Text("Gemini 3.8 Flash Vision Analyzing Rx...", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color(0xFF4C1D95))
+                Text("Gemini 2.5 Flash Vision Analyzing Rx...", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color(0xFF4C1D95))
                 Text("Reading doctor handwriting, recognizing salts & matching inventory...", fontSize = 11.sp, color = Color(0xFF6D28D9))
               }
             }

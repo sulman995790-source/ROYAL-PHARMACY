@@ -428,7 +428,6 @@ fun CustomerHistoryScreen(
                 },
                 onPrintInvoice = {
                   viewModel.openInvoicePrinter(inv)
-                  viewModel.navigateTo(Screen.INVOICE_PRINTER)
                 },
                 onShareWhatsApp = {
                   val text = "🧾 *ROYAL PHARMACY INVOICE*\nInvoice No: ${inv.invoiceNumber}\nDate: ${inv.invoiceDate}\nCustomer: ${inv.customerName}\nItems: ${inv.itemsJson}\nGrand Total: ₹${inv.grandTotal}\nStatus: ${if (inv.isPaid) "PAID ✅" else "UNPAID ⚠️"}\nThank you for choosing Royal Pharmacy!"

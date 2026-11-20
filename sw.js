@@ -1,10 +1,11 @@
-const CACHE_NAME = 'royal-pharmacy-v4.2-neon';
+const CACHE_NAME = 'royal-pharmacy-v4.3-free';
 const ASSETS = [
   './',
   './index.html',
   'https://cdn.tailwindcss.com',
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css',
-  'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js'
+  'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js',
+  'https://cdn.jsdelivr.net/npm/d3@7'
 ];
 
 self.addEventListener('install', (event) => {

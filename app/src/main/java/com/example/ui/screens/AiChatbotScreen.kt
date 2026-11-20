@@ -163,7 +163,7 @@ fun AiChatbotScreen(
                   .background(Color(0xFFF59E0B))
                   .padding(horizontal = 5.dp, vertical = 1.5.dp)
               ) {
-                Text("Gemini 3.8 Flash", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                Text("Gemini 2.5 Flash (Free)", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.Black)
               }
             }
             Text("Google Search & Maps Grounded • Ask Anything", fontSize = 11.sp, color = Color(0xFFE2E8F0))
@@ -274,7 +274,7 @@ fun AiChatbotScreen(
             ) {
               CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = RoyalMagenta)
               Spacer(modifier = Modifier.width(8.dp))
-              Text("Gemini 3.8 Flash is analyzing clinical data & searching...", fontSize = 11.5.sp, color = TextMuted)
+              Text("Gemini 2.5 Flash is analyzing clinical data & searching...", fontSize = 11.5.sp, color = TextMuted)
             }
           }
         }

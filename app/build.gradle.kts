@@ -36,9 +36,9 @@ android {
       val releaseKeystore = file("${rootDir}/release.keystore")
       if (releaseKeystore.exists()) {
         storeFile = releaseKeystore
-        storePassword = "@sk1234SS"
+        storePassword = System.getenv("RELEASE_KEYSTORE_PASSWORD")
         keyAlias = "releaseKey"
-        keyPassword = "@sk1234SS"
+        keyPassword = System.getenv("RELEASE_KEYSTORE_PASSWORD")
       } else {
         storeFile = file("${rootDir}/debug.keystore")
         storePassword = "android"

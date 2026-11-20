@@ -799,6 +799,44 @@ fun BusinessProfileScreen(
               }
             }
           }
+
+          7 -> {
+            // TAB 7: CATEGORY REORDER THRESHOLDS
+            val displayCategories = categories.ifEmpty {
+              listOf("Tablet", "Capsule", "Syrup", "Injection", "Drops", "Ointment", "Inhaler", "OTC")
+            }
+            item {
+              Card(
+                shape = RoundedCornerShape(10.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF1F2)),
+                border = BorderStroke(1.dp, Color(0xFFFECDD3)),
+                modifier = Modifier.fillMaxWidth()
+              ) {
+                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                  Text(
+                    "Category Low-Stock Alert Thresholds",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = StatusRed
+                  )
+                  Text(
+                    "Configure minimum stock pack thresholds per dosage form. Items at or below this count trigger subtle red critical-stock highlights across Inventory & Alerts.",
+                    fontSize = 11.5.sp,
+                    color = TextDark
+                  )
+                }
+              }
+            }
+            items(displayCategories.size) { index ->
+              val cat = displayCategories[index]
+              val currentVal = thresholds.firstOrNull { it.category.equals(cat, ignoreCase = true) }?.threshold ?: 15
+              ThresholdRow(
+                category = cat,
+                currentThreshold = currentVal,
+                onUpdate = { newVal -> viewModel.updateCategoryThreshold(cat, newVal) }
+              )
+            }
+          }
         }
 
         item {

@@ -97,11 +97,30 @@ fun formatClinicalMarkdown(rawText: String): AnnotatedString {
   }
 }
 
+fun mapGeminiFreeTierError(e: Throwable): String {
+  val msg = buildString {
+    append(e.message.orEmpty())
+    append(' ')
+    append(e.localizedMessage.orEmpty())
+    append(' ')
+    append(e.cause?.message.orEmpty())
+  }
+  val isRateLimit = msg.contains("429") ||
+    msg.contains("RESOURCE_EXHAUSTED", ignoreCase = true) ||
+    msg.contains("quota", ignoreCase = true) ||
+    msg.contains("rate limit", ignoreCase = true)
+  return if (isRateLimit) {
+    "Free Gemini API rate limit reached (RPM/RPD). Please wait 30–60 seconds and tap Retry."
+  } else {
+    e.localizedMessage ?: "Cloud AI request could not be completed. Please try again."
+  }
+}
+
 class GeminiPharmacistService {
 
   companion object {
-    const val PRIMARY_MODEL = "gemini-3.8-flash"
-    const val FAST_MODEL = "gemini-3.5-flash-lite"
+    const val PRIMARY_MODEL = "gemini-2.5-flash"
+    const val FAST_MODEL = "gemini-2.5-flash-lite"
     private const val TAG = "GeminiPharmacistSvc"
   }
 
@@ -151,7 +170,7 @@ class GeminiPharmacistService {
 
   private val medicineEnrichmentModel by lazy {
     Firebase.ai.generativeModel(
-      modelName = PRIMARY_MODEL,
+      modelName = FAST_MODEL,
       generationConfig = generationConfig {
         temperature = 0.1f
         responseMimeType = "application/json"
@@ -181,7 +200,7 @@ class GeminiPharmacistService {
 
   private val structuredCatalogModel by lazy {
     Firebase.ai.generativeModel(
-      modelName = PRIMARY_MODEL,
+      modelName = FAST_MODEL,
       generationConfig = generationConfig {
         temperature = 0.15f
         responseMimeType = "application/json"
@@ -249,7 +268,7 @@ class GeminiPharmacistService {
       throw e
     } catch (e: Exception) {
       Log.e(TAG, "resolveMedicineProfileWithAi failed for '$cleaned'", e)
-      Result.failure(e)
+      Result.failure(Exception(mapGeminiFreeTierError(e), e))
     }
   }
 
@@ -257,7 +276,7 @@ class GeminiPharmacistService {
     userQuery: String,
     inventory: List<MedicineBatchEntity>
   ): Result<String> = withContext(Dispatchers.IO) {
-    val stockDigest = inventory.take(60).joinToString("; ") {
+    val stockDigest = inventory.take(25).joinToString("; ") {
       "${it.brandName} (Salt: ${it.genericSalt}, Batch: ${it.batchNumber}, Exp: ${it.expiryYearMonth}, Qty: ${it.stockQuantity}, MRP: ₹${it.sellingMrp})"
     }
 
@@ -286,7 +305,7 @@ class GeminiPharmacistService {
       throw e
     } catch (e: Exception) {
       Log.e(TAG, "askClinicalPharmacist failed", e)
-      Result.failure(e)
+      Result.failure(Exception(mapGeminiFreeTierError(e), e))
     }
   }
 
@@ -301,8 +320,22 @@ class GeminiPharmacistService {
       .takeLast(6)
       .joinToString("\n") { "${if (it.sender == "user") "User" else "Pharmacist AI"}: ${it.text}" }
 
-    val inventoryDigest = if (liveInventory.isNotEmpty()) {
-      "Live Store Inventory: " + liveInventory.take(40).joinToString("; ") {
+    val queryTokens = userMessage.lowercase()
+      .split(Regex("[^a-z0-9]+"))
+      .filter { it.length >= 3 }
+      .toSet()
+
+    val relevantInventory = if (queryTokens.isEmpty()) {
+      liveInventory.take(20)
+    } else {
+      liveInventory.sortedByDescending { med ->
+        val haystack = "${med.name} ${med.composition} ${med.saltMolecule} ${med.category}".lowercase()
+        queryTokens.count { token -> haystack.contains(token) }
+      }.take(20)
+    }
+
+    val inventoryDigest = if (relevantInventory.isNotEmpty()) {
+      "Live Store Inventory (Top Relevant): " + relevantInventory.joinToString("; ") {
         "${it.name} (${it.composition.ifBlank { it.saltMolecule }}, Stock: ${it.stockPacks}, MRP: ₹${it.mrp})"
       }
     } else "Live Store Inventory: Empty / not yet stocked"
@@ -332,7 +365,7 @@ class GeminiPharmacistService {
       throw e
     } catch (e: Exception) {
       Log.e(TAG, "sendMessageResult failed", e)
-      Result.failure(e)
+      Result.failure(Exception(mapGeminiFreeTierError(e), e))
     }
   }
 
@@ -344,7 +377,7 @@ class GeminiPharmacistService {
   ): String {
     return sendMessageResult(userMessage, conversationHistory, liveInventory, patientContext)
       .getOrElse { err ->
-        "⚠️ Cloud AI request could not be completed (${err.localizedMessage ?: "Network or App Check error"}). Please check internet connectivity and tap Retry."
+        "⚠️ ${mapGeminiFreeTierError(err)}"
       }
   }
 
@@ -370,7 +403,7 @@ class GeminiPharmacistService {
       throw e
     } catch (e: Exception) {
       Log.e(TAG, "searchBrandProductsOnlineResult failed for $brandName", e)
-      Result.failure(e)
+      Result.failure(Exception(mapGeminiFreeTierError(e), e))
     }
   }
 
@@ -402,7 +435,7 @@ class GeminiPharmacistService {
       throw e
     } catch (e: Exception) {
       Log.e(TAG, "searchSubstitutesOnlineResult failed for $q", e)
-      Result.failure(e)
+      Result.failure(Exception(mapGeminiFreeTierError(e), e))
     }
   }
 
