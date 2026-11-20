@@ -728,6 +728,82 @@
     </div>
   </div>
 
+  <!-- 30-DAY MEDICINE STOCK HISTORY MODAL (D3 LINE CHART) -->
+  <div id="stock-history-modal" onclick="if(event.target===this)closeStockHistoryModal()" class="hidden fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-2xl w-full overflow-hidden flex flex-col max-h-[90vh]">
+      <div class="px-5 py-3.5 bg-slate-900 text-white flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-indigo-500/20 border border-indigo-400/40 flex items-center justify-center text-indigo-300">
+            <i class="fa-solid fa-chart-line"></i>
+          </div>
+          <div>
+            <h3 id="sh-modal-title" class="font-bold text-sm leading-tight">30-Day Stock Level History</h3>
+            <p id="sh-modal-subtitle" class="text-[11px] text-slate-300">Batch &amp; generic composition</p>
+          </div>
+        </div>
+        <button onclick="closeStockHistoryModal()" aria-label="Close stock history modal" class="text-slate-300 hover:text-white p-1.5 rounded-lg">
+          <i class="fa-solid fa-xmark text-base"></i>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-4 overflow-y-auto custom-scroll">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+          <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+            <div class="text-[10px] font-semibold uppercase text-slate-400">Current Stock</div>
+            <div id="sh-kpi-current" class="text-lg font-bold text-slate-800 mt-0.5">0</div>
+          </div>
+          <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+            <div class="text-[10px] font-semibold uppercase text-slate-400">Reorder Level</div>
+            <div id="sh-kpi-reorder" class="text-lg font-bold text-amber-600 mt-0.5">0</div>
+          </div>
+          <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+            <div class="text-[10px] font-semibold uppercase text-slate-400">30d High / Low</div>
+            <div id="sh-kpi-range" class="text-lg font-bold text-indigo-700 mt-0.5">0 / 0</div>
+          </div>
+          <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+            <div class="text-[10px] font-semibold uppercase text-slate-400">30d Net Change</div>
+            <div id="sh-kpi-net" class="text-lg font-bold text-emerald-700 mt-0.5">0</div>
+          </div>
+        </div>
+
+        <div id="sh-low-alert" class="hidden p-3 rounded-xl bg-rose-50 border border-rose-200 flex flex-wrap items-center justify-between gap-2 text-xs">
+          <div class="flex items-center gap-2 text-rose-800 font-semibold">
+            <i class="fa-solid fa-triangle-exclamation text-rose-600"></i>
+            <span id="sh-low-alert-text">Stock is below reorder level.</span>
+          </div>
+          <button id="sh-quick-reorder-btn" class="bg-rose-600 hover:bg-rose-700 text-white px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5">
+            <i class="fa-solid fa-cart-plus"></i> Create Reorder PO
+          </button>
+        </div>
+
+        <div class="bg-slate-50/70 border border-slate-200 rounded-xl p-4 space-y-2">
+          <div class="flex flex-wrap items-center justify-between gap-2 text-xs">
+            <span class="font-bold text-slate-700">Daily Inventory Trend (Last 30 Days)</span>
+            <div class="flex items-center gap-3 text-[11px] text-slate-500">
+              <span class="inline-flex items-center gap-1"><span class="w-3 h-0.5 bg-indigo-600 inline-block"></span> Stock Level</span>
+              <span class="inline-flex items-center gap-1"><span class="w-3 h-0.5 border-t-2 border-dashed border-rose-500 inline-block"></span> Reorder Threshold</span>
+            </div>
+          </div>
+          <div id="stock-history-chart" class="w-full h-60 relative"></div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs">
+          <span class="font-bold text-slate-700">Quick Stock Adjust:</span>
+          <input id="sh-adjust-delta" type="number" placeholder="+20 or -2" class="w-28 border rounded-lg px-2.5 py-1.5 bg-white" />
+          <input id="sh-adjust-reason" type="text" placeholder="Reason (e.g. Stock Inward, Breakage)" class="flex-1 min-w-40 border rounded-lg px-2.5 py-1.5 bg-white" />
+          <button onclick="applyModalStockAdjustment()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-lg font-bold">
+            Apply
+          </button>
+        </div>
+
+        <div class="space-y-1.5">
+          <h4 class="text-xs font-bold uppercase text-slate-500">Recorded Stock Movements (Last 30 Days)</h4>
+          <div id="stock-history-events" class="divide-y divide-slate-100 border rounded-xl bg-white max-h-36 overflow-y-auto text-xs"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- 80mm THERMAL RECEIPT PRINT VIEW -->
   <div id="printable-receipt" class="hidden">
     <div style="text-align:center; border-bottom:1px dashed #000; padding-bottom:6px; margin-bottom:6px;">
@@ -803,7 +879,8 @@
         { id: 2, name: "Keimed Pharma Hub", gst: "27AAECK9981F1Z2", phone: "9800445566" }
       ],
       cashLedger: JSON.parse(localStorage.getItem("rp4_cash")) || [],
-      purchaseOrders: JSON.parse(localStorage.getItem("rp4_pos")) || []
+      purchaseOrders: JSON.parse(localStorage.getItem("rp4_pos")) || [],
+      stockEvents: JSON.parse(localStorage.getItem("rp4_stock_events")) || []
     };
 
     let posCart = [];
@@ -814,6 +891,24 @@
     let invCameraStream = null;
     let invBarcodeTimer = null;
     let currentScannedBarcode = "";
+    let currentStockHistoryMedId = null;
+
+    function recordStockEvent(medicineId, medicineName, qtyAfter, delta, reason, meta = {}) {
+      if (!Array.isArray(state.stockEvents)) state.stockEvents = [];
+      state.stockEvents.push({
+        id: Date.now() + Math.floor(Math.random() * 1000),
+        medicineId: Number(medicineId),
+        medicineName: String(medicineName || ""),
+        qtyAfter: Number(qtyAfter || 0),
+        delta: Number(delta || 0),
+        reason: String(reason || "Stock Update"),
+        invoiceId: meta.invoiceId || "",
+        timestamp: meta.timestamp || new Date().toISOString()
+      });
+      if (state.stockEvents.length > 3000) {
+        state.stockEvents = state.stockEvents.slice(-3000);
+      }
+    }
 
     function escapeHtml(str) {
       return String(str ?? "")
@@ -903,6 +998,7 @@
       localStorage.setItem("rp4_suppliers", JSON.stringify(state.suppliers));
       localStorage.setItem("rp4_cash", JSON.stringify(state.cashLedger));
       localStorage.setItem("rp4_pos", JSON.stringify(state.purchaseOrders));
+      localStorage.setItem("rp4_stock_events", JSON.stringify(state.stockEvents || []));
       renderAll();
     }
 
@@ -1101,6 +1197,7 @@
         const dupe = findLocalMedicineMatch(enrichedItem.name);
         if (dupe) return { item: dupe, source: "local_cache" };
         state.inventory.push(enrichedItem);
+        recordStockEvent(enrichedItem.id, enrichedItem.name, enrichedItem.qty, enrichedItem.qty, "AI Catalog Enriched");
         persist();
       }
       return { item: enrichedItem, source: "gemini_25_flash_lite" };
@@ -1190,7 +1287,10 @@
 
       try {
         const { item, source } = await resolveMedicineWithGemini4(query, true);
-        if (item.qty <= 0) item.qty = 10;
+        if (item.qty <= 0) {
+          item.qty = 10;
+          recordStockEvent(item.id, item.name, item.qty, 10, "POS AI Auto-Replenish");
+        }
         const existing = posCart.find(c => c.id === item.id);
         if (existing) existing.qty += 1;
         else posCart.push({ ...item, qty: 1 });
@@ -1715,9 +1815,22 @@ Identify every clinically significant interaction among these salts, severity (C
       const net = gross - discVal;
       let costPtr = 0;
 
+      const invoiceId = "INV-" + Math.floor(100000 + Math.random() * 900000);
+      const invoiceTimestamp = new Date().toISOString();
+
       posCart.forEach(c => {
         const inv = state.inventory.find(i => i.id === c.id);
-        if (inv) inv.qty = Math.max(0, inv.qty - c.qty);
+        if (inv) {
+          const prevQty = Number(inv.qty || 0);
+          inv.qty = Math.max(0, prevQty - Number(c.qty || 0));
+          const actualDelta = inv.qty - prevQty;
+          if (actualDelta !== 0) {
+            recordStockEvent(inv.id, inv.name, inv.qty, actualDelta, `POS Sale (${invoiceId})`, {
+              invoiceId,
+              timestamp: invoiceTimestamp
+            });
+          }
+        }
         costPtr += (c.ptr || c.mrp * 0.75) * c.qty;
       });
 
@@ -1730,8 +1843,8 @@ Identify every clinically significant interaction among these salts, severity (C
       }
 
       const invObj = {
-        id: "INV-" + Math.floor(100000 + Math.random() * 900000),
-        createdAt: new Date().toISOString(),
+        id: invoiceId,
+        createdAt: invoiceTimestamp,
         date: new Date().toLocaleString(),
         patient, phone, doctor, mode, net, gstTotal,
         profit: net - costPtr,
@@ -1777,7 +1890,12 @@ Identify every clinically significant interaction among these salts, severity (C
       if (!confirm(`Process Sales Return & restock items for ${inv.id}?`)) return;
       inv.items.forEach(item => {
         const batch = state.inventory.find(b => b.id === item.id);
-        if (batch) batch.qty += item.qty;
+        if (batch) {
+          batch.qty += Number(item.qty || 0);
+          recordStockEvent(batch.id, batch.name, batch.qty, Number(item.qty || 0), `Sales Return (${inv.id})`, {
+            invoiceId: inv.id
+          });
+        }
       });
       if (inv.mode === "UDHAR") {
         const khataEntry = state.khata.find(k => k.name.toLowerCase() === (inv.patient || "").toLowerCase());
@@ -1821,9 +1939,17 @@ Identify every clinically significant interaction among these salts, severity (C
       if (editId) {
         const idx = state.inventory.findIndex(i => i.id == editId);
         const prevBarcode = idx > -1 ? state.inventory[idx].barcode : "";
-        if (idx > -1) state.inventory[idx] = { id: Number(editId), name, salt, batch, expiry, rack, schedule, qty, reorder, ptr, mrp, gst: finalGst, barcode: currentScannedBarcode || prevBarcode || "" };
+        const prevQty = idx > -1 ? Number(state.inventory[idx].qty || 0) : qty;
+        if (idx > -1) {
+          state.inventory[idx] = { id: Number(editId), name, salt, batch, expiry, rack, schedule, qty, reorder, ptr, mrp, gst: finalGst, barcode: currentScannedBarcode || prevBarcode || "" };
+          if (qty !== prevQty) {
+            recordStockEvent(editId, name, qty, qty - prevQty, "Manual Batch Edit");
+          }
+        }
       } else {
-        state.inventory.push({ id: Date.now(), name, salt, batch, expiry, rack, schedule, qty, reorder, ptr, mrp, gst: finalGst, barcode: currentScannedBarcode || "" });
+        const newId = Date.now();
+        state.inventory.push({ id: newId, name, salt, batch, expiry, rack, schedule, qty, reorder, ptr, mrp, gst: finalGst, barcode: currentScannedBarcode || "" });
+        recordStockEvent(newId, name, qty, qty, "Batch Added");
       }
 
       currentScannedBarcode = "";
@@ -2154,20 +2280,23 @@ Identify every clinically significant interaction among these salts, severity (C
           const cols = parseCsvLine(line);
           if (cols.length >= 9) {
             const parsedGst = parseInt(cols[9], 10);
+            const importedId = Date.now() + Math.floor(Math.random() * 1000);
+            const importedQty = parseInt(cols[6], 10) || 10;
             state.inventory.push({
-              id: Date.now() + Math.floor(Math.random() * 1000),
+              id: importedId,
               name: cols[0],
               salt: cols[1],
               batch: cols[2],
               expiry: cols[3],
               rack: cols[4],
               schedule: normalizeSchedule(cols[5]),
-              qty: parseInt(cols[6], 10) || 10,
+              qty: importedQty,
               reorder: 15,
               ptr: parseFloat(cols[7]) || 50,
               mrp: parseFloat(cols[8]) || 70,
               gst: Number.isNaN(parsedGst) ? 12 : parsedGst
             });
+            recordStockEvent(importedId, cols[0], importedQty, importedQty, "CSV Import");
           }
         });
         persist();
@@ -2384,7 +2513,8 @@ Provide an accurate, clinically verified answer with salt-level pharmacology, in
             doctors: Array.isArray(parsed.doctors) ? parsed.doctors : [],
             suppliers: Array.isArray(parsed.suppliers) ? parsed.suppliers : [],
             cashLedger: Array.isArray(parsed.cashLedger) ? parsed.cashLedger : [],
-            purchaseOrders: Array.isArray(parsed.purchaseOrders) ? parsed.purchaseOrders : []
+            purchaseOrders: Array.isArray(parsed.purchaseOrders) ? parsed.purchaseOrders : [],
+            stockEvents: Array.isArray(parsed.stockEvents) ? parsed.stockEvents : []
           };
           persist();
           alert("Backup restored successfully!");
@@ -2447,15 +2577,23 @@ Provide an accurate, clinically verified answer with salt-level pharmacology, in
       }
 
       document.getElementById("inventory-tbody").innerHTML = matches.map(i => {
-        const isCritical = Number(i.qty) <= Number(i.reorder);
-        const isOutOfStock = Number(i.qty) === 0;
+        const qtyVal = Number(i.qty || 0);
+        const reorderVal = Number(i.reorder || 0);
+        const isCritical = qtyVal <= reorderVal;
+        const isBelowReorder = qtyVal < reorderVal;
+        const isOutOfStock = qtyVal === 0;
+        const statusBadgeText = isOutOfStock
+          ? "Out of Stock"
+          : isBelowReorder
+            ? "Below Reorder"
+            : "At Reorder Level";
         return `
           <tr class="${isCritical ? 'critical-stock-row border-l-4 border-rose-500' : 'hover:bg-slate-50 transition-colors'}">
             <td class="p-3 font-bold">
               <div class="flex items-center gap-1.5 flex-wrap">
                 <span>${escapeHtml(i.name)}</span>
                 <span class="px-1.5 py-0.5 bg-slate-100 rounded text-[10px] text-slate-600 font-medium">${escapeHtml(i.schedule || "OTC")}</span>
-                ${isCritical ? `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700 border border-rose-300 shadow-xs"><i class="fa-solid fa-triangle-exclamation text-rose-600"></i> ${isOutOfStock ? 'Out of Stock' : 'Critical (≤ Reorder)'}</span>` : ''}
+                ${isCritical ? `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700 border border-rose-300 shadow-xs"><i class="fa-solid fa-bell animate-pulse text-rose-600"></i> ${statusBadgeText}</span>` : ''}
               </div>
             </td>
             <td class="p-3 text-slate-500">${escapeHtml(i.salt)}</td>
@@ -2467,16 +2605,349 @@ Provide an accurate, clinically verified answer with salt-level pharmacology, in
               <div class="inline-flex flex-col items-center">
                 <span class="font-bold ${isCritical ? 'text-rose-600 text-sm' : 'text-emerald-700'}">${i.qty}</span>
                 <span class="text-[10px] text-slate-400">Reorder: ${i.reorder}</span>
-                ${isCritical ? `<span class="text-[9px] font-bold text-rose-600 uppercase tracking-tight flex items-center justify-center gap-0.5 mt-0.5"><i class="fa-solid fa-arrow-down text-[8px]"></i> ≤ Reorder</span>` : ''}
+                ${isCritical ? `<span class="text-[9px] font-bold text-rose-600 uppercase tracking-tight flex items-center justify-center gap-0.5 mt-0.5"><i class="fa-solid fa-arrow-down text-[8px]"></i> ${isBelowReorder ? 'Below Min' : 'Reorder Now'}</span>` : ''}
               </div>
             </td>
-            <td class="p-3 text-center space-x-2">
-              <button onclick="editBatch(${i.id})" class="text-blue-600 hover:underline">Edit</button>
-              <button onclick="deleteBatch(${i.id})" class="text-rose-600 hover:underline">Delete</button>
+            <td class="p-3 text-center">
+              <div class="inline-flex items-center justify-center gap-1.5 flex-wrap">
+                ${isCritical ? `<button onclick="quickReorderBatch(${i.id})" title="Quick Reorder PO for ${escapeHtml(i.name)}" class="inline-flex items-center gap-1 bg-rose-600 hover:bg-rose-700 text-white px-2 py-1 rounded text-[11px] font-bold shadow-xs"><i class="fa-solid fa-cart-plus"></i> Reorder</button>` : ''}
+                <button onclick="showStockHistory(${i.id})" title="View 30-day stock level history" class="inline-flex items-center gap-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-2 py-1 rounded text-[11px] font-semibold"><i class="fa-solid fa-chart-line"></i> History</button>
+                <button onclick="editBatch(${i.id})" class="text-blue-600 hover:underline px-1">Edit</button>
+                <button onclick="deleteBatch(${i.id})" class="text-rose-600 hover:underline px-1">Delete</button>
+              </div>
             </td>
           </tr>
         `;
       }).join("");
+    }
+
+    function quickReorderBatch(medicineId) {
+      const med = state.inventory.find(i => Number(i.id) === Number(medicineId));
+      if (!med) return alert("Medicine batch not found.");
+      const orderQty = Math.max(15, (Number(med.reorder) || 15) * 3);
+      const po = {
+        id: "PO-" + Math.floor(1000 + Math.random() * 9000),
+        date: new Date().toLocaleDateString(),
+        supplier: state.suppliers[0]?.name || "Primary Distributor",
+        items: `${med.name} [Batch:${med.batch}] (${orderQty} strips)`
+      };
+      state.purchaseOrders.unshift(po);
+      persist();
+
+      const feedback = document.getElementById("inv-ai-feedback");
+      if (feedback) {
+        feedback.className = "text-xs p-2.5 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 flex flex-wrap items-center justify-between gap-2";
+        feedback.classList.remove("hidden");
+        feedback.innerHTML = `
+          <span><strong>${escapeHtml(po.id)} Created:</strong> Ordered ${orderQty} strips of <strong>${escapeHtml(med.name)}</strong> from ${escapeHtml(po.supplier)}.</span>
+          <button onclick="switchTab('purchases')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded text-[11px] font-bold">View Purchase Orders →</button>
+        `;
+      }
+      if (currentStockHistoryMedId === Number(medicineId)) {
+        closeStockHistoryModal();
+        switchTab("purchases");
+      }
+    }
+
+    // --- 30-DAY STOCK HISTORY MODAL & D3 LINE CHART ---
+    function toLocalDateKey(dt) {
+      const d = new Date(dt);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${y}-${m}-${day}`;
+    }
+
+    function build30DayStockSeries(med) {
+      const medId = Number(med.id);
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+
+      const days = [];
+      for (let offset = 29; offset >= 0; offset--) {
+        const dt = new Date(today.getFullYear(), today.getMonth(), today.getDate() - offset);
+        days.push({
+          date: dt,
+          key: toLocalDateKey(dt),
+          qty: Number(med.qty || 0),
+          netDelta: 0,
+          events: []
+        });
+      }
+      const startKey = days[0].key;
+      const recordedInvoiceIds = new Set();
+      const events = [];
+
+      (state.stockEvents || []).forEach(ev => {
+        if (Number(ev.medicineId) !== medId) return;
+        const parsed = new Date(ev.timestamp);
+        if (Number.isNaN(parsed.getTime())) return;
+        if (ev.invoiceId) recordedInvoiceIds.add(ev.invoiceId);
+        const key = toLocalDateKey(parsed);
+        if (key >= startKey) {
+          events.push({
+            date: parsed,
+            key,
+            delta: Number(ev.delta || 0),
+            reason: ev.reason || "Stock Update"
+          });
+        }
+      });
+
+      // Backfill any pre-existing invoices not yet present in stockEvents
+      (state.invoices || []).forEach(inv => {
+        if (!inv || recordedInvoiceIds.has(inv.id)) return;
+        const parsed = new Date(inv.createdAt || inv.date);
+        if (Number.isNaN(parsed.getTime())) return;
+        const key = toLocalDateKey(parsed);
+        if (key < startKey) return;
+        (inv.items || []).forEach(it => {
+          if (Number(it.id) === medId) {
+            events.push({
+              date: parsed,
+              key,
+              delta: -Math.abs(Number(it.qty || 0)),
+              reason: `POS Sale (${inv.id})`
+            });
+          }
+        });
+      });
+
+      events.sort((a, b) => a.date - b.date);
+
+      const dayMap = new Map(days.map(d => [d.key, d]));
+      events.forEach(ev => {
+        const bucket = dayMap.get(ev.key);
+        if (bucket) {
+          bucket.netDelta += ev.delta;
+          bucket.events.push(ev);
+        }
+      });
+
+      const currentQty = Number(med.qty || 0);
+      days.forEach(day => {
+        const laterDelta = events
+          .filter(ev => ev.key > day.key)
+          .reduce((sum, ev) => sum + ev.delta, 0);
+        day.qty = Math.max(0, currentQty - laterDelta);
+      });
+
+      return { days, events };
+    }
+
+    function showStockHistory(medicineId) {
+      const med = state.inventory.find(i => Number(i.id) === Number(medicineId));
+      if (!med) return alert("Medicine record not found.");
+      currentStockHistoryMedId = Number(med.id);
+
+      const { days, events } = build30DayStockSeries(med);
+      const qtyVal = Number(med.qty || 0);
+      const reorderVal = Number(med.reorder || 0);
+      const highVal = Math.max(...days.map(d => d.qty), qtyVal);
+      const lowVal = Math.min(...days.map(d => d.qty), qtyVal);
+      const netChange = events.reduce((s, e) => s + e.delta, 0);
+
+      document.getElementById("sh-modal-title").innerText = `${med.name} — 30-Day Stock History`;
+      document.getElementById("sh-modal-subtitle").innerText = `${med.salt || "Generic"} • Batch: ${med.batch} • Rack: ${med.rack} • Exp: ${med.expiry}`;
+
+      const curEl = document.getElementById("sh-kpi-current");
+      curEl.innerText = `${qtyVal} strips`;
+      curEl.className = `text-lg font-bold mt-0.5 ${qtyVal <= reorderVal ? "text-rose-600" : "text-slate-800"}`;
+      document.getElementById("sh-kpi-reorder").innerText = `${reorderVal} strips`;
+      document.getElementById("sh-kpi-range").innerText = `${highVal} / ${lowVal}`;
+
+      const netEl = document.getElementById("sh-kpi-net");
+      netEl.innerText = `${netChange > 0 ? "+" : ""}${netChange}`;
+      netEl.className = `text-lg font-bold mt-0.5 ${netChange < 0 ? "text-rose-600" : netChange > 0 ? "text-emerald-700" : "text-slate-600"}`;
+
+      const alertBanner = document.getElementById("sh-low-alert");
+      const alertText = document.getElementById("sh-low-alert-text");
+      const reorderBtn = document.getElementById("sh-quick-reorder-btn");
+      if (qtyVal <= reorderVal) {
+        alertBanner.classList.remove("hidden");
+        alertText.innerText = qtyVal === 0
+          ? `Out of stock! Immediate reorder recommended (Target min: ${reorderVal} strips).`
+          : `Current stock (${qtyVal}) is ${qtyVal < reorderVal ? "below" : "at"} reorder level (${reorderVal}).`;
+        reorderBtn.onclick = () => quickReorderBatch(med.id);
+      } else {
+        alertBanner.classList.add("hidden");
+      }
+
+      const eventsBox = document.getElementById("stock-history-events");
+      const recentEvents = [...events].reverse();
+      eventsBox.innerHTML = recentEvents.length > 0
+        ? recentEvents.map(ev => `
+            <div class="px-3 py-2 flex items-center justify-between gap-2">
+              <div>
+                <div class="font-semibold text-slate-700">${escapeHtml(ev.reason)}</div>
+                <div class="text-[10px] text-slate-400">${ev.date.toLocaleString()}</div>
+              </div>
+              <span class="font-bold px-2 py-0.5 rounded ${ev.delta >= 0 ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}">
+                ${ev.delta >= 0 ? "+" : ""}${ev.delta} strips
+              </span>
+            </div>
+          `).join("")
+        : `<div class="p-3 text-center text-slate-400">No sales or manual quantity adjustments recorded in the last 30 days.</div>`;
+
+      document.getElementById("stock-history-modal").classList.remove("hidden");
+      requestAnimationFrame(() => renderStockHistoryD3Chart(med, days));
+    }
+
+    function renderStockHistoryD3Chart(med, days) {
+      const container = document.getElementById("stock-history-chart");
+      if (!container) return;
+      container.innerHTML = "";
+      if (typeof window.d3 === "undefined") {
+        container.innerHTML = `<div class="h-full flex items-center justify-center text-xs text-slate-400">D3 library unavailable offline. Connect once to cache chart engine.</div>`;
+        return;
+      }
+      const d3 = window.d3;
+      const width = Math.max(container.clientWidth || 560, 320);
+      const height = container.clientHeight || 240;
+      const margin = { top: 18, right: 20, bottom: 30, left: 46 };
+      const innerW = width - margin.left - margin.right;
+      const innerH = height - margin.top - margin.bottom;
+
+      const reorderVal = Number(med.reorder || 0);
+      const maxY = Math.max(d3.max(days, d => d.qty) || 0, reorderVal * 1.2, 10);
+
+      const svg = d3.select(container)
+        .append("svg")
+        .attr("viewBox", `0 0 ${width} ${height}`)
+        .attr("class", "w-full h-full overflow-visible");
+
+      const defs = svg.append("defs");
+      const gradId = "sh-area-grad";
+      const grad = defs.append("linearGradient")
+        .attr("id", gradId)
+        .attr("x1", "0%").attr("y1", "0%")
+        .attr("x2", "0%").attr("y2", "100%");
+      grad.append("stop").attr("offset", "0%").attr("stop-color", "#4f46e5").attr("stop-opacity", 0.24);
+      grad.append("stop").attr("offset", "100%").attr("stop-color", "#4f46e5").attr("stop-opacity", 0.02);
+
+      const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+      const x = d3.scaleTime()
+        .domain(d3.extent(days, d => d.date))
+        .range([0, innerW]);
+
+      const y = d3.scaleLinear()
+        .domain([0, maxY * 1.12])
+        .nice()
+        .range([innerH, 0]);
+
+      g.append("g")
+        .attr("class", "text-[10px] text-slate-400")
+        .call(d3.axisLeft(y).ticks(5).tickSize(-innerW))
+        .call(ax => ax.select(".domain").remove())
+        .call(ax => ax.selectAll(".tick line").attr("stroke", "#e2e8f0").attr("stroke-dasharray", "3,3"));
+
+      g.append("g")
+        .attr("transform", `translate(0,${innerH})`)
+        .attr("class", "text-[10px] text-slate-500")
+        .call(d3.axisBottom(x).ticks(6).tickFormat(d3.timeFormat("%b %d")))
+        .call(ax => ax.select(".domain").attr("stroke", "#cbd5e1"));
+
+      // Reorder level threshold line
+      if (reorderVal > 0 && y(reorderVal) >= 0 && y(reorderVal) <= innerH) {
+        g.append("line")
+          .attr("x1", 0)
+          .attr("x2", innerW)
+          .attr("y1", y(reorderVal))
+          .attr("y2", y(reorderVal))
+          .attr("stroke", "#e11d48")
+          .attr("stroke-width", 1.5)
+          .attr("stroke-dasharray", "5,4");
+
+        g.append("text")
+          .attr("x", innerW - 4)
+          .attr("y", Math.max(10, y(reorderVal) - 5))
+          .attr("text-anchor", "end")
+          .attr("class", "fill-rose-600 text-[10px] font-bold")
+          .text(`Reorder: ${reorderVal}`);
+      }
+
+      const areaGen = d3.area()
+        .x(d => x(d.date))
+        .y0(innerH)
+        .y1(d => y(d.qty))
+        .curve(d3.curveMonotoneX);
+
+      const lineGen = d3.line()
+        .x(d => x(d.date))
+        .y(d => y(d.qty))
+        .curve(d3.curveMonotoneX);
+
+      g.append("path")
+        .datum(days)
+        .attr("fill", `url(#${gradId})`)
+        .attr("d", areaGen);
+
+      g.append("path")
+        .datum(days)
+        .attr("fill", "none")
+        .attr("stroke", "#4f46e5")
+        .attr("stroke-width", 2.5)
+        .attr("d", lineGen);
+
+      const tooltip = d3.select(container)
+        .append("div")
+        .attr("class", "hidden pointer-events-none absolute bg-slate-900 text-white text-[11px] px-2.5 py-1.5 rounded-lg shadow-lg z-20 max-w-52");
+
+      g.selectAll(".sh-point")
+        .data(days)
+        .enter()
+        .append("circle")
+        .attr("class", "sh-point cursor-pointer")
+        .attr("cx", d => x(d.date))
+        .attr("cy", d => y(d.qty))
+        .attr("r", d => (d.events.length > 0 || d === days[days.length - 1]) ? 4 : 2.5)
+        .attr("fill", d => d.qty <= reorderVal ? "#e11d48" : (d.events.length > 0 ? "#4f46e5" : "#818cf8"))
+        .attr("stroke", "#ffffff")
+        .attr("stroke-width", 1.5)
+        .on("mouseenter", function (event, d) {
+          d3.select(this).attr("r", 6);
+          const dateLabel = d.date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+          const evSummary = d.events.length > 0
+            ? `<div class="mt-1 pt-1 border-t border-slate-700 text-[10px] text-slate-200">${d.events.map(e => `${escapeHtml(e.reason)}: ${e.delta >= 0 ? "+" : ""}${e.delta}`).join("<br>")}</div>`
+            : "";
+          tooltip
+            .classed("hidden", false)
+            .html(`<div class="font-bold">${escapeHtml(dateLabel)}</div><div>Stock: <strong>${d.qty} strips</strong></div>${evSummary}`)
+            .style("left", `${Math.min(innerW - 110, Math.max(8, x(d.date) + margin.left - 45))}px`)
+            .style("top", `${Math.max(4, y(d.qty) - 10)}px`);
+        })
+        .on("mouseleave", function (event, d) {
+          d3.select(this).attr("r", (d.events.length > 0 || d === days[days.length - 1]) ? 4 : 2.5);
+          tooltip.classed("hidden", true);
+        });
+    }
+
+    function applyModalStockAdjustment() {
+      if (currentStockHistoryMedId === null) return;
+      const med = state.inventory.find(i => Number(i.id) === Number(currentStockHistoryMedId));
+      if (!med) return;
+      const deltaEl = document.getElementById("sh-adjust-delta");
+      const reasonEl = document.getElementById("sh-adjust-reason");
+      const delta = parseInt(deltaEl.value, 10);
+      if (!delta || Number.isNaN(delta)) return alert("Enter a non-zero quantity change (e.g. +20 or -2).");
+      const prevQty = Number(med.qty || 0);
+      const nextQty = Math.max(0, prevQty + delta);
+      const actualDelta = nextQty - prevQty;
+      if (actualDelta === 0) return alert("Stock is already 0.");
+      med.qty = nextQty;
+      const reason = (reasonEl.value || "").trim() || (actualDelta > 0 ? "Stock Inward" : "Stock Adjustment");
+      recordStockEvent(med.id, med.name, nextQty, actualDelta, reason);
+      deltaEl.value = "";
+      reasonEl.value = "";
+      persist();
+      showStockHistory(med.id);
+    }
+
+    function closeStockHistoryModal() {
+      currentStockHistoryMedId = null;
+      const modal = document.getElementById("stock-history-modal");
+      if (modal) modal.classList.add("hidden");
     }
 
     function renderInvoicesTable(filter = "") {
@@ -2848,7 +3319,19 @@ Provide an accurate, clinically verified answer with salt-level pharmacology, in
     let chartResizeTimer = null;
     window.addEventListener("resize", () => {
       clearTimeout(chartResizeTimer);
-      chartResizeTimer = setTimeout(renderDashboardCharts, 180);
+      chartResizeTimer = setTimeout(() => {
+        renderDashboardCharts();
+        if (currentStockHistoryMedId !== null) {
+          const med = state.inventory.find(i => Number(i.id) === Number(currentStockHistoryMedId));
+          if (med) renderStockHistoryD3Chart(med, build30DayStockSeries(med).days);
+        }
+      }, 180);
+    });
+
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && currentStockHistoryMedId !== null) {
+        closeStockHistoryModal();
+      }
     });
 
     // Bind interactive functions to window so inline HTML event handlers work inside <script type="module">
@@ -2878,6 +3361,10 @@ Provide an accurate, clinically verified answer with salt-level pharmacology, in
       saveInventoryBatch,
       editBatch,
       deleteBatch,
+      quickReorderBatch,
+      showStockHistory,
+      closeStockHistoryModal,
+      applyModalStockAdjustment,
       enrichAndSaveMissingSearch,
       importInventoryCsv,
       exportInventoryCsv,
