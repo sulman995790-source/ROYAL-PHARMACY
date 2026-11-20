@@ -12,6 +12,7 @@ import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.firestore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -42,7 +43,8 @@ class FirebaseSyncManager(
   private val firestore: FirebaseFirestore? by lazy {
     try {
       val dbId = context.getString(R.string.firestore_database_id)
-      FirebaseFirestore.getInstance(dbId)
+        .ifBlank { "ai-studio-android-royalpha-1aaf0481-70c1-4064-9bb9-5d4d765c6272" }
+      Firebase.firestore(dbId)
     } catch (e: Throwable) {
       Log.e("FirebaseSyncManager", "Named Firestore initialization failed: ${e.message}", e)
       null

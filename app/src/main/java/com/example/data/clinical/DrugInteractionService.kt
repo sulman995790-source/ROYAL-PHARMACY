@@ -300,12 +300,22 @@ class DrugInteractionService {
     "rosuvas" to listOf("rosuvastatin")
   )
 
+  private fun matchesSaltToken(salt: String, rulePart: String): Boolean {
+    val s = salt.trim().lowercase()
+    val r = rulePart.trim().lowercase()
+    if (s.isBlank() || r.isBlank()) return false
+    if (s == r) return true
+    val rBoundary = Regex("\\b${Regex.escape(r)}\\b")
+    val sBoundary = Regex("\\b${Regex.escape(s)}\\b")
+    return rBoundary.containsMatchIn(s) || (s.length >= 4 && sBoundary.containsMatchIn(r))
+  }
+
   private fun parseSaltString(rawSalt: String): List<String> {
     return rawSalt
       .split("+", ",", "/", "&", " and ")
       .map { token ->
         token.lowercase()
-          .replace(Regex("\\d+(\\.\\d+)?\\s*(mg|mcg|g|ml|iu|%|w/v)"), "")
+          .replace(Regex("\\d+(\\.\\d+)?\\s*(mg|mcg|gm|g|ml|iu|%|w/v|w/w)"), "")
           .replace(Regex("\\b(ip|bp|usp|sr|er|xr|dt|md|ds|duo|plus|forte)\\b"), "")
           .replace(Regex("[^a-z\\s-]"), " ")
           .trim()
@@ -320,9 +330,12 @@ class DrugInteractionService {
 
     // 1. Check cached Room inventory first (Cache-Through persisted salts)
     val cachedMatch = cachedInventory.firstOrNull { med ->
-      med.name.equals(drugInput, ignoreCase = true) ||
+      med.name.equals(drugInput, ignoreCase = true)
+    } ?: cachedInventory.firstOrNull { med ->
+      drugInput.length >= 3 && (
         med.name.contains(drugInput, ignoreCase = true) ||
-        drugInput.contains(med.name, ignoreCase = true)
+          drugInput.contains(med.name, ignoreCase = true)
+        )
     }
     if (cachedMatch != null) {
       val saltSource = cachedMatch.saltMolecule.ifBlank { cachedMatch.composition }
@@ -367,7 +380,8 @@ class DrugInteractionService {
     for (drug in cleanDrugs) {
       var salts = resolveLocalSalts(drug, cachedInventory)
       val matchedCached = cachedInventory.any {
-        it.name.equals(drug, ignoreCase = true) || it.name.contains(drug, ignoreCase = true)
+        it.name.equals(drug, ignoreCase = true) ||
+          (drug.length >= 3 && it.name.contains(drug, ignoreCase = true))
       }
       val matchedKnownMap = brandToMoleculesMap.keys.any { drug.lowercase().contains(it) }
 
@@ -392,8 +406,8 @@ class DrugInteractionService {
       val singleWarnings = offlineInteractions.filter { rule ->
         val r1 = rule.drug1.lowercase().split("/").map { it.trim() }
         val r2 = rule.drug2.lowercase().split("/").map { it.trim() }
-        r1.any { p -> singleSalts.any { it.contains(p) || p.contains(it) } } ||
-          r2.any { p -> singleSalts.any { it.contains(p) || p.contains(it) } }
+        r1.any { p -> singleSalts.any { matchesSaltToken(it, p) } } ||
+          r2.any { p -> singleSalts.any { matchesSaltToken(it, p) } }
       }.take(3)
       val foodList = singleWarnings.mapNotNull { it.foodPrecaution.takeIf { p -> p.isNotBlank() } }.distinct()
 
@@ -441,10 +455,10 @@ class DrugInteractionService {
         val found = offlineInteractions.firstOrNull { rule ->
           val r1Parts = rule.drug1.lowercase().split("/").map { it.trim() }
           val r2Parts = rule.drug2.lowercase().split("/").map { it.trim() }
-          val aR1 = r1Parts.any { p -> molsA.any { it.contains(p) || p.contains(it) } }
-          val bR2 = r2Parts.any { p -> molsB.any { it.contains(p) || p.contains(it) } }
-          val aR2 = r2Parts.any { p -> molsA.any { it.contains(p) || p.contains(it) } }
-          val bR1 = r1Parts.any { p -> molsB.any { it.contains(p) || p.contains(it) } }
+          val aR1 = r1Parts.any { p -> molsA.any { matchesSaltToken(it, p) } }
+          val bR2 = r2Parts.any { p -> molsB.any { matchesSaltToken(it, p) } }
+          val aR2 = r2Parts.any { p -> molsA.any { matchesSaltToken(it, p) } }
+          val bR1 = r1Parts.any { p -> molsB.any { matchesSaltToken(it, p) } }
           (aR1 && bR2) || (aR2 && bR1)
         }
 

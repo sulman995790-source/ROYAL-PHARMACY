@@ -244,7 +244,7 @@ fun RoyalPharmacyApp(
       Screen.INVENTORY_DASHBOARD, Screen.BATCH_TRACKING, Screen.STOCK_ANALYTICS, Screen.STOCK_TRANSFER -> viewModel.navigateTo(Screen.STOCK)
       Screen.PURCHASE_ORDERS -> viewModel.navigateTo(Screen.PURCHASE)
       Screen.VOICE_SEARCH, Screen.SYNC_MANAGER, Screen.PRESCRIPTION_SCANNER, Screen.DAILY_HUDDLE, Screen.BACKUP_RESTORE, Screen.INVENTORY_QR -> viewModel.navigateTo(Screen.HOME)
-      Screen.CASH_BANK_ACCOUNTS, Screen.PRESCRIPTION_HISTORY, Screen.SMART_DOSAGE_CALCULATOR, Screen.UNIT_CONVERTER, Screen.DRUG_INTERACTION_CHECKER, Screen.SMART_INVENTORY_SUGGESTIONS, Screen.DOCTOR_MANAGEMENT, Screen.SYMPTOM_DISEASE_TRACKER, Screen.ROLE_MANAGEMENT -> viewModel.navigateTo(Screen.MORE)
+      Screen.CASH_BANK_ACCOUNTS, Screen.PRESCRIPTION_HISTORY, Screen.SMART_DOSAGE_CALCULATOR, Screen.UNIT_CONVERTER, Screen.DRUG_INTERACTION_CHECKER, Screen.SMART_INVENTORY_SUGGESTIONS, Screen.DOCTOR_MANAGEMENT, Screen.SYMPTOM_DISEASE_TRACKER, Screen.ROLE_MANAGEMENT, Screen.STAFF_ACTIVITY -> viewModel.navigateTo(Screen.MORE)
       else -> viewModel.navigateTo(Screen.HOME)
     }
   }
@@ -360,14 +360,13 @@ fun RoyalPharmacyApp(
       }
 
       // Tax Invoice Receipt Print/Share Dialog
-      if (showReceiptDialog && lastInvoice != null) {
+      val invoiceForDialog = lastInvoice
+      if (showReceiptDialog && invoiceForDialog != null) {
         InvoiceReceiptDialog(
-          invoice = lastInvoice!!,
+          invoice = invoiceForDialog,
           profile = profile,
           onDismiss = { viewModel.showReceiptDialog.value = false },
-          onOpenPrinterStation = {
-            viewModel.openInvoicePrinter(lastInvoice)
-          }
+          onOpenPrinterStation = { viewModel.openInvoicePrinter(invoiceForDialog) }
         )
       }
 

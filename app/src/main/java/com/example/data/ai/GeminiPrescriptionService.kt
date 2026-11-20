@@ -149,6 +149,34 @@ object GeminiPrescriptionService {
     )
   }
 
+  private fun calculateInSampleSize(width: Int, height: Int, maxDim: Int = 1024): Int {
+    var sampleSize = 1
+    while ((width / sampleSize) > maxDim * 2 || (height / sampleSize) > maxDim * 2) {
+      sampleSize *= 2
+    }
+    return sampleSize
+  }
+
+  private fun decodeScaledBitmapFromUri(context: Context, uri: Uri, maxDim: Int = 1024): Bitmap? {
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
+    if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+    val opts = BitmapFactory.Options().apply {
+      inSampleSize = calculateInSampleSize(bounds.outWidth, bounds.outHeight, maxDim)
+    }
+    return context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, opts) }
+  }
+
+  private fun decodeScaledBitmapFromBytes(bytes: ByteArray, maxDim: Int = 1024): Bitmap? {
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+    if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+    val opts = BitmapFactory.Options().apply {
+      inSampleSize = calculateInSampleSize(bounds.outWidth, bounds.outHeight, maxDim)
+    }
+    return BitmapFactory.decodeByteArray(bytes, 0, bytes.size, opts)
+  }
+
   private fun Bitmap.scaleForAiVision(): Bitmap {
     val maxDim = 1024
     if (width <= maxDim && height <= maxDim) return this
@@ -163,7 +191,7 @@ object GeminiPrescriptionService {
     availableStock: List<MedicineBatchEntity>
   ): Result<List<ExtractedRxItem>> = withContext(Dispatchers.IO) {
     try {
-      val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+      val bitmap = decodeScaledBitmapFromBytes(imageBytes, 1024)
         ?: return@withContext Result.failure(IllegalArgumentException("Unable to decode prescription image"))
 
       val scaled = bitmap.scaleForAiVision()
@@ -244,9 +272,7 @@ object GeminiPrescriptionService {
 
     val resolvedBitmap = bitmap ?: imageUri?.let { uri ->
       try {
-        context.contentResolver.openInputStream(uri)?.use { stream ->
-          BitmapFactory.decodeStream(stream)
-        }
+        decodeScaledBitmapFromUri(context, uri, 1024)
       } catch (_: Exception) {
         null
       }

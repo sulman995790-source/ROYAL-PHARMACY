@@ -749,7 +749,13 @@
   </div>
 
   <script type="module">
-    import { GoogleGenAI, Type } from "https://esm.sh/@google/genai";
+    const Type = {
+      OBJECT: "OBJECT",
+      ARRAY: "ARRAY",
+      STRING: "STRING",
+      NUMBER: "NUMBER",
+      BOOLEAN: "BOOLEAN"
+    };
 
     // Register Offline PWA Service Worker
     if ("serviceWorker" in navigator) {
@@ -826,10 +832,65 @@
       return msg || "Cloud AI request failed.";
     }
 
-    function getGenAIClient() {
+    let genAiModulePromise = null;
+    async function getGenAIClient() {
       const key = (state.config.geminiKey || "").trim();
       if (!key) return null;
+      if (!genAiModulePromise) {
+        genAiModulePromise = import("https://esm.sh/@google/genai").catch((err) => {
+          genAiModulePromise = null;
+          throw new Error("Offline or unable to load @google/genai SDK: " + (err?.message || err));
+        });
+      }
+      const { GoogleGenAI } = await genAiModulePromise;
       return new GoogleGenAI({ apiKey: key });
+    }
+
+    function getNearExpiryCutoffYm(monthsAhead = 3) {
+      const dt = new Date();
+      dt.setMonth(dt.getMonth() + monthsAhead);
+      return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`;
+    }
+
+    function isNearOrExpired(expiryYm, monthsAhead = 3) {
+      return /^\d{4}-\d{2}$/.test(expiryYm || "") && expiryYm <= getNearExpiryCutoffYm(monthsAhead);
+    }
+
+    function formatWaPhone(phone) {
+      const digits = String(phone || "").replace(/\D/g, "");
+      if (!digits) return "";
+      if (digits.length === 10) return "91" + digits;
+      if (digits.length === 11 && digits.startsWith("0")) return "91" + digits.slice(1);
+      return digits;
+    }
+
+    function buildWhatsAppUrl(phone, encodedText = "") {
+      const num = formatWaPhone(phone);
+      const base = num ? `https://wa.me/${num}` : "https://wa.me/";
+      return encodedText ? `${base}?text=${encodedText}` : base;
+    }
+
+    function csvCell(v) {
+      return `"${String(v ?? "").replace(/"/g, '""')}"`;
+    }
+
+    function parseCsvLine(line) {
+      const cols = [];
+      let cur = "", inQuotes = false;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '"') {
+          if (inQuotes && line[i + 1] === '"') { cur += '"'; i++; }
+          else { inQuotes = !inQuotes; }
+        } else if (ch === "," && !inQuotes) {
+          cols.push(cur.trim());
+          cur = "";
+        } else {
+          cur += ch;
+        }
+      }
+      cols.push(cur.trim());
+      return cols;
     }
 
     function persist() {
@@ -845,6 +906,20 @@
       renderAll();
     }
 
+    const TAB_TITLES = {
+      dashboard: "Executive Dashboard",
+      pos: "Point of Sale (POS)",
+      ocr: "Gemini 2.5 Rx Scanner",
+      inventory: "Inventory & Batches",
+      expiry: "Expiry & Shortbook",
+      clinical: "Gemini 2.5 Pharmacist AI",
+      patients: "Patients & Doctors CRM",
+      khata: "Udhar Khata & Cashbook",
+      purchases: "Suppliers & Purchase PO",
+      gst: "GST Filing & Backup",
+      settings: "Store & Gemini AI Config"
+    };
+
     function switchTab(tab) {
       document.querySelectorAll(".tab-content").forEach(el => el.classList.add("hidden"));
       const targetTab = document.getElementById("tab-" + tab);
@@ -858,6 +933,8 @@
         nav.classList.add("bg-emerald-600", "text-white");
         nav.classList.remove("text-slate-300");
       }
+      const titleEl = document.getElementById("page-title");
+      if (titleEl && TAB_TITLES[tab]) titleEl.innerText = TAB_TITLES[tab];
       renderAll();
     }
 
@@ -974,7 +1051,7 @@
       const existing = findLocalMedicineMatch(clean);
       if (existing) return { item: existing, source: "local_cache" };
 
-      const ai = getGenAIClient();
+      const ai = await getGenAIClient();
       if (!ai) {
         throw new Error("Configure your Google AI Studio API Key in Settings to resolve uncached Indian brands with Gemini 2.5 Flash-Lite.");
       }
@@ -1045,11 +1122,12 @@
       renderAutocompleteChips(localMatches);
 
       clearTimeout(autocompleteTimer);
-      const ai = getGenAIClient();
-      if (!ai || val.trim().length < 3) return;
+      if (!(state.config.geminiKey || "").trim() || val.trim().length < 3) return;
 
       autocompleteTimer = setTimeout(async () => {
         try {
+          const ai = await getGenAIClient();
+          if (!ai) return;
           const res = await ai.models.generateContent({
             model: MODEL_HYDROGEN,
             contents: `Suggest up to 4 exact popular Indian pharmacy brand names matching prefix "${val.trim()}". Include strength if standard (e.g. Dolo 650, Telma-H, Augmentin 625 Duo, Pan-D).`,
@@ -1087,7 +1165,7 @@
       }
       box.classList.remove("hidden");
       box.innerHTML = chips.map(c => `
-        <button onclick="useAutocompleteSuggestion('${escapeHtml(c.brand)}')" class="px-2.5 py-1 rounded-full text-[11px] font-semibold border ${c.local ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-purple-50 border-purple-200 text-purple-800'} hover:opacity-80">
+        <button data-brand="${escapeHtml(c.brand)}" onclick="useAutocompleteSuggestion(this.dataset.brand)" class="px-2.5 py-1 rounded-full text-[11px] font-semibold border ${c.local ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-purple-50 border-purple-200 text-purple-800'} hover:opacity-80">
           ${c.local ? '<i class="fa-solid fa-database mr-1"></i>' : '<i class="fa-solid fa-bolt mr-1"></i>'}${escapeHtml(c.label)}
         </button>
       `).join("");
@@ -1167,7 +1245,12 @@
     }
 
     async function callGemini4NeonText(promptText, base64Image = null) {
-      const ai = getGenAIClient();
+      let ai;
+      try {
+        ai = await getGenAIClient();
+      } catch (err) {
+        throw new Error(mapGeminiErrorMessage(err));
+      }
       if (!ai) return null;
 
       const selectedModel = document.getElementById("gemini-model-select")?.value || MODEL_NEON;
@@ -1227,7 +1310,13 @@
       let clinicalSummary = "";
       let engineLabel = MODEL_NEON;
 
-      const ai = getGenAIClient();
+      let ai = null;
+      let sdkError = null;
+      try {
+        ai = await getGenAIClient();
+      } catch (err) {
+        sdkError = err;
+      }
       if (ai) {
         try {
           const parts = [{
@@ -1279,7 +1368,9 @@
           engineLabel = `Error fallback (${mapGeminiErrorMessage(err)})`;
         }
       } else {
-        engineLabel = "Local Salt/Brand Matcher (Add Gemini API Key in Settings for 2.5 Flash Vision)";
+        engineLabel = sdkError
+          ? `Offline Local Matcher (${mapGeminiErrorMessage(sdkError)})`
+          : "Local Salt/Brand Matcher (Add Gemini API Key in Settings for 2.5 Flash Vision)";
         const corpus = rawText.toLowerCase();
         state.inventory.forEach(item => {
           const brandToken = item.name.toLowerCase().split(" ")[0];
@@ -1321,9 +1412,12 @@
     function pushExtractedRxToPos() {
       if (lastExtractedRxItems.length === 0) return;
       lastExtractedRxItems.forEach(item => {
+        const inv = state.inventory.find(i => i.id === item.id);
+        const maxStock = inv ? Math.max(1, Number(inv.qty)) : Math.max(1, Number(item.qty) || 1);
+        const addQty = Math.max(1, item.qty || 1);
         const existing = posCart.find(c => c.id === item.id);
-        if (existing) existing.qty += item.qty || 1;
-        else posCart.push({ ...item, qty: item.qty || 1 });
+        if (existing) existing.qty = Math.min(maxStock, existing.qty + addQty);
+        else posCart.push({ ...item, qty: Math.min(maxStock, addQty) });
       });
       switchTab("pos");
       renderPosCart();
@@ -1342,33 +1436,49 @@
       return Array.from(saltSet);
     }
 
-    function evaluateLocalDeterministicDdi(saltsLower) {
+    function hasSaltWord(saltListLower, keyword) {
+      const rx = new RegExp(`\\b${keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i");
+      return saltListLower.some(s => rx.test(s));
+    }
+
+    function evaluateLocalDeterministicDdi(cartItems) {
       const warnings = [];
-      const joined = saltsLower.join(" | ");
-      if (joined.includes("warfarin") && (joined.includes("aspirin") || joined.includes("ibuprofen") || joined.includes("diclofenac"))) {
-        warnings.push({
-          saltPair: "Warfarin + Aspirin/NSAID",
-          severity: "Contraindicated",
-          mechanism: "Synergistic antiplatelet & anticoagulant COX-1 inhibition increases GI hemorrhage risk.",
-          pharmacistGuidance: "Hold dispensing and consult prescriber; Paracetamol is preferred for analgesia."
+      const saltOwnerMap = new Map();
+      cartItems.forEach(item => {
+        extractDeduplicatedSaltsFromCart([item]).forEach(s => {
+          const k = s.toLowerCase();
+          if (!saltOwnerMap.has(k)) saltOwnerMap.set(k, new Set());
+          saltOwnerMap.get(k).add(item.name);
         });
-      }
-      if (joined.includes("azithromycin") && joined.includes("domperidone")) {
-        warnings.push({
-          saltPair: "Azithromycin + Domperidone",
-          severity: "Major",
-          mechanism: "Additive QTc interval prolongation risk (Torsades de Pointes).",
-          pharmacistGuidance: "Flag to physician; check ECG/electrolytes or consider Ondansetron."
-        });
-      }
-      if (joined.includes("clopidogrel") && joined.includes("omeprazole")) {
-        warnings.push({
-          saltPair: "Clopidogrel + Omeprazole",
-          severity: "Moderate",
-          mechanism: "CYP2C19 inhibition reduces bioactivation of Clopidogrel.",
-          pharmacistGuidance: "Substitute Omeprazole with Pantoprazole 40mg per cardiologist protocol."
-        });
-      }
+      });
+
+      saltOwnerMap.forEach((brands, saltKey) => {
+        if (brands.size > 1) {
+          warnings.push({
+            saltPair: `Duplicate ${saltKey} (${Array.from(brands).join(" + ")})`,
+            severity: "Contraindicated",
+            mechanism: `Multiple cart items contain the same active salt (${saltKey}), risking cumulative overdose toxicity.`,
+            pharmacistGuidance: "Hold duplicate brand and confirm with prescriber before dispensing."
+          });
+        }
+      });
+
+      const saltsLower = Array.from(saltOwnerMap.keys());
+      const rules = [
+        [["warfarin", "acenocoumarol"], ["aspirin", "ibuprofen", "diclofenac", "aceclofenac"], "Contraindicated", "Warfarin + Aspirin/NSAID", "Additive antiplatelet/anticoagulant GI hemorrhage risk.", "Hold dispensing and consult prescriber; Paracetamol is preferred."],
+        [["nitroglycerin", "isosorbide"], ["sildenafil", "tadalafil"], "Contraindicated", "Nitrate + PDE5 Inhibitor", "Severe refractory hypotension via synergistic cGMP vasodilation.", "Strictly contraindicated; maintain 24-48h separation."],
+        [["azithromycin"], ["domperidone"], "Major", "Azithromycin + Domperidone", "Additive QTc interval prolongation risk.", "Flag to physician; review ECG/electrolytes or consider alternative."],
+        [["clopidogrel"], ["omeprazole", "esomeprazole"], "Moderate", "Clopidogrel + Omeprazole", "CYP2C19 inhibition reduces active clopidogrel metabolite.", "Prefer Pantoprazole 40mg per cardiology protocol."],
+        [["atorvastatin", "simvastatin"], ["clarithromycin", "erythromycin"], "Contraindicated", "Statin + Macrolide (CYP3A4)", "Elevated statin levels increase rhabdomyolysis risk.", "Hold statin during course or switch to Azithromycin."],
+        [["telmisartan", "ramipril", "enalapril"], ["spironolactone", "potassium"], "Moderate", "ARB/ACEi + Potassium-sparing Agent", "Additive renal potassium retention causing hyperkalemia.", "Monitor serum K+ and creatinine within 7-14 days."],
+        [["ciprofloxacin", "levofloxacin", "doxycycline", "levothyroxine"], ["calcium", "iron", "aluminium", "magnesium"], "Moderate", "Cation Chelation Interaction", "Polyvalent cations reduce oral absorption.", "Separate doses by 2-4 hours."]
+      ];
+
+      rules.forEach(([groupA, groupB, severity, saltPair, mechanism, pharmacistGuidance]) => {
+        if (groupA.some(k => hasSaltWord(saltsLower, k)) && groupB.some(k => hasSaltWord(saltsLower, k))) {
+          warnings.push({ saltPair, severity, mechanism, pharmacistGuidance });
+        }
+      });
       return warnings;
     }
 
@@ -1389,7 +1499,12 @@
 
       try {
         // Resolve salts for any cart item missing composition first
-        const ai = getGenAIClient();
+        let ai = null;
+        try {
+          ai = await getGenAIClient();
+        } catch (_sdkErr) {
+          ai = null;
+        }
         for (const c of posCart) {
           if (!c.salt || c.salt.trim().length < 2) {
             if (ai) {
@@ -1402,7 +1517,7 @@
         }
 
         const uniqueSalts = extractDeduplicatedSaltsFromCart(posCart);
-        const localWarnings = evaluateLocalDeterministicDdi(uniqueSalts.map(s => s.toLowerCase()));
+        const localWarnings = evaluateLocalDeterministicDdi(posCart);
 
         if (!ai) {
           lastDdiReport = {
@@ -1486,8 +1601,17 @@ Identify every clinically significant interaction among these salts, severity (C
     }
 
     function updatePosCartQty(idx, rawVal) {
-      if (!posCart[idx]) return;
-      posCart[idx].qty = Math.max(1, parseInt(rawVal, 10) || 1);
+      const cartItem = posCart[idx];
+      if (!cartItem) return;
+      const inv = state.inventory.find(i => i.id === cartItem.id);
+      const maxStock = inv ? Math.max(1, Number(inv.qty)) : 1;
+      const requested = Math.max(1, parseInt(rawVal, 10) || 1);
+      if (requested > maxStock) {
+        alert(`Only ${maxStock} packs available in batch ${cartItem.batch}.`);
+        cartItem.qty = maxStock;
+      } else {
+        cartItem.qty = requested;
+      }
       renderPosCart();
     }
 
@@ -1510,6 +1634,8 @@ Identify every clinically significant interaction among these salts, severity (C
         const line = item.mrp * item.qty;
         const gstRate = Number(item.gst ?? 12);
         const gstAmt = line - (line / (1 + gstRate / 100));
+        const invMatch = state.inventory.find(i => i.id === item.id);
+        const maxQty = invMatch ? Math.max(1, Number(invMatch.qty)) : Math.max(1, Number(item.qty));
         gross += line;
         rawGstTotal += gstAmt;
         return `
@@ -1519,7 +1645,7 @@ Identify every clinically significant interaction among these salts, severity (C
             <td class="p-2.5">${escapeHtml(item.expiry)}</td>
             <td class="p-2.5 text-right">₹${Number(item.mrp).toFixed(2)}</td>
             <td class="p-2.5 text-center">
-              <input type="number" min="1" max="${item.qty + 50}" value="${item.qty}" onchange="updatePosCartQty(${idx}, this.value)" class="w-12 border rounded text-center py-0.5" />
+              <input type="number" min="1" max="${maxQty}" value="${item.qty}" onchange="updatePosCartQty(${idx}, this.value)" class="w-12 border rounded text-center py-0.5" />
             </td>
             <td class="p-2.5 text-right">${gstRate}%</td>
             <td class="p-2.5 text-right font-bold">₹${line.toFixed(2)}</td>
@@ -1539,8 +1665,7 @@ Identify every clinically significant interaction among these salts, severity (C
       document.getElementById("pos-net").innerText = `₹${net.toFixed(2)}`;
 
       // Live offline Salt-Level DDI Pre-Screen
-      const uniqueSaltsLower = extractDeduplicatedSaltsFromCart(posCart).map(s => s.toLowerCase());
-      const offlineWarnings = evaluateLocalDeterministicDdi(uniqueSaltsLower);
+      const offlineWarnings = evaluateLocalDeterministicDdi(posCart);
       const alertBox = document.getElementById("pos-ddi-alert");
       const alertText = document.getElementById("pos-ddi-text");
       const structuredBox = document.getElementById("pos-ddi-structured");
@@ -1571,12 +1696,23 @@ Identify every clinically significant interaction among these salts, severity (C
 
     function checkoutSale(print = false) {
       if (posCart.length === 0) return alert("Add items to cart first!");
-      const patient = document.getElementById("pos-patient").value || "Walk-in Customer";
-      const phone = document.getElementById("pos-phone").value || "";
-      const doctor = document.getElementById("pos-doctor").value || "Self / OTC";
+      const patient = document.getElementById("pos-patient").value.trim() || "Walk-in Customer";
+      const phone = document.getElementById("pos-phone").value.trim() || "";
+      const doctor = document.getElementById("pos-doctor").value.trim() || "Self / OTC";
       const mode = document.getElementById("pos-mode").value;
-      const net = parseFloat(document.getElementById("pos-net").innerText.replace("₹", "")) || 0;
-      const gstTotal = parseFloat(document.getElementById("pos-gst").innerText.replace("₹", "")) || 0;
+
+      let gross = 0, rawGstTotal = 0;
+      posCart.forEach(item => {
+        const line = Number(item.mrp || 0) * Number(item.qty || 1);
+        const gstRate = Number(item.gst ?? 12);
+        gross += line;
+        rawGstTotal += line - (line / (1 + gstRate / 100));
+      });
+      const discEl = document.getElementById("pos-disc");
+      const discPct = Math.min(100, Math.max(0, parseFloat(discEl.value) || 0));
+      const discVal = gross * (discPct / 100);
+      const gstTotal = rawGstTotal * (1 - discPct / 100);
+      const net = gross - discVal;
       let costPtr = 0;
 
       posCart.forEach(c => {
@@ -1595,6 +1731,7 @@ Identify every clinically significant interaction among these salts, severity (C
 
       const invObj = {
         id: "INV-" + Math.floor(100000 + Math.random() * 900000),
+        createdAt: new Date().toISOString(),
         date: new Date().toLocaleString(),
         patient, phone, doctor, mode, net, gstTotal,
         profit: net - costPtr,
@@ -1606,6 +1743,7 @@ Identify every clinically significant interaction among these salts, severity (C
 
       posCart = [];
       lastDdiReport = null;
+      discEl.value = "0";
       persist();
       renderPosCart();
     }
@@ -1641,7 +1779,14 @@ Identify every clinically significant interaction among these salts, severity (C
         const batch = state.inventory.find(b => b.id === item.id);
         if (batch) batch.qty += item.qty;
       });
-      state.cashLedger.unshift({ id: Date.now(), date: new Date().toLocaleString(), desc: `Sales Return ${inv.id}`, type: "OUT", amt: inv.net });
+      if (inv.mode === "UDHAR") {
+        const khataEntry = state.khata.find(k => k.name.toLowerCase() === (inv.patient || "").toLowerCase());
+        if (khataEntry) {
+          khataEntry.balance = Math.max(0, Number(khataEntry.balance || 0) - Number(inv.net || 0));
+        }
+      } else {
+        state.cashLedger.unshift({ id: Date.now(), date: new Date().toLocaleString(), desc: `Sales Return ${inv.id}`, type: "OUT", amt: inv.net });
+      }
       state.invoices.splice(idx, 1);
       persist();
     }
@@ -1650,8 +1795,9 @@ Identify every clinically significant interaction among these salts, severity (C
       if (posCart.length === 0) return alert("Cart is empty!");
       const phone = document.getElementById("pos-phone").value;
       const net = document.getElementById("pos-net").innerText;
-      const lines = posCart.map(i => `• ${i.name} x${i.qty} = ₹${(i.mrp * i.qty).toFixed(2)}`).join("%0A");
-      window.open(`https://wa.me/91${phone}?text=*${encodeURIComponent(state.config.name)}*%0A${lines}%0A*Total: ${net}*`, "_blank");
+      const lines = posCart.map(i => `• ${i.name} x${i.qty} = ₹${(i.mrp * i.qty).toFixed(2)}`).join("\n");
+      const msg = encodeURIComponent(`*${state.config.name}*\n${lines}\n*Total: ${net}*`);
+      window.open(buildWhatsAppUrl(phone, msg), "_blank");
     }
 
     // --- INVENTORY CRUD & CSV ---
@@ -1832,7 +1978,19 @@ Identify every clinically significant interaction among these salts, severity (C
 
     async function analyzeLabelImageBase64(dataUrl, detectedBarcode = "") {
       const camStatus = document.getElementById("inv-cam-status");
-      const ai = getGenAIClient();
+      let ai = null;
+      try {
+        ai = await getGenAIClient();
+      } catch (err) {
+        if (detectedBarcode) {
+          document.getElementById("inv-batch").value = detectedBarcode.slice(-8);
+          closeInventoryCameraScan();
+          return;
+        }
+        camStatus.className = "text-xs p-2.5 rounded-lg bg-rose-50 text-rose-700 border border-rose-200";
+        camStatus.innerText = mapGeminiErrorMessage(err);
+        return;
+      }
       if (!ai) {
         if (detectedBarcode) {
           document.getElementById("inv-batch").value = detectedBarcode.slice(-8);
@@ -1966,7 +2124,18 @@ Identify every clinically significant interaction among these salts, severity (C
     function exportInventoryCsv() {
       let csv = "Name,Salt,Batch,Expiry,Rack,Schedule,Qty,PTR,MRP,GST\n";
       state.inventory.forEach(i => {
-        csv += `"${i.name}","${i.salt}","${i.batch}",${i.expiry},${i.rack},${i.schedule || "OTC"},${i.qty},${i.ptr},${i.mrp},${i.gst}\n`;
+        csv += [
+          csvCell(i.name),
+          csvCell(i.salt),
+          csvCell(i.batch),
+          csvCell(i.expiry),
+          csvCell(i.rack),
+          csvCell(i.schedule || "OTC"),
+          csvCell(i.qty),
+          csvCell(i.ptr),
+          csvCell(i.mrp),
+          csvCell(i.gst)
+        ].join(",") + "\n";
       });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
@@ -1975,23 +2144,24 @@ Identify every clinically significant interaction among these salts, severity (C
     }
 
     function importInventoryCsv(e) {
-      const file = e.target.files[0];
+      const file = e.target.files?.[0];
       if (!file) return;
       const reader = new FileReader();
       reader.onload = () => {
-        const lines = reader.result.split("\n").slice(1);
+        const lines = String(reader.result || "").split(/\r?\n/).slice(1);
         lines.forEach(line => {
-          const cols = line.split(",");
+          if (!line.trim()) return;
+          const cols = parseCsvLine(line);
           if (cols.length >= 9) {
             const parsedGst = parseInt(cols[9], 10);
             state.inventory.push({
               id: Date.now() + Math.floor(Math.random() * 1000),
-              name: cols[0].replace(/"/g, ""),
-              salt: cols[1].replace(/"/g, ""),
-              batch: cols[2].replace(/"/g, ""),
+              name: cols[0],
+              salt: cols[1],
+              batch: cols[2],
               expiry: cols[3],
               rack: cols[4],
-              schedule: cols[5] || "OTC",
+              schedule: normalizeSchedule(cols[5]),
               qty: parseInt(cols[6], 10) || 10,
               reorder: 15,
               ptr: parseFloat(cols[7]) || 50,
@@ -2019,7 +2189,7 @@ Identify every clinically significant interaction among these salts, severity (C
         return `<strong>Live Low-Stock Report:</strong><br>` + (low.length ? low.map(i => `• <strong>${escapeHtml(i.name)}</strong> (${escapeHtml(i.salt)}) — Qty: ${i.qty} packs | Reorder Level: ${i.reorder}`).join("<br>") : "✅ All inventory items are above reorder thresholds.");
       }
       if (lower.includes("expir")) {
-        const exp = state.inventory.filter(i => (i.expiry || "").includes("2025") || (i.expiry || "").includes("2026-0") || (i.expiry || "").includes("26"));
+        const exp = state.inventory.filter(i => isNearOrExpired(i.expiry, 3));
         return `<strong>Batch Expiry Radar:</strong><br>` + (exp.length ? exp.map(i => `• <strong>${escapeHtml(i.name)}</strong> [Batch: ${escapeHtml(i.batch)}] — Exp: ${escapeHtml(i.expiry)} (Rack ${escapeHtml(i.rack)})`).join("<br>") : "✅ No near-expiry batches flagged.");
       }
       if (matchedMeds.length > 0) {
@@ -2085,13 +2255,15 @@ Provide an accurate, clinically verified answer with salt-level pharmacology, in
 
     function calcPediatricDose() {
       const w = parseFloat(document.getElementById("ped-weight").value);
-      const rate = parseFloat(document.getElementById("ped-drug").value);
-      if (!w || w <= 0) return alert("Enter child weight in kg!");
+      const sel = document.getElementById("ped-drug");
+      const rate = parseFloat(sel.value);
+      if (!w || w <= 0 || w > 120) return alert("Enter a valid child weight (1-120 kg)!");
+      const concMgPer5ml = sel.selectedIndex === 1 ? 100 : 125;
       const mg = w * rate;
-      const ml = (mg / 125) * 5;
+      const ml = (mg / concMgPer5ml) * 5;
       const res = document.getElementById("ped-result");
       res.classList.remove("hidden");
-      res.innerHTML = `Safe Single Dose: <strong>${mg.toFixed(0)} mg</strong> (${ml.toFixed(1)} ml of 125mg/5ml suspension).`;
+      res.innerHTML = `Safe Single Dose: <strong>${mg.toFixed(0)} mg</strong> (${ml.toFixed(1)} ml of ${concMgPer5ml}mg/5ml suspension). Verify frequency & max daily limit per physician.`;
     }
 
     // --- CRM, KHATA, SUPPLIERS, SETTINGS ---
@@ -2126,8 +2298,19 @@ Provide an accurate, clinically verified answer with salt-level pharmacology, in
     }
 
     function settleKhata(idx) {
-      if (!state.khata[idx]) return;
-      state.khata[idx].balance = 0;
+      const entry = state.khata[idx];
+      if (!entry) return;
+      const settledAmt = Number(entry.balance || 0);
+      if (settledAmt <= 0) return alert(`${entry.name} has zero pending balance.`);
+      if (!confirm(`Confirm full settlement of ₹${settledAmt.toFixed(2)} from ${entry.name}?`)) return;
+      state.cashLedger.unshift({
+        id: Date.now(),
+        date: new Date().toLocaleString(),
+        desc: "Udhar Collected (" + entry.name + ")",
+        type: "IN",
+        amt: settledAmt
+      });
+      entry.balance = 0;
       persist();
     }
 
@@ -2183,13 +2366,33 @@ Provide an accurate, clinically verified answer with salt-level pharmacology, in
     }
 
     function restoreFullBackup(e) {
-      const file = e.target.files[0];
+      const file = e.target.files?.[0];
       if (!file) return;
       const reader = new FileReader();
       reader.onload = () => {
-        state = JSON.parse(reader.result);
-        persist();
-        alert("Backup restored successfully!");
+        try {
+          const parsed = JSON.parse(reader.result);
+          if (!parsed || typeof parsed !== "object" || !Array.isArray(parsed.inventory)) {
+            throw new Error("Invalid Royal Pharmacy backup file.");
+          }
+          state = {
+            config: { ...state.config, ...(parsed.config || {}) },
+            inventory: parsed.inventory,
+            invoices: Array.isArray(parsed.invoices) ? parsed.invoices : [],
+            khata: Array.isArray(parsed.khata) ? parsed.khata : [],
+            patients: Array.isArray(parsed.patients) ? parsed.patients : [],
+            doctors: Array.isArray(parsed.doctors) ? parsed.doctors : [],
+            suppliers: Array.isArray(parsed.suppliers) ? parsed.suppliers : [],
+            cashLedger: Array.isArray(parsed.cashLedger) ? parsed.cashLedger : [],
+            purchaseOrders: Array.isArray(parsed.purchaseOrders) ? parsed.purchaseOrders : []
+          };
+          persist();
+          alert("Backup restored successfully!");
+        } catch (err) {
+          alert("Restore failed: " + (err?.message || "Malformed JSON"));
+        } finally {
+          e.target.value = "";
+        }
       };
       reader.readAsText(file);
     }
@@ -2197,7 +2400,15 @@ Provide an accurate, clinically verified answer with salt-level pharmacology, in
     function exportGstCsv() {
       let csv = "InvoiceID,Date,Patient,Doctor,Mode,GSTAmount,NetAmount\n";
       state.invoices.forEach(i => {
-        csv += `${i.id},"${i.date}","${i.patient}","${i.doctor}",${i.mode},${(i.gstTotal || 0).toFixed(2)},${i.net}\n`;
+        csv += [
+          csvCell(i.id),
+          csvCell(i.date),
+          csvCell(i.patient),
+          csvCell(i.doctor),
+          csvCell(i.mode),
+          csvCell((i.gstTotal || 0).toFixed(2)),
+          csvCell(i.net)
+        ].join(",") + "\n";
       });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
@@ -2227,7 +2438,7 @@ Provide an accurate, clinically verified answer with salt-level pharmacology, in
             <td colspan="8" class="p-6 text-center bg-purple-50/70">
               <div class="font-bold text-slate-800 mb-1">"${escapeHtml(rawFilter)}" not found in local stock catalog</div>
               <div class="text-slate-500 mb-3">Resolve active generic salts, GST slab & CDSCO schedule via Gemini 2.5 Flash-Lite and save to local DB automatically.</div>
-              <button id="btn-empty-search-ai" onclick="enrichAndSaveMissingSearch('${escapeHtml(rawFilter)}')" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-bold shadow-sm">
+              <button id="btn-empty-search-ai" data-query="${escapeHtml(rawFilter)}" onclick="enrichAndSaveMissingSearch(this.dataset.query)" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-bold shadow-sm">
                 <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> AI Resolve & Save "${escapeHtml(rawFilter)}" to DB
               </button>
             </td>
@@ -2281,8 +2492,8 @@ Provide an accurate, clinically verified answer with salt-level pharmacology, in
             <td class="p-3"><span class="px-2 py-0.5 bg-slate-100 rounded font-semibold">${escapeHtml(inv.mode)}</span></td>
             <td class="p-3 text-right font-bold text-emerald-700">₹${Number(inv.net).toFixed(2)}</td>
             <td class="p-3 text-center space-x-2">
-              <button onclick="printThermalInvoiceById('${escapeHtml(inv.id)}')" class="text-slate-600 hover:text-black"><i class="fa-solid fa-print"></i></button>
-              <button onclick="refundInvoice('${escapeHtml(inv.id)}')" class="text-rose-600 hover:underline">Return</button>
+              <button data-id="${escapeHtml(inv.id)}" onclick="printThermalInvoiceById(this.dataset.id)" class="text-slate-600 hover:text-black"><i class="fa-solid fa-print"></i></button>
+              <button data-id="${escapeHtml(inv.id)}" onclick="refundInvoice(this.dataset.id)" class="text-rose-600 hover:underline">Return</button>
             </td>
           </tr>
         `).join("") || `<tr><td colspan="7" class="p-6 text-center text-slate-400">No sales invoices recorded yet.</td></tr>`;
@@ -2309,7 +2520,7 @@ Provide an accurate, clinically verified answer with salt-level pharmacology, in
       const totalProfit = state.invoices.reduce((s, i) => s + Number(i.profit ?? (i.net * 0.22)), 0);
       const stockVal = state.inventory.reduce((s, i) => s + (Number(i.ptr || 0) * Number(i.qty || 0)), 0);
       const totalUdhar = state.khata.reduce((s, k) => s + Number(k.balance || 0), 0);
-      const alertsCount = state.inventory.filter(i => i.qty <= i.reorder || (i.expiry || "") <= "2026-12").length;
+      const alertsCount = state.inventory.filter(i => i.qty <= i.reorder || isNearOrExpired(i.expiry, 3)).length;
 
       document.getElementById("stat-sales").innerText = `₹${totalRev.toFixed(2)}`;
       document.getElementById("stat-profit").innerText = `Net Margin: ₹${totalProfit.toFixed(2)}`;
@@ -2331,7 +2542,7 @@ Provide an accurate, clinically verified answer with salt-level pharmacology, in
 
       // Expiry & Shortbook
       document.getElementById("expiry-items-container").innerHTML = state.inventory
-        .filter(i => (i.expiry || "") <= "2026-12")
+        .filter(i => isNearOrExpired(i.expiry, 3))
         .map(i => `<div class="p-2.5 bg-rose-50 rounded border border-rose-200 flex justify-between"><span><strong>${escapeHtml(i.name)}</strong> (${escapeHtml(i.batch)})</span><span class="font-bold text-rose-700">Exp: ${escapeHtml(i.expiry)}</span></div>`)
         .join("") || `<div class="text-slate-400">No batches expiring within 90 days.</div>`;
 
@@ -2356,7 +2567,7 @@ Provide an accurate, clinically verified answer with salt-level pharmacology, in
           <td class="p-2 text-right font-bold text-rose-600">₹${Number(k.balance).toFixed(2)}</td>
           <td class="p-2 text-center space-x-1">
             <button onclick="settleKhata(${idx})" class="bg-emerald-600 text-white px-2 py-0.5 rounded">Settle</button>
-            <a href="https://wa.me/91${escapeHtml(k.phone)}?text=Reminder:%20Your%20pending%20balance%20at%20${encodeURIComponent(state.config.name)}%20is%20Rs.${Number(k.balance).toFixed(2)}" target="_blank" class="bg-green-100 text-green-800 px-2 py-0.5 rounded">WhatsApp</a>
+            <a href="${escapeHtml(buildWhatsAppUrl(k.phone, encodeURIComponent(`Reminder: Your pending balance at ${state.config.name} is Rs.${Number(k.balance).toFixed(2)}`)))}" target="_blank" class="bg-green-100 text-green-800 px-2 py-0.5 rounded">WhatsApp</a>
           </td>
         </tr>
       `).join("");
@@ -2373,7 +2584,7 @@ Provide an accurate, clinically verified answer with salt-level pharmacology, in
         <div class="p-3 border rounded-lg bg-slate-50">
           <div class="font-bold">${escapeHtml(s.name)}</div>
           <div class="text-[10px] text-slate-500">GSTIN: ${escapeHtml(s.gst)}</div>
-          <a href="https://wa.me/91${escapeHtml(s.phone)}" target="_blank" class="text-emerald-600 underline text-[11px] mt-1 inline-block">WhatsApp Order →</a>
+          <a href="${escapeHtml(buildWhatsAppUrl(s.phone))}" target="_blank" class="text-emerald-600 underline text-[11px] mt-1 inline-block">WhatsApp Order →</a>
         </div>
       `).join("");
 

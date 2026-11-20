@@ -51,14 +51,16 @@ abstract class PharmacyDatabase : RoomDatabase() {
     @Suppress("DEPRECATION")
     fun getDatabase(context: Context, scope: CoroutineScope): PharmacyDatabase {
       return INSTANCE ?: synchronized(this) {
-        val instance = Room.databaseBuilder(
+        val builder = Room.databaseBuilder(
           context.applicationContext,
           PharmacyDatabase::class.java,
           "royal_pharmacy_db"
         )
           .addCallback(PharmacyDatabaseCallback(context.applicationContext, scope))
-          .fallbackToDestructiveMigration()
-          .build()
+        if (com.example.BuildConfig.DEBUG) {
+          builder.fallbackToDestructiveMigration()
+        }
+        val instance = builder.build()
         INSTANCE = instance
         instance
       }
@@ -419,7 +421,7 @@ abstract class PharmacyDatabase : RoomDatabase() {
           barcode = "8901117092102",
           hsnCode = "3004",
           batchNumber = "PF1542",
-          expiryDate = "02/26",
+          expiryDate = "02/28",
           isExpired = false,
           stockPacks = 0,
           mrp = 309.38,

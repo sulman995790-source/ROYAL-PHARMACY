@@ -45,7 +45,9 @@ class PharmacyRepository(private val dao: PharmacyDao) {
           timestamp = System.currentTimeMillis()
         )
       )
-    } catch (_: Exception) {}
+    } catch (e: Exception) {
+      android.util.Log.e("PharmacyRepository", "Failed to enqueue sync item", e)
+    }
   }
 
   suspend fun getCriticalLowStockMedicinesList(): List<MedicineItem> = dao.getCriticalLowStockMedicinesList()

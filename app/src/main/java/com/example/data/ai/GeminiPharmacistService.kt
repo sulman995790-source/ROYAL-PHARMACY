@@ -235,11 +235,12 @@ class GeminiPharmacistService {
       }
 
       val obj = JSONObject(rawJson)
-      val mrp = obj.optDouble("estimatedMrp", 50.0).coerceAtLeast(1.0)
-      val ptr = obj.optDouble("estimatedPurchaseRate", (mrp * 0.75)).coerceIn(0.5, mrp)
-      val gst = obj.optDouble("gstPercent", 12.0).let { g ->
-        if (g in listOf(0.0, 5.0, 12.0, 18.0)) g else 12.0
-      }
+      val rawMrp = obj.optDouble("estimatedMrp", 50.0)
+      val mrp = if (rawMrp.isFinite() && rawMrp > 0.0) rawMrp.coerceAtLeast(1.0) else 50.0
+      val rawPtr = obj.optDouble("estimatedPurchaseRate", mrp * 0.75)
+      val ptr = if (rawPtr.isFinite() && rawPtr > 0.0) rawPtr.coerceIn(0.5, mrp) else (mrp * 0.75).coerceIn(0.5, mrp)
+      val rawGst = obj.optDouble("gstPercent", 12.0)
+      val gst = if (rawGst.isFinite() && rawGst in listOf(0.0, 5.0, 12.0, 18.0)) rawGst else 12.0
 
       val resolvedItem = MedicineItem(
         name = obj.optString("name", cleaned).ifBlank { cleaned },
